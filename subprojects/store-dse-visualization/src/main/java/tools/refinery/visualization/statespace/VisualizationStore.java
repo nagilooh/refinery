@@ -5,6 +5,7 @@
  */
 package tools.refinery.visualization.statespace;
 
+import org.eclipse.collections.api.map.primitive.ObjectIntMap;
 import tools.refinery.store.map.Version;
 
 import java.util.Map;
@@ -15,4 +16,5 @@ public interface VisualizationStore {
 	void addTransition(Version from, Version to, String label);
 	StringBuilder getDesignSpaceStringBuilder();
 	Map<Version, Integer> getStates();
+	ObjectIntMap<Version> getDepths();
 }
