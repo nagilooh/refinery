@@ -8,6 +8,7 @@ package tools.refinery.store.dse;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import tools.refinery.store.dse.logging.LoggingAdapter;
+import tools.refinery.store.dse.logging.loggers.ConsoleLogger;
 import tools.refinery.store.dse.logging.loggers.FileFormat;
 import tools.refinery.store.dse.logging.loggers.VisualLogger;
 import tools.refinery.store.dse.modification.ModificationAdapter;
@@ -93,13 +94,16 @@ public class FileSystemExampleTest {
 				.symbols(folder, file, contains)
 				.with(ViatraModelQueryAdapter.builder())
 				.with(LoggingAdapter.builder()
-						.withLoggers(new VisualLogger()
-								.withOutputPath("test_output")
-								.withFormat(FileFormat.DOT)
-								.withFormat(FileFormat.SVG)
-								.withDotExecutable("C:/Program Files/Graphviz/bin/dot.exe")
-								.setSaveStates()
-								.setSaveDesignSpace()))
+						.withLoggers(
+								new VisualLogger()
+										.withOutputPath("test_output")
+										.withFormat(FileFormat.DOT)
+										.withFormat(FileFormat.SVG)
+										.withDotExecutable("C:/Program Files/Graphviz/bin/dot.exe")
+										.setSaveStates()
+										.setSaveDesignSpace(),
+								new ConsoleLogger()
+										.setLevel(java.util.logging.Level.FINE)))
 				.with(StateCoderAdapter.builder())
 				.with(ModificationAdapter.builder())
 				.with(DesignSpaceExplorationAdapter.builder()

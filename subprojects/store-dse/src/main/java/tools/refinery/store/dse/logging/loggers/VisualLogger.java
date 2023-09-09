@@ -74,88 +74,8 @@ public class VisualLogger implements Logger {
 	}
 
 	@Override
-	public void logState(Version state) {
-		logState(state, null);
-	}
-
-	@Override
-	public void logState(Version state, String label) {
-		if (states.containsKey(state)) {
-			return;
-		}
-		states.put(state, numberOfStates++);
-		designSpaceBuilder.append(states.get(state));
-		designSpaceBuilder.append(" [label = \"").append(states.get(state));
-		if (label != null) {
-			designSpaceBuilder.append(" (");
-			designSpaceBuilder.append(label);
-			designSpaceBuilder.append(")");
-		}
-		designSpaceBuilder.append("\"\n").append("URL=\"./").append(states.get(state)).append(".svg\"]\n");
-	}
-
-	@Override
-	public void logState(VersionWithObjectiveValue state) {
-		logState(state, null);
-	}
-
-	@Override
-	public void logState(VersionWithObjectiveValue stateWithObjective, String label) {
-		var state = stateWithObjective.version();
-		var objectiveValue = stateWithObjective.objectiveValue();
-
-		if (label != null) {
-			logState(state, "(" + objectiveValue + ") " + label);
-		} else {
-			logState(state, objectiveValue.toString());
-		}
-
-	}
-
-	@Override
-	public void logSolution(Version state) {
-		designSpaceBuilder.append(states.get(state)).append(" [peripheries = 2]\n");
-	}
-
-	@Override
-	public void logSolution(VersionWithObjectiveValue state) {
-		logSolution(state.version());
-	}
-
-	@Override
-	public void logTransition(Version from, Version to) {
-		logTransition(from, to, null);
-	}
-
-	@Override
-	public void logTransition(Version from, Version to, String label) {
-		var fromDepth = depths.getIfAbsentPut(from, 0);
-		if (fromDepth == 0) {
-			depths.put(from, 0);
-		}
-		var toDepth = depths.getIfAbsent(to, fromDepth + 1);
-		depths.put(to, Math.min(toDepth, fromDepth + 1));
-		designSpaceBuilder.append(states.get(from)).append(" -> ").append(states.get(to));
-		designSpaceBuilder.append(" [label=\"");
-		if (label != null) {
-			designSpaceBuilder.append(transitionCounter++).append(": ").append(label);
-		}
-		designSpaceBuilder.append("\"]\n");
-	}
-
-	@Override
-	public void logTransition(VersionWithObjectiveValue from, VersionWithObjectiveValue to) {
-		logTransition(from, to, null);
-	}
-
-	@Override
-	public void logTransition(VersionWithObjectiveValue from, VersionWithObjectiveValue to, String label) {
-		logTransition(from.version(), to.version(), label);
-	}
-
-	@Override
 	public void init(ModelStore store) {
-  		ModelStore modelStore;
+		ModelStore modelStore;
 		modelStore = store;
 		model = modelStore.createEmptyModel();
 		for (var symbol : modelStore.getSymbols()) {
@@ -202,6 +122,57 @@ public class VisualLogger implements Logger {
 		if (isSaveDesignSpace) {
 			saveDesignSpace();
 		}
+	}
+
+	@Override
+	public void logState(Version state, String label) {
+		if (states.containsKey(state)) {
+			return;
+		}
+		var stateId = numberOfStates++;
+		states.put(state, stateId);
+		designSpaceBuilder.append(stateId);
+		designSpaceBuilder.append(" [label = \"").append(stateId);
+		if (label != null) {
+			designSpaceBuilder.append(" (");
+			designSpaceBuilder.append(label);
+			designSpaceBuilder.append(")");
+		}
+		designSpaceBuilder.append("\"\n").append("URL=\"./").append(stateId).append(".svg\"]\n");
+	}
+
+	@Override
+	public void logState(VersionWithObjectiveValue stateWithObjective, String label) {
+		var state = stateWithObjective.version();
+		var objectiveValue = stateWithObjective.objectiveValue();
+
+		if (label != null) {
+			logState(state, "(" + objectiveValue + ") " + label);
+		} else {
+			logState(state, objectiveValue.toString());
+		}
+
+	}
+
+	@Override
+	public void logSolution(Version state) {
+		designSpaceBuilder.append(states.get(state)).append(" [peripheries = 2]\n");
+	}
+
+	@Override
+	public void logTransition(Version from, Version to, String label) {
+		var fromDepth = depths.getIfAbsentPut(from, 0);
+		if (fromDepth == 0) {
+			depths.put(from, 0);
+		}
+		var toDepth = depths.getIfAbsent(to, fromDepth + 1);
+		depths.put(to, Math.min(toDepth, fromDepth + 1));
+		designSpaceBuilder.append(states.get(from)).append(" -> ").append(states.get(to));
+		designSpaceBuilder.append(" [label=\"");
+		if (label != null) {
+			designSpaceBuilder.append(transitionCounter++).append(": ").append(label);
+		}
+		designSpaceBuilder.append("\"]\n");
 	}
 
 	private void saveStates()  {

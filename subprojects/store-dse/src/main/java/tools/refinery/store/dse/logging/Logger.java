@@ -10,16 +10,30 @@ import tools.refinery.store.map.Version;
 import tools.refinery.store.model.ModelStore;
 
 public interface Logger {
-	void logState(Version state);
-	void logState(Version state, String label);
-	void logState(VersionWithObjectiveValue state);
-	void logState(VersionWithObjectiveValue state, String label);
-	void logSolution(Version state);
-	void logSolution(VersionWithObjectiveValue state);
-	void logTransition(Version from, Version to);
-	void logTransition(Version from, Version to, String label);
-	void logTransition(VersionWithObjectiveValue from, VersionWithObjectiveValue to);
-	void logTransition(VersionWithObjectiveValue from, VersionWithObjectiveValue to, String label);
 	void init(ModelStore store);
 	void flush();
+	default void logState(Version state) {
+		logState(state, null);
+	}
+	void logState(Version state, String label);
+	default void logState(VersionWithObjectiveValue state) {
+		logState(state, null);
+	}
+	default void logState(VersionWithObjectiveValue state, String label) {
+		logState(state.version(), label);
+	}
+	void logSolution(Version state);
+	default void logSolution(VersionWithObjectiveValue state) {
+		logSolution(state.version());
+	}
+	default void logTransition(Version from, Version to) {
+		logTransition(from, to, null);
+	}
+	void logTransition(Version from, Version to, String label);
+	default void logTransition(VersionWithObjectiveValue from, VersionWithObjectiveValue to) {
+		logTransition(from, to, null);
+	}
+	default void logTransition(VersionWithObjectiveValue from, VersionWithObjectiveValue to, String label) {
+		logTransition(from.version(), to.version(), label);
+	}
 }
