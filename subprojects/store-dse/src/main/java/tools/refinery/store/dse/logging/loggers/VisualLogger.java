@@ -371,7 +371,7 @@ public class VisualLogger implements Logger {
 		try (FileWriter writer = new FileWriter(file)) {
 			writer.write(dot);
 		} catch (Exception e) {
-			throw new RuntimeException(e);
+			return false;
 		}
 		return true;
 	}
@@ -388,7 +388,7 @@ public class VisualLogger implements Logger {
 			pwToProcess.write(dot);
 			pwToProcess.close();
 		} catch (IOException e) {
-			throw new RuntimeException(e);
+			return false;
 		}
 		return true;
 	}
