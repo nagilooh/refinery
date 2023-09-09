@@ -7,6 +7,9 @@ package tools.refinery.store.dse;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import tools.refinery.store.dse.logging.LoggingAdapter;
+import tools.refinery.store.dse.logging.loggers.FileFormat;
+import tools.refinery.store.dse.logging.loggers.VisualLogger;
 import tools.refinery.store.dse.modification.DanglingEdges;
 import tools.refinery.store.dse.modification.ModificationAdapter;
 import tools.refinery.store.dse.strategy.BestFirstStoreManager;
@@ -27,8 +30,6 @@ import tools.refinery.store.query.view.KeyOnlyView;
 import tools.refinery.store.representation.Symbol;
 import tools.refinery.store.statecoding.StateCoderAdapter;
 import tools.refinery.store.tuple.Tuple;
-import tools.refinery.visualization.ModelVisualizerAdapter;
-import tools.refinery.visualization.internal.FileFormat;
 
 import java.util.List;
 
@@ -39,7 +40,6 @@ import static tools.refinery.store.dse.transition.actions.ActionLiterals.remove;
 import static tools.refinery.store.query.literal.Literals.not;
 
 class CRAExamplesTest {
-	private static final Symbol<String> name = Symbol.of("Name", 1, String.class);
 	private static final Symbol<Boolean> classElement = Symbol.of("ClassElement", 1);
 	private static final Symbol<Boolean> attribute = Symbol.of("Attribute", 1);
 	private static final Symbol<Boolean> method = Symbol.of("Method", 1);
@@ -114,14 +114,15 @@ class CRAExamplesTest {
 	@Disabled("This test is only for debugging purposes")
 	void craTest() {
 		var store = ModelStore.builder()
-				.symbols(classElement, encapsulates, attribute, method, dataDependency, functionalDependency, name)
+				.symbols(classElement, encapsulates, attribute, method, dataDependency, functionalDependency)
 				.with(ViatraModelQueryAdapter.builder())
-				.with(ModelVisualizerAdapter.builder()
-						.withOutputPath("test_output")
-						.withFormat(FileFormat.DOT)
-						.withFormat(FileFormat.SVG)
-						.saveStates()
-						.saveDesignSpace())
+				.with(LoggingAdapter.builder()
+						.withLoggers(new VisualLogger()
+								.withOutputPath("test_output")
+								.withFormat(FileFormat.DOT)
+								.withFormat(FileFormat.SVG)
+								.saveStates()
+								.saveDesignSpace()))
 				.with(StateCoderAdapter.builder())
 				.with(ModificationAdapter.builder())
 				.with(DesignSpaceExplorationAdapter.builder()
@@ -137,7 +138,6 @@ class CRAExamplesTest {
 		var model = store.createEmptyModel();
 		var queryEngine = model.getAdapter(ModelQueryAdapter.class);
 
-		var nameInterpretation = model.getInterpretation(name);
 		var methodInterpretation = model.getInterpretation(method);
 		var attributeInterpretation = model.getInterpretation(attribute);
 		var dataDependencyInterpretation = model.getInterpretation(dataDependency);
@@ -163,16 +163,6 @@ class CRAExamplesTest {
 		var attribute4Id = attribute4.get(0);
 		var attribute5 = modificationAdapter.createObject();
 		var attribute5Id = attribute5.get(0);
-
-		nameInterpretation.put(method1, "M1");
-		nameInterpretation.put(method2, "M2");
-		nameInterpretation.put(method3, "M3");
-		nameInterpretation.put(method4, "M4");
-		nameInterpretation.put(attribute1, "A1");
-		nameInterpretation.put(attribute2, "A2");
-		nameInterpretation.put(attribute3, "A3");
-		nameInterpretation.put(attribute4, "A4");
-		nameInterpretation.put(attribute5, "A5");
 
 		methodInterpretation.put(method1, true);
 		methodInterpretation.put(method2, true);
@@ -206,6 +196,5 @@ class CRAExamplesTest {
 		bestFirst.startExploration(initialVersion);
 		var resultStore = bestFirst.getSolutionStore();
 		System.out.println("states size: " + resultStore.getSolutions().size());
-		model.getAdapter(ModelVisualizerAdapter.class).visualize(bestFirst.getVisualizationStore());
 	}
 }

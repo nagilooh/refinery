@@ -18,8 +18,6 @@ import tools.refinery.store.dse.transition.statespace.internal.SolutionStoreImpl
 import tools.refinery.store.map.Version;
 import tools.refinery.store.model.ModelStore;
 import tools.refinery.store.statecoding.StateCoderStoreAdapter;
-import tools.refinery.visualization.statespace.VisualizationStore;
-import tools.refinery.visualization.statespace.internal.VisualizationStoreImpl;
 
 import java.util.function.Consumer;
 
@@ -30,7 +28,6 @@ public class BestFirstStoreManager {
 	ActivationStore activationStore;
 	SolutionStore solutionStore;
 	EquivalenceClassStore equivalenceClassStore;
-	VisualizationStore visualizationStore;
 
 	public BestFirstStoreManager(ModelStore modelStore, int maxNumberOfSolutions) {
 		this.modelStore = modelStore;
@@ -47,7 +44,6 @@ public class BestFirstStoreManager {
 				throw new UnsupportedOperationException("This equivalence storage is not prepared to resolve symmetries!");
 			}
 		};
-		visualizationStore = new VisualizationStoreImpl();
 	}
 	public ModelStore getModelStore() {
 		return modelStore;
@@ -69,12 +65,11 @@ public class BestFirstStoreManager {
 		return equivalenceClassStore;
 	}
 
-	public VisualizationStore getVisualizationStore() {
-		return visualizationStore;
-	}
-
 	public void startExploration(Version initial) {
 		BestFirstExplorer bestFirstExplorer = new BestFirstExplorer(this, modelStore.createModelForState(initial), 1);
 		bestFirstExplorer.explore();
+		if (bestFirstExplorer.isVisualizationEnabled) {
+			bestFirstExplorer.loggingAdapter.flush();
+		}
 	}
 }

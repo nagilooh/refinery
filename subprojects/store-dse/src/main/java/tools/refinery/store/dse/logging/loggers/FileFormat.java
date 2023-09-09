@@ -3,7 +3,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package tools.refinery.visualization.internal;
+package tools.refinery.store.dse.logging.loggers;
 
 public enum FileFormat {
 	BMP("bmp"),

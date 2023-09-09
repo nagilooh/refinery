@@ -15,7 +15,6 @@ include(
 		"language-web",
 		"store",
 		"store-dse",
-		"store-dse-visualization",
 		"store-query",
 		"store-query-viatra",
 		"store-reasoning",

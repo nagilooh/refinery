@@ -7,6 +7,9 @@ package tools.refinery.store.dse;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import tools.refinery.store.dse.logging.LoggingAdapter;
+import tools.refinery.store.dse.logging.loggers.FileFormat;
+import tools.refinery.store.dse.logging.loggers.VisualLogger;
 import tools.refinery.store.dse.modification.ModificationAdapter;
 import tools.refinery.store.dse.strategy.BestFirstStoreManager;
 import tools.refinery.store.dse.tests.DummyRandomCriterion;
@@ -20,8 +23,6 @@ import tools.refinery.store.query.view.AnySymbolView;
 import tools.refinery.store.query.view.KeyOnlyView;
 import tools.refinery.store.representation.Symbol;
 import tools.refinery.store.statecoding.StateCoderAdapter;
-import tools.refinery.visualization.ModelVisualizerAdapter;
-import tools.refinery.visualization.internal.FileFormat;
 
 import java.util.List;
 
@@ -63,12 +64,13 @@ class DebugTest {
 		var store = ModelStore.builder()
 				.symbols(classModel, classElement, feature, classes, features)
 				.with(ViatraModelQueryAdapter.builder())
-				.with(ModelVisualizerAdapter.builder()
-						.withOutputPath("test_output")
-						.withFormat(FileFormat.DOT)
-						.withFormat(FileFormat.SVG)
-						.saveStates()
-						.saveDesignSpace())
+				.with(LoggingAdapter.builder()
+						.withLoggers(new VisualLogger()
+								.withOutputPath("test_output")
+								.withFormat(FileFormat.DOT)
+								.withFormat(FileFormat.SVG)
+								.saveStates()
+								.saveDesignSpace()))
 				.with(StateCoderAdapter.builder())
 				.with(ModificationAdapter.builder())
 				.with(DesignSpaceExplorationAdapter.builder()

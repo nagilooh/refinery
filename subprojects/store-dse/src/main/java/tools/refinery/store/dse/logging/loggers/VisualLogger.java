@@ -3,34 +3,39 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package tools.refinery.visualization.internal;
+package tools.refinery.store.dse.logging.loggers;
 
+import org.eclipse.collections.api.factory.primitive.ObjectIntMaps;
+import org.eclipse.collections.api.map.primitive.MutableObjectIntMap;
+import tools.refinery.store.dse.logging.Logger;
+import tools.refinery.store.dse.transition.VersionWithObjectiveValue;
 import tools.refinery.store.map.Version;
 import tools.refinery.store.model.Interpretation;
 import tools.refinery.store.model.Model;
+import tools.refinery.store.model.ModelStore;
 import tools.refinery.store.representation.AnySymbol;
 import tools.refinery.store.representation.TruthValue;
 import tools.refinery.store.tuple.Tuple;
-import tools.refinery.visualization.ModelVisualizerAdapter;
-import tools.refinery.visualization.ModelVisualizerStoreAdapter;
-import tools.refinery.visualization.statespace.VisualizationStore;
 
 import java.io.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
-	private final Model model;
-	private final ModelVisualizerStoreAdapter storeAdapter;
-	private final Map<AnySymbol, Interpretation<?>> allInterpretations;
-	private final StringBuilder designSpaceBuilder = new StringBuilder();
+public class VisualLogger implements Logger {
+
+	private String outputPath;
+	private boolean saveDesignSpace = false;
+	private boolean saveStates = false;
+	private final Set<FileFormat> formats = new LinkedHashSet<>();
+
 	private final Map<Version, Integer> states = new HashMap<>();
+	private final MutableObjectIntMap<Version> depths = ObjectIntMaps.mutable.empty();
 	private int transitionCounter = 0;
 	private Integer numberOfStates = 0;
-	private final String outputPath;
-	private final Set<FileFormat> formats;
-	private final boolean renderDesignSpace;
-	private final boolean renderStates;
+	private final StringBuilder designSpaceBuilder = new StringBuilder();
+	private ModelStore modelStore;
+	private Model model;
+	private final Map<AnySymbol, Interpretation<?>> allInterpretations = new HashMap<>();
 
 	private static final Map<Object, String> truthValueToDot = Map.of(
 			TruthValue.TRUE, "1",
@@ -41,19 +46,109 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 			false, "0"
 	);
 
-	public ModelVisualizerAdapterImpl(Model model, ModelVisualizerStoreAdapter storeAdapter) {
-		this.model = model;
-		this.storeAdapter = storeAdapter;
-		this.outputPath = storeAdapter.getOutputPath();
-		this.formats = storeAdapter.getFormats();
-		if (formats.isEmpty()) {
-			formats.add(FileFormat.SVG);
-		}
-		this.renderDesignSpace = storeAdapter.isRenderDesignSpace();
-		this.renderStates = storeAdapter.isRenderStates();
 
-		this.allInterpretations = new HashMap<>();
-		for (var symbol : storeAdapter.getStore().getSymbols()) {
+	public VisualLogger withOutputPath(String outputPath) {
+		this.outputPath = outputPath;
+		return this;
+	}
+	public VisualLogger withFormat(FileFormat format) {
+		this.formats.add(format);
+		return this;
+	}
+	public VisualLogger saveDesignSpace() {
+		this.saveDesignSpace = true;
+		return this;
+	}
+	public VisualLogger saveStates() {
+		this.saveStates = true;
+		return this;
+	}
+
+	@Override
+	public void logState(Version state) {
+		logState(state, null);
+	}
+
+	@Override
+	public void logState(Version state, String label) {
+		if (states.containsKey(state)) {
+			return;
+		}
+		states.put(state, numberOfStates++);
+		designSpaceBuilder.append(states.get(state));
+		designSpaceBuilder.append(" [label = \"").append(states.get(state));
+		if (label != null) {
+			designSpaceBuilder.append(" (");
+			designSpaceBuilder.append(label);
+			designSpaceBuilder.append(")");
+		}
+		designSpaceBuilder.append("\"\n").append("URL=\"./").append(states.get(state)).append(".svg\"]\n");
+	}
+
+	@Override
+	public void logState(VersionWithObjectiveValue state) {
+		logState(state, null);
+	}
+
+	@Override
+	public void logState(VersionWithObjectiveValue stateWithObjective, String label) {
+		var state = stateWithObjective.version();
+		var objectiveValue = stateWithObjective.objectiveValue();
+
+		if (label != null) {
+			logState(state, "(" + objectiveValue + ") " + label);
+		} else {
+			logState(state, objectiveValue.toString());
+		}
+
+	}
+
+	@Override
+	public void logSolution(Version state) {
+		designSpaceBuilder.append(states.get(state)).append(" [peripheries = 2]\n");
+	}
+
+	@Override
+	public void logSolution(VersionWithObjectiveValue state) {
+		logSolution(state.version());
+	}
+
+	@Override
+	public void logTransition(Version from, Version to) {
+		logTransition(from, to, null);
+	}
+
+	@Override
+	public void logTransition(Version from, Version to, String label) {
+		var fromDepth = depths.getIfAbsentPut(from, 0);
+		if (fromDepth == 0) {
+			depths.put(from, 0);
+		}
+		var toDepth = depths.getIfAbsent(to, fromDepth + 1);
+		depths.put(to, Math.min(toDepth, fromDepth + 1));
+		designSpaceBuilder.append(states.get(from)).append(" -> ").append(states.get(to));
+		designSpaceBuilder.append(" [label=\"");
+		if (label != null) {
+			designSpaceBuilder.append(transitionCounter++).append(": ").append(label);
+		}
+		designSpaceBuilder.append("\"]\n");
+	}
+
+	@Override
+	public void logTransition(VersionWithObjectiveValue from, VersionWithObjectiveValue to) {
+		logTransition(from, to, null);
+	}
+
+	@Override
+	public void logTransition(VersionWithObjectiveValue from, VersionWithObjectiveValue to, String label) {
+		logTransition(from.version(), to.version(), label);
+	}
+
+	@Override
+	public void init(ModelStore store) {
+		this.modelStore = store;
+		model = modelStore.createEmptyModel();
+		for (var symbol : modelStore.getSymbols()) {
 			var arity = symbol.arity();
 			if (arity < 1 || arity > 2) {
 				continue;
@@ -61,28 +156,42 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 			var interpretation = (Interpretation<?>) model.getInterpretation(symbol);
 			allInterpretations.put(symbol, interpretation);
 		}
-		designSpaceBuilder.append("digraph designSpace {\n");
-		designSpaceBuilder.append("""
-				nodesep=0
-				ranksep=5
-				node[
-				\tstyle=filled
-				\tfillcolor=white
-				]
-				""");
 	}
 
 	@Override
-	public Model getModel() {
-		return model;
+	public void flush() {
+		File filePath = new File(outputPath);
+		filePath.mkdirs();
+		if (saveStates) {
+			for (var entry : states.entrySet()) {
+				var stateId = entry.getValue();
+				var stateDot = createDotForModelState(entry.getKey());
+				for (var format : formats) {
+					if (format == FileFormat.DOT) {
+						saveDot(stateDot, outputPath + "/" + stateId + ".dot");
+					}
+					else {
+						renderDot(stateDot, format, outputPath + "/" + stateId + "." + format.getFormat());
+					}
+				}
+			}
+		}
+		if (saveDesignSpace) {
+			var designSpaceDot = buildDesignSpaceDot();
+			for (var format : formats) {
+				if (format == FileFormat.DOT) {
+					saveDot(designSpaceDot, outputPath + "/designSpace.dot");
+				}
+				else {
+					renderDot(designSpaceDot, format, outputPath + "/designSpace." + format.getFormat());
+				}
+			}
+		}
 	}
 
-	@Override
-	public ModelVisualizerStoreAdapter getStoreAdapter() {
-		return storeAdapter;
-	}
+	private String createDotForModelState(Version version) {
+		model.restore(version);
 
-	private String createDotForCurrentModelState() {
 
 		var unaryTupleToInterpretationsMap = new HashMap<Tuple, LinkedHashSet<Interpretation<?>>>();
 
@@ -221,6 +330,7 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 	}
 
 	private Integer[] typeColor(String name) {
+		@SuppressWarnings("squid:S2245")
 		var random = new Random(name.hashCode());
 		return new Integer[] { random.nextInt(128) + 128, random.nextInt(128) + 128, random.nextInt(128) + 128 };
 	}
@@ -242,14 +352,6 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 		};
 	}
 
-	private String createDotForModelState(Version version) {
-		var currentVersion = model.getState();
-		model.restore(version);
-		var graph = createDotForCurrentModelState();
-		model.restore(currentVersion);
-		return graph;
-	}
-
 	private boolean saveDot(String dot, String filePath) {
 		File file = new File(filePath);
 		file.getParentFile().mkdirs();
@@ -261,10 +363,6 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 			return false;
 		}
 		return true;
-	}
-
-	private boolean renderDot(String dot, String filePath) {
-		return renderDot(dot, FileFormat.SVG, filePath);
 	}
 
 	private boolean renderDot(String dot, FileFormat format, String filePath) {
@@ -283,52 +381,14 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 	}
 
 	private String buildDesignSpaceDot() {
-		designSpaceBuilder.append("}");
-		return designSpaceBuilder.toString();
-	}
-
-	private boolean saveDesignSpace(String path) {
-		saveDot(buildDesignSpaceDot(), path + "/designSpace.dot");
-		for (var entry : states.entrySet()) {
-			saveDot(createDotForModelState(entry.getKey()), path + "/" + entry.getValue() + ".dot");
-		}
-		return true;
-	}
-
-	private void renderDesignSpace(String path, Set<FileFormat> formats) {
-		File filePath = new File(path);
-		filePath.mkdirs();
-		if (renderStates) {
-			for (var entry : states.entrySet()) {
-				var stateId = entry.getValue();
-				var stateDot = createDotForModelState(entry.getKey());
-				for (var format : formats) {
-					if (format == FileFormat.DOT) {
-						saveDot(stateDot, path + "/" + stateId + ".dot");
-					}
-					else {
-						renderDot(stateDot, format, path + "/" + stateId + "." + format.getFormat());
-					}
-				}
-			}
-		}
-		if (renderDesignSpace) {
-			var designSpaceDot = buildDesignSpaceDot();
-			for (var format : formats) {
-				if (format == FileFormat.DOT) {
-					saveDot(designSpaceDot, path + "/designSpace.dot");
-				}
-				else {
-					renderDot(designSpaceDot, format, path + "/designSpace." + format.getFormat());
-				}
-			}
-		}
-	}
-
-	@Override
-	public void visualize(VisualizationStore visualizationStore) {
-		this.designSpaceBuilder.append(visualizationStore.getDesignSpaceStringBuilder());
-		this.states.putAll(visualizationStore.getStates());
-		renderDesignSpace(outputPath, formats);
+        return """
+				digraph designSpace {
+				nodesep=0
+				ranksep=5
+				node[
+				\tstyle=filled
+				\tfillcolor=white
+				]
+				""" + designSpaceBuilder + "}";
 	}
 }

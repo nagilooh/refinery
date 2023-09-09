@@ -1,14 +1,15 @@
 package tools.refinery.store.dse;
 
-import org.eclipse.collections.api.collection.primitive.MutableIntCollection;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import tools.refinery.store.dse.logging.LoggingAdapter;
+import tools.refinery.store.dse.logging.loggers.FileFormat;
+import tools.refinery.store.dse.logging.loggers.VisualLogger;
 import tools.refinery.store.dse.modification.ModificationAdapter;
 import tools.refinery.store.dse.strategy.BestFirstStoreManager;
 import tools.refinery.store.dse.tests.DummyRandomObjective;
 import tools.refinery.store.dse.transition.DesignSpaceExplorationAdapter;
 import tools.refinery.store.dse.transition.Rule;
-import tools.refinery.store.dse.transition.objectives.AndCriterion;
 import tools.refinery.store.dse.transition.objectives.Criteria;
 import tools.refinery.store.model.ModelStore;
 import tools.refinery.store.query.ModelQueryAdapter;
@@ -20,11 +21,8 @@ import tools.refinery.store.query.view.AnySymbolView;
 import tools.refinery.store.query.view.KeyOnlyView;
 import tools.refinery.store.representation.Symbol;
 import tools.refinery.store.statecoding.StateCoderAdapter;
-import tools.refinery.visualization.ModelVisualizerAdapter;
-import tools.refinery.visualization.internal.FileFormat;
 
 import java.util.List;
-import java.util.TreeMap;
 
 import static tools.refinery.store.dse.modification.actions.ModificationActionLiterals.create;
 import static tools.refinery.store.dse.transition.actions.ActionLiterals.add;
@@ -78,25 +76,24 @@ public class FileSystemExampleTest {
 
 		var moreThan2Deep = Query.of("moreThan3Deep", (builder, tooDeep) -> builder
 				.clause((folder0, folder1, folder2) -> List.of(
-								containsView.call(folder0, folder1),
-								containsView.call(folder1, folder2),
-								containsView.call(folder2, tooDeep),
-								folder0.notEquivalent(folder1),
-								folder0.notEquivalent(folder2),
-								folder1.notEquivalent(folder2)
-						)
-				));
+						containsView.call(folder0, folder1),
+						containsView.call(folder1, folder2),
+						containsView.call(folder2, tooDeep),
+						folder0.notEquivalent(folder1),
+						folder0.notEquivalent(folder2),
+						folder1.notEquivalent(folder2)
+				)));
 
 		var store = ModelStore.builder()
 				.symbols(folder, file, contains)
 				.with(ViatraModelQueryAdapter.builder())
-				.with(ModelVisualizerAdapter.builder()
-						.withOutputPath("D:/temp/dse/test_output_file_system")
-						.withFormat(FileFormat.DOT)
-						.withFormat(FileFormat.SVG)
-						.saveStates()
-						.saveDesignSpace()
-				)
+				.with(LoggingAdapter.builder()
+						.withLoggers(new VisualLogger()
+								.withOutputPath("test_output")
+								.withFormat(FileFormat.DOT)
+								.withFormat(FileFormat.SVG)
+								.saveStates()
+								.saveDesignSpace()))
 				.with(StateCoderAdapter.builder())
 				.with(ModificationAdapter.builder())
 				.with(DesignSpaceExplorationAdapter.builder()
@@ -104,8 +101,7 @@ public class FileSystemExampleTest {
 						.objectives(new DummyRandomObjective())
 						.accept(Criteria.whenNoMatch(emptyFolder))
 						.exclude(Criteria.or(Criteria.whenHasMatch(moreThan2Deep),
-								Criteria.whenHasMatch(moreThan3Contained)
-						))
+								Criteria.whenHasMatch(moreThan3Contained)))
 				)
 				.build();
 
