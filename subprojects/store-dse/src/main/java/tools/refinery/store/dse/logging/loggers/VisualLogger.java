@@ -24,8 +24,8 @@ import java.util.stream.Collectors;
 public class VisualLogger implements Logger {
 
 	private String outputPath;
-	private boolean saveDesignSpace = false;
-	private boolean saveStates = false;
+	private boolean isSaveDesignSpace = false;
+	private boolean isSaveStates = false;
 	private final Set<FileFormat> formats = new LinkedHashSet<>();
 
 	private final Map<Version, Integer> states = new HashMap<>();
@@ -33,34 +33,43 @@ public class VisualLogger implements Logger {
 	private int transitionCounter = 0;
 	private Integer numberOfStates = 0;
 	private final StringBuilder designSpaceBuilder = new StringBuilder();
-	private ModelStore modelStore;
+
 	private Model model;
 	private final Map<AnySymbol, Interpretation<?>> allInterpretations = new HashMap<>();
 
 	private static final Map<Object, String> truthValueToDot = Map.of(
 			TruthValue.TRUE, "1",
 			TruthValue.FALSE, "0",
-			TruthValue.UNKNOWN, "½",
+			TruthValue.UNKNOWN, "U",
 			TruthValue.ERROR, "E",
 			true, "1",
 			false, "0"
 	);
 
+	private String executablePath;
 
 	public VisualLogger withOutputPath(String outputPath) {
 		this.outputPath = outputPath;
 		return this;
 	}
+
 	public VisualLogger withFormat(FileFormat format) {
 		this.formats.add(format);
 		return this;
 	}
-	public VisualLogger saveDesignSpace() {
-		this.saveDesignSpace = true;
+
+	public VisualLogger withDotExecutable(String executablePath) {
+		this.executablePath = executablePath;
 		return this;
 	}
-	public VisualLogger saveStates() {
-		this.saveStates = true;
+
+	public VisualLogger setSaveDesignSpace() {
+		this.isSaveDesignSpace = true;
+		return this;
+	}
+
+	public VisualLogger setSaveStates() {
+		this.isSaveStates = true;
 		return this;
 	}
 
@@ -146,7 +155,8 @@ public class VisualLogger implements Logger {
 
 	@Override
 	public void init(ModelStore store) {
-		this.modelStore = store;
+  		ModelStore modelStore;
+		modelStore = store;
 		model = modelStore.createEmptyModel();
 		for (var symbol : modelStore.getSymbols()) {
 			var arity = symbol.arity();
@@ -156,35 +166,67 @@ public class VisualLogger implements Logger {
 			var interpretation = (Interpretation<?>) model.getInterpretation(symbol);
 			allInterpretations.put(symbol, interpretation);
 		}
+		if (isDotRequired()) {
+			if (executablePath == null) {
+				throw new IllegalStateException("Dot executable path is required for output formats other than .DOT");
+			}
+
+			try {
+				Process process = new ProcessBuilder(executablePath).start();
+				OutputStream osToProcess = process.getOutputStream();
+				PrintWriter pwToProcess = new PrintWriter(osToProcess);
+				pwToProcess.close();
+			} catch (IOException e) {
+				throw new IllegalStateException("Could not find dot executable at " + executablePath);
+			}
+		}
+	}
+
+	private boolean isDotRequired() {
+		if (formats.isEmpty()) {
+			return false;
+		}
+		if (formats.size() == 1) {
+			return !formats.contains(FileFormat.DOT);
+		}
+		return true;
 	}
 
 	@Override
 	public void flush() {
 		File filePath = new File(outputPath);
 		filePath.mkdirs();
-		if (saveStates) {
-			for (var entry : states.entrySet()) {
-				var stateId = entry.getValue();
-				var stateDot = createDotForModelState(entry.getKey());
-				for (var format : formats) {
-					if (format == FileFormat.DOT) {
-						saveDot(stateDot, outputPath + "/" + stateId + ".dot");
-					}
-					else {
-						renderDot(stateDot, format, outputPath + "/" + stateId + "." + format.getFormat());
-					}
+		if (isSaveStates) {
+			saveStates();
+		}
+		if (isSaveDesignSpace) {
+			saveDesignSpace();
+		}
+	}
+
+	private void saveStates()  {
+		for (var entry : states.entrySet()) {
+			var stateId = entry.getValue();
+			var stateDot = createDotForModelState(entry.getKey());
+			for (var format : formats) {
+				if (format == FileFormat.DOT) {
+					saveDot(stateDot, outputPath + "/" + stateId + ".dot");
+				}
+				else {
+					renderDot(stateDot, format, outputPath + "/" + stateId + "." + format.getFormat());
 				}
 			}
 		}
-		if (saveDesignSpace) {
-			var designSpaceDot = buildDesignSpaceDot();
-			for (var format : formats) {
-				if (format == FileFormat.DOT) {
-					saveDot(designSpaceDot, outputPath + "/designSpace.dot");
-				}
-				else {
-					renderDot(designSpaceDot, format, outputPath + "/designSpace." + format.getFormat());
-				}
+	}
+
+	private void saveDesignSpace()  {
+		var designSpaceDot = buildDesignSpaceDot();
+		for (var format : formats) {
+			if (format == FileFormat.DOT) {
+				saveDot(designSpaceDot, outputPath + "/designSpace.dot");
+			}
+			else {
+				renderDot(designSpaceDot, format, outputPath + "/designSpace." + format.getFormat());
 			}
 		}
 	}
@@ -354,28 +396,28 @@ public class VisualLogger implements Logger {
 
 	private boolean saveDot(String dot, String filePath) {
 		File file = new File(filePath);
-		file.getParentFile().mkdirs();
 
 		try (FileWriter writer = new FileWriter(file)) {
 			writer.write(dot);
 		} catch (Exception e) {
-			e.printStackTrace();
-			return false;
+			throw new RuntimeException(e);
 		}
 		return true;
 	}
 
 	private boolean renderDot(String dot, FileFormat format, String filePath) {
+		if (isDotRequired() && executablePath == null) {
+			throw new IllegalStateException("Dot executable path is required for output formats other than .DOT");
+		}
 		try {
-			Process process = new ProcessBuilder("dot", "-T" + format.getFormat(), "-o", filePath).start();
+			Process process = new ProcessBuilder(executablePath, "-T" + format.getFormat(), "-o", filePath).start();
 
 			OutputStream osToProcess = process.getOutputStream();
 			PrintWriter pwToProcess = new PrintWriter(osToProcess);
 			pwToProcess.write(dot);
 			pwToProcess.close();
 		} catch (IOException e) {
-			e.printStackTrace();
-			return false;
+			throw new RuntimeException(e);
 		}
 		return true;
 	}
@@ -384,7 +426,7 @@ public class VisualLogger implements Logger {
         return """
 				digraph designSpace {
 				nodesep=0
-				ranksep=5
+				ranksep=0
 				node[
 				\tstyle=filled
 				\tfillcolor=white
