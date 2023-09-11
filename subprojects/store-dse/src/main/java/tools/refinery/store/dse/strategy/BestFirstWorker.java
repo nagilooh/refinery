@@ -25,7 +25,7 @@ public class BestFirstWorker {
 	final DesignSpaceExplorationAdapter explorationAdapter;
 	final ModelQueryAdapter queryAdapter;
 	final LoggingAdapter loggingAdapter;
-	final boolean isVisualizationEnabled;
+	final boolean isLoggingEnabled;
 
 	public BestFirstWorker(BestFirstStoreManager storeManager, Model model) {
 		this.storeManager = storeManager;
@@ -37,7 +37,7 @@ public class BestFirstWorker {
 		activationStoreWorker = new ActivationStoreWorker(storeManager.getActivationStore(),
 				explorationAdapter.getTransformations());
 		loggingAdapter = model.tryGetAdapter(LoggingAdapter.class).orElse(null);
-		isVisualizationEnabled = loggingAdapter != null;
+		isLoggingEnabled = loggingAdapter != null;
 	}
 
 	protected VersionWithObjectiveValue last = null;
@@ -67,7 +67,7 @@ public class BestFirstWorker {
 				storeManager.solutionStore.submit(versionWithObjectiveValue);
 			}
 
-			if (isVisualizationEnabled) {
+			if (isLoggingEnabled) {
 				loggingAdapter.logState(last.version());
 				if (accepted) {
 					loggingAdapter.logSolution(last.version());
@@ -127,11 +127,11 @@ public class BestFirstWorker {
 
 			if (visitResult.successfulVisit()) {
 				Version oldVersion = null;
-				if (isVisualizationEnabled) {
+				if (isLoggingEnabled) {
 					oldVersion = last.version();
 				}
 				var submitResult = submit();
-				if (isVisualizationEnabled && submitResult.newVersion() != null) {
+				if (isLoggingEnabled && submitResult.newVersion() != null) {
 					var newVersion = submitResult.newVersion().version();
 					loggingAdapter.logTransition(oldVersion, newVersion,
 							"fire: " + visitResult.transformation() + ", " + visitResult.activation());

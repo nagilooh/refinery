@@ -387,10 +387,11 @@ public class VisualLogger implements Logger {
 			PrintWriter pwToProcess = new PrintWriter(osToProcess);
 			pwToProcess.write(dot);
 			pwToProcess.close();
-		} catch (IOException e) {
+			process.waitFor();
+		} catch (IOException | InterruptedException e) {
 			return false;
 		}
-		return true;
+        return true;
 	}
 
 	private String buildDesignSpaceDot() {

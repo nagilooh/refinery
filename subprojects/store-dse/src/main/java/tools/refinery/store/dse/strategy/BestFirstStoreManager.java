@@ -68,7 +68,7 @@ public class BestFirstStoreManager {
 	public void startExploration(Version initial) {
 		BestFirstExplorer bestFirstExplorer = new BestFirstExplorer(this, modelStore.createModelForState(initial), 1);
 		bestFirstExplorer.explore();
-		if (bestFirstExplorer.isVisualizationEnabled) {
+		if (bestFirstExplorer.isLoggingEnabled) {
 			bestFirstExplorer.loggingAdapter.flush();
 		}
 	}
