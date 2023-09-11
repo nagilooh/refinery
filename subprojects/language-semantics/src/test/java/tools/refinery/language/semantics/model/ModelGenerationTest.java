@@ -291,12 +291,170 @@ class ModelGenerationTest {
 
 		var storeBuilder = ModelStore.builder()
 				.with(ViatraModelQueryAdapter.builder())
-//				.with(ModelVisualizerAdapter.builder()
-//						.withOutputPath("test_output")
-//						.withFormat(FileFormat.DOT)
-//						.withFormat(FileFormat.SVG)
-//						.saveStates()
-//						.saveDesignSpace())
+				.with(LoggingAdapter.builder()
+						.withLoggers(
+								new VisualLogger()
+										.withOutputPath("test_output")
+										.withFormat(FileFormat.DOT)
+										.withFormat(FileFormat.SVG)
+										.withDotExecutable("C:/Program Files/Graphviz/bin/dot.exe")
+										.setSaveStates()
+										.setSaveDesignSpace()))
+				.with(PropagationAdapter.builder())
+				.with(StateCoderAdapter.builder())
+				.with(DesignSpaceExplorationAdapter.builder())
+				.with(ReasoningAdapter.builder());
+
+		var modelSeed = modelInitializer.createModel(problem, storeBuilder);
+
+		var store = storeBuilder.build();
+
+		var initialModel = store.getAdapter(ReasoningStoreAdapter.class).createInitialModel(modelSeed);
+
+		var initialVersion = initialModel.commit();
+
+		var bestFirst = new BestFirstStoreManager(store, 1);
+		bestFirst.startExploration(initialVersion);
+		var resultStore = bestFirst.getSolutionStore();
+		System.out.println("states size: " + resultStore.getSolutions().size());
+
+		var model = store.createModelForState(resultStore.getSolutions().get(0).version());
+		var interpretation = model.getAdapter(ReasoningAdapter.class)
+				.getPartialInterpretation(Concreteness.CANDIDATE, ReasoningAdapter.EXISTS_SYMBOL);
+		var cursor = interpretation.getAll();
+		int max = -1;
+		var types = new LinkedHashMap<PartialRelation, Integer>();
+		var typeInterpretation = model.getInterpretation(TypeHierarchyTranslator.TYPE_SYMBOL);
+		while (cursor.move()) {
+			max = Math.max(max, cursor.getKey().get(0));
+			var type = typeInterpretation.get(cursor.getKey());
+			if (type != null) {
+				types.compute(type.candidateType(), (ignoredKey, oldValue) -> oldValue == null ? 1 : oldValue + 1);
+			}
+		}
+		System.out.println("Model size: " + (max + 1));
+		System.out.println(types);
+//		initialModel.getAdapter(ModelVisualizerAdapter.class).visualize(bestFirst.getVisualizationStore());
+	}
+
+	@Test
+	void famTest() {
+		var parsedProblem = parseHelper.parse("""
+				% Metamodel
+				class FunctionalArchitectureModel {
+				    contains FunctionalElement[] rootElements
+				}
+
+				abstract class FunctionalElement {
+				    container Function[0..1] parent opposite subElements % I think this is unnecessary
+				    contains FunctionalInterface[0..1] interface opposite element
+				}
+
+				class Function extends FunctionalElement{
+				    contains FunctionalElement[] subElements opposite parent
+				}
+
+				class FAMTerminator {
+				    container FunctionalData[0..1] data opposite terminator
+				}
+
+				abstract class FunctionalData {
+				    contains FAMTerminator[0..1] terminator opposite FAMTerminator::data
+				    container FunctionalInterface[0..1] interface opposite FunctionalInterface::data
+				}
+
+				class FunctionalInterface {
+				    container FunctionalElement[0..1] element opposite FunctionalElement::interface
+				    contains FunctionalData[] data opposite FunctionalData::interface
+				}
+
+				class FunctionalInput extends FunctionalData {
+				    InformationLink[] incomingLinks opposite to
+				}
+
+				class FunctionalOutput extends FunctionalData {
+				    contains InformationLink[] outgoingLinks opposite from
+				}
+
+				class InformationLink {
+				    FunctionalInput[0..1] to opposite incomingLinks
+				    container FunctionalOutput[0..1] from opposite outgoingLinks
+				}
+
+				enum FunctionType {
+				    Root,
+				    Leaf,
+				    Intermediate
+				}
+
+				pred type(Function this, FunctionType target) <->
+				    rootElements(_model, this),
+				    target == Root;
+				    !parent(_child, this),
+				    !rootElements(_model, this),
+				    target == Leaf;
+				    parent(this, _par),
+				    parent(_child, this),
+				    target == Intermediate.
+
+				% Constraints
+				error terminatorAndInformation(FAMTerminator T, InformationLink I) <->
+				    outgoingLinks(Out, I),
+				    terminator(Out, T);
+				    to(I, In),
+				    terminator(In, T).
+
+				pred hasRoot(FunctionalArchitectureModel fam) <->
+				    rootElements(fam, root),
+				    type(root, Root).
+
+				pred hasInt(FunctionalArchitectureModel fam) <->
+				    rootElements(fam, root),
+				    subElements(root, interm),
+				    type(interm, Intermediate).
+
+				pred hasLeaf(FunctionalArchitectureModel fam) <->
+				    rootElements(fam, root),
+				    subElements+(root, leaf),
+				    type(leaf, Leaf).
+
+				error noRoot(FunctionalArchitectureModel fam) <->
+				    !hasRoot(fam).
+
+				error noInt(FunctionalArchitectureModel fam) <->
+				    !hasInt(fam).
+
+				error noLeaf(FunctionalArchitectureModel fam) <->
+				    !hasLeaf(fam).
+
+				% rootElements(fam, f1).
+				% subElements(f1, f2).
+				% subElements(f2, f3).
+				% !subElements(f3, *).
+
+				% Instance model
+				FunctionalArchitectureModel(fam).
+
+				% Scope
+				scope FunctionalArchitectureModel = 1, node = 10..20, InformationLink += 1.
+				""");
+		assertThat(parsedProblem.errors(), empty());
+		var problem = parsedProblem.problem();
+
+		var storeBuilder = ModelStore.builder()
+				.with(ViatraModelQueryAdapter.builder())
+				.with(LoggingAdapter.builder()
+						.withLoggers(
+								new VisualLogger()
+										.withOutputPath("test_output")
+										.withFormat(FileFormat.DOT)
+										.withFormat(FileFormat.SVG)
+										.withDotExecutable("C:/Program Files/Graphviz/bin/dot.exe")
+										.setSaveStates()
+										.setSaveDesignSpace(),
+								new ConsoleLogger()
+										.setLevel(java.util.logging.Level.FINE)
+				))
 				.with(PropagationAdapter.builder())
 				.with(StateCoderAdapter.builder())
 				.with(DesignSpaceExplorationAdapter.builder())
