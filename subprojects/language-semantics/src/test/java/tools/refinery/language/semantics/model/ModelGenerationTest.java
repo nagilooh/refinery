@@ -14,6 +14,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import tools.refinery.language.ProblemStandaloneSetup;
 import tools.refinery.language.model.tests.utils.ProblemParseHelper;
 import tools.refinery.language.tests.ProblemInjectorProvider;
+import tools.refinery.store.dse.logging.LoggingAdapter;
+import tools.refinery.store.dse.logging.loggers.ConsoleLogger;
+import tools.refinery.store.dse.logging.loggers.FileFormat;
+import tools.refinery.store.dse.logging.loggers.VisualLogger;
 import tools.refinery.store.dse.propagation.PropagationAdapter;
 import tools.refinery.store.dse.strategy.BestFirstStoreManager;
 import tools.refinery.store.dse.transition.DesignSpaceExplorationAdapter;
@@ -25,8 +29,6 @@ import tools.refinery.store.reasoning.literal.Concreteness;
 import tools.refinery.store.reasoning.representation.PartialRelation;
 import tools.refinery.store.reasoning.translator.typehierarchy.TypeHierarchyTranslator;
 import tools.refinery.store.statecoding.StateCoderAdapter;
-import tools.refinery.visualization.ModelVisualizerAdapter;
-import tools.refinery.visualization.internal.FileFormat;
 
 import java.util.LinkedHashMap;
 
@@ -82,12 +84,15 @@ class ModelGenerationTest {
 
 		var storeBuilder = ModelStore.builder()
 				.with(ViatraModelQueryAdapter.builder())
-				.with(ModelVisualizerAdapter.builder()
-						.withOutputPath("test_output")
-						.withFormat(FileFormat.DOT)
-						.withFormat(FileFormat.SVG)
-//						.saveStates()
-						.saveDesignSpace())
+				.with(LoggingAdapter.builder()
+						.withLoggers(
+								new VisualLogger()
+										.withOutputPath("test_output")
+										.withFormat(FileFormat.DOT)
+										.withFormat(FileFormat.SVG)
+										.withDotExecutable("C:/Program Files/Graphviz/bin/dot.exe")
+//										.setSaveStates()
+										.setSaveDesignSpace()))
 				.with(PropagationAdapter.builder())
 				.with(StateCoderAdapter.builder())
 				.with(DesignSpaceExplorationAdapter.builder())
@@ -216,12 +221,15 @@ class ModelGenerationTest {
 
 		var storeBuilder = ModelStore.builder()
 				.with(ViatraModelQueryAdapter.builder())
-//				.with(ModelVisualizerAdapter.builder()
-//						.withOutputPath("test_output")
-//						.withFormat(FileFormat.DOT)
-//						.withFormat(FileFormat.SVG)
-//						.saveStates()
-//						.saveDesignSpace())
+//				.with(LoggingAdapter.builder()
+//						.withLoggers(
+//								new VisualLogger()
+//										.withOutputPath("test_output")
+//										.withFormat(FileFormat.DOT)
+//										.withFormat(FileFormat.SVG)
+//										.withDotExecutable("C:/Program Files/Graphviz/bin/dot.exe")
+//										.setSaveStates()
+//										.setSaveDesignSpace()))
 				.with(PropagationAdapter.builder())
 				.with(StateCoderAdapter.builder())
 				.with(DesignSpaceExplorationAdapter.builder())
