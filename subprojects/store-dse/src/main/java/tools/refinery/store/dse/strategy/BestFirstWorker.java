@@ -72,9 +72,9 @@ public class BestFirstWorker {
 			}
 
 			if (isLoggingEnabled) {
-				loggingAdapter.logState(last.version());
+				loggingAdapter.logState(last);
 				if (accepted) {
-					loggingAdapter.logSolution(last.version());
+					loggingAdapter.logSolution(last);
 				}
 			}
 
@@ -139,13 +139,13 @@ public class BestFirstWorker {
 		}
 		queryAdapter.flushChanges();
 
-		Version oldVersion = null;
+		VersionWithObjectiveValue oldVersion = null;
 		if (isLoggingEnabled) {
-			oldVersion = last.version();
+			oldVersion = last;
 		}
 		var submitResult = submit();
 		if (isLoggingEnabled && submitResult.newVersion() != null) {
-			var newVersion = submitResult.newVersion().version();
+			var newVersion = submitResult.newVersion();
 			loggingAdapter.logTransition(oldVersion, newVersion,
 					"fire: " + visitResult.transformation() + ", " + visitResult.activation());
 		}

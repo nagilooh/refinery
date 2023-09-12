@@ -19,6 +19,11 @@ public interface ObjectiveValues {
 		public int getSize() {
 			return 1;
 		}
+
+		@Override
+		public String toString() {
+			return String.valueOf(value0);
+		}
 	}
 	public record ObjectiveValue2(double value0, double value1) implements ObjectiveValue {
 		@Override

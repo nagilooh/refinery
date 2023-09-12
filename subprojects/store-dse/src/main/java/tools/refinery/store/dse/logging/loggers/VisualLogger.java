@@ -8,6 +8,7 @@ package tools.refinery.store.dse.logging.loggers;
 import org.eclipse.collections.api.factory.primitive.ObjectIntMaps;
 import org.eclipse.collections.api.map.primitive.MutableObjectIntMap;
 import tools.refinery.store.dse.logging.Logger;
+import tools.refinery.store.dse.transition.ObjectiveValue;
 import tools.refinery.store.dse.transition.VersionWithObjectiveValue;
 import tools.refinery.store.map.Version;
 import tools.refinery.store.model.Interpretation;
@@ -36,6 +37,7 @@ public class VisualLogger implements Logger {
 
 	private Model model;
 	private final Map<AnySymbol, Interpretation<?>> allInterpretations = new HashMap<>();
+	private double maxObjectiveValue = 0;
 
 	private static final Map<Object, String> truthValueToDot = Map.of(
 			TruthValue.TRUE, "1",
@@ -126,6 +128,10 @@ public class VisualLogger implements Logger {
 
 	@Override
 	public void logState(Version state, String label) {
+		logState(state, label, "0.0 0.0 1.0");
+	}
+
+	private void logState(Version state, String label, String color) {
 		if (states.containsKey(state)) {
 			return;
 		}
@@ -138,18 +144,28 @@ public class VisualLogger implements Logger {
 			designSpaceBuilder.append(label);
 			designSpaceBuilder.append(")");
 		}
-		designSpaceBuilder.append("\"\n").append("URL=\"./").append(stateId).append(".svg\"]\n");
+		designSpaceBuilder.append("\"\n").append("URL=\"./").append(stateId).append(".svg\" ");
+		if (color != null) {
+			designSpaceBuilder.append("fillcolor=\"").append(color);
+		}
+		designSpaceBuilder.append("\"]\n");
+	}
+
+	private String getFillColor(ObjectiveValue objectiveValue) {
+		var hue = (maxObjectiveValue - objectiveValue.get(0)) / (3.0 * maxObjectiveValue);
+		return hue + " 1.0 1.0";
 	}
 
 	@Override
 	public void logState(VersionWithObjectiveValue stateWithObjective, String label) {
 		var state = stateWithObjective.version();
 		var objectiveValue = stateWithObjective.objectiveValue();
+		maxObjectiveValue = Math.max(maxObjectiveValue, objectiveValue.get(0));
 
 		if (label != null) {
-			logState(state, "(" + objectiveValue + ") " + label);
+			logState(state, "(" + objectiveValue + ") " + label, getFillColor(objectiveValue));
 		} else {
-			logState(state, objectiveValue.toString());
+			logState(state, objectiveValue.toString(), getFillColor(objectiveValue));
 		}
 
 	}
@@ -168,11 +184,12 @@ public class VisualLogger implements Logger {
 		var toDepth = depths.getIfAbsent(to, fromDepth + 1);
 		depths.put(to, Math.min(toDepth, fromDepth + 1));
 		designSpaceBuilder.append(states.get(from)).append(" -> ").append(states.get(to));
-		designSpaceBuilder.append(" [label=\"");
 		if (label != null) {
+			designSpaceBuilder.append(" [label=\"");
 			designSpaceBuilder.append(transitionCounter++).append(": ").append(label);
+			designSpaceBuilder.append("\"]");
 		}
-		designSpaceBuilder.append("\"]\n");
+		designSpaceBuilder.append("\n");
 	}
 
 	private void saveStates()  {
@@ -401,6 +418,7 @@ public class VisualLogger implements Logger {
 				ranksep=0
 				node[
 				\tstyle=filled
+				\tshape=box
 				\tfillcolor=white
 				]
 				""" + designSpaceBuilder + "}";
