@@ -8,6 +8,7 @@ rootProject.name = "refinery"
 
 include(
 		"docs",
+		"benchmark",
 		"frontend",
 		"generator",
 		"generator-cli",
