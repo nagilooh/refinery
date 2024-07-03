@@ -59,4 +59,9 @@ public class DummySerializer extends ModelSerializer{
 		// TODO Auto-generated method stub
 
 	}
+
+	@Override
+	public void endTransaction() {
+
+	}
 }

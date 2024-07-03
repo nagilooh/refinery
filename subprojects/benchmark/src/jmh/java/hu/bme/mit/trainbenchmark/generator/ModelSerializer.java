@@ -50,4 +50,5 @@ public abstract class ModelSerializer {
 	public abstract long commit();
 	public abstract void restore(long version);
 
+	public abstract void endTransaction();
 }

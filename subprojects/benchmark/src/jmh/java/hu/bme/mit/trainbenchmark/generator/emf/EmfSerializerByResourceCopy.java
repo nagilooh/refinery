@@ -206,4 +206,9 @@ public class EmfSerializerByResourceCopy extends ModelSerializer {
 	public void restore(long version) {
 		this.actual = this.states.get((int) version);
 	}
+
+	@Override
+	public void endTransaction() {
+
+	}
 }

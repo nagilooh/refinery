@@ -155,4 +155,9 @@ public class RefinerySerializer extends ModelSerializer{
 	public void restore(long version) {
 		this.model.restore(versions.get(version));
 	}
+
+	@Override
+	public void endTransaction() {
+
+	}
 }

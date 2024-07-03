@@ -167,4 +167,9 @@ public class EmfSerializerNoVC extends ModelSerializer {
 	@Override
 	public void restore(long version) {
 	}
+
+	@Override
+	public void endTransaction() {
+
+	}
 }
