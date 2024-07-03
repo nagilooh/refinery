@@ -4,18 +4,27 @@ import java.io.IOException;
 
 public class RunnerRunner {
 	public static void main(String[] args) throws IOException {
-		int[] sizes = new int[] {50,
-				100,
-				150,
-				200,
-				250,
-				300
+		int[] sizes = new int[] {
+				2,
+				5,
+				10,
+//				50,
+//				100,
+//				150,
+//				200,
+//				250,
+//				300
 /*, 20,40/*15, 32, 75, 125, 250, 500,*/ /* 1000, 2000,*/ /*4000,  8000, 16000 */};
 		int[] widths = new int[] {1};
 		Tool[] tools = new Tool[] {
-				 Tool.RefineryR, Tool.RefineryF/*, Tool.Dummy, Tool.EMFnoVC/*,  Tool.Refinery, /*Tool.EMFCopyVC,
+				Tool.RefineryR,
+//				Tool.DoltNoP,
+//				Tool.Dolt,
+				Tool.Git,
+				//Tool.RefineryR, Tool.RefineryF
+				/*, Tool.Dummy, Tool.EMFnoVC/*,  Tool.Refinery, /*Tool.EMFCopyVC,
 				 Tool.EMFDelta, Tool.Dummy  Tool.EMFDelta*/ };
-		int[] commitsAfterActionsDuringBuilding = new int[] {1};
+		int[] commitsAfterActionsDuringBuilding = new int[] {100};
 		final int repeat = 1;
 		final int[] errorsInOneEditAction = new int[] {/*10, 20, 30, 40, 50, 60, 70, 80, 90,*/ 5};
 		final int numberOfEditActions = 10;

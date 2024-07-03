@@ -9,9 +9,12 @@ import hu.bme.mit.trainbenchmark.constants.ModelConstants;
 import hu.bme.mit.trainbenchmark.generator.DummySerializer;
 import hu.bme.mit.trainbenchmark.generator.ModelSerializer;
 import hu.bme.mit.trainbenchmark.generator.Scenario;
+import hu.bme.mit.trainbenchmark.generator.dolt.DoltSerializer;
+import hu.bme.mit.trainbenchmark.generator.dolt.DoltSerializerNoPersistence;
 import hu.bme.mit.trainbenchmark.generator.emf.EMFSerializerByTransactions;
 import hu.bme.mit.trainbenchmark.generator.emf.EmfSerializerByResourceCopy;
 import hu.bme.mit.trainbenchmark.generator.emf.EmfSerializerNoVC;
+import hu.bme.mit.trainbenchmark.generator.git.GitSerializer;
 import hu.bme.mit.trainbenchmark.generator.refinery.RefinerySerializer;
 import hu.bme.mit.trainbenchmark.generator.refinery.RefinerySerializerFunctional;
 import hu.bme.mit.trainbenchmark.generator.scalable.ScalableModelGenerator;
@@ -68,6 +71,15 @@ public class BenchmarkRunner {
 		}
 		case Dummy: {
 			return new DummySerializer();
+		}
+		case Dolt: {
+			return new DoltSerializer();
+		}
+		case DoltNoP: {
+			return new DoltSerializerNoPersistence();
+		}
+		case Git: {
+			return new GitSerializer();
 		}
 		default:
 			throw new IllegalArgumentException("Unexpected value: " + tool);
@@ -147,6 +159,7 @@ public class BenchmarkRunner {
 		System.out.print(delim+commitedErrors);
 
 		System.out.println();
+		serializer.endTransaction();
 		//((RefinerySerializer) serializer).print();
 		return serializer;
 	}
