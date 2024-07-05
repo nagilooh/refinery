@@ -15,7 +15,7 @@ public class GitSerializer extends CSVSerializer {
 	public GitSerializer() {
 		super();
 		versions  = new HashMap<>();
-		MODEL_PATH = "Z:/models/git/";
+		MODEL_PATH = "models/git/";
 	}
 
 
@@ -34,6 +34,7 @@ public class GitSerializer extends CSVSerializer {
 	@Override
 	public long commit() {
 		try {
+			persist();
 			var commit = GitProcess.commitGit();
 			versions.put(commits, commit);
 			return commits++;
