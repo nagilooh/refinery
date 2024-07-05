@@ -20,5 +20,6 @@ dependencies {
 	implementation("com.mysql:mysql-connector-j:8.4.0")
 	implementation("org.apache.commons:commons-exec:1.4.0")
 	implementation("commons-io:commons-io:2.16.1")
+	implementation("org.eclipse.jgit:org.eclipse.jgit:6.10.0.202406032230-r")
 	api(project(":refinery-store"))
 }

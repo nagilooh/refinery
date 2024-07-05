@@ -20,6 +20,7 @@ public class RunnerRunner {
 				Tool.RefineryR,
 //				Tool.DoltNoP,
 //				Tool.Dolt,
+				Tool.JGit,
 				Tool.Git,
 				//Tool.RefineryR, Tool.RefineryF
 				/*, Tool.Dummy, Tool.EMFnoVC/*,  Tool.Refinery, /*Tool.EMFCopyVC,

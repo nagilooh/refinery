@@ -15,6 +15,7 @@ import hu.bme.mit.trainbenchmark.generator.emf.EMFSerializerByTransactions;
 import hu.bme.mit.trainbenchmark.generator.emf.EmfSerializerByResourceCopy;
 import hu.bme.mit.trainbenchmark.generator.emf.EmfSerializerNoVC;
 import hu.bme.mit.trainbenchmark.generator.git.GitSerializer;
+import hu.bme.mit.trainbenchmark.generator.git.JGitSerializer;
 import hu.bme.mit.trainbenchmark.generator.refinery.RefinerySerializer;
 import hu.bme.mit.trainbenchmark.generator.refinery.RefinerySerializerFunctional;
 import hu.bme.mit.trainbenchmark.generator.scalable.ScalableModelGenerator;
@@ -80,6 +81,9 @@ public class BenchmarkRunner {
 		}
 		case Git: {
 			return new GitSerializer();
+		}
+		case JGit: {
+			return new JGitSerializer();
 		}
 		default:
 			throw new IllegalArgumentException("Unexpected value: " + tool);
