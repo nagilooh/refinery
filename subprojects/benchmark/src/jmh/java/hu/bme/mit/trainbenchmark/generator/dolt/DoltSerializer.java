@@ -12,23 +12,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import static hu.bme.mit.trainbenchmark.constants.ModelConstants.CONNECTS_TO;
-import static hu.bme.mit.trainbenchmark.constants.ModelConstants.ELEMENTS;
-import static hu.bme.mit.trainbenchmark.constants.ModelConstants.FOLLOWS;
-import static hu.bme.mit.trainbenchmark.constants.ModelConstants.ID;
-import static hu.bme.mit.trainbenchmark.constants.ModelConstants.MONITORED_BY;
-import static hu.bme.mit.trainbenchmark.constants.ModelConstants.REQUIRES;
-import static hu.bme.mit.trainbenchmark.constants.ModelConstants.SEMAPHORE;
-import static hu.bme.mit.trainbenchmark.constants.ModelConstants.SEMAPHORES;
-import static hu.bme.mit.trainbenchmark.constants.ModelConstants.SENSOR;
-import static hu.bme.mit.trainbenchmark.constants.ModelConstants.SENSORS;
-import static hu.bme.mit.trainbenchmark.constants.ModelConstants.SUPERTYPES;
-import static hu.bme.mit.trainbenchmark.constants.ModelConstants.SWITCHPOSITION;
-import static hu.bme.mit.trainbenchmark.constants.ModelConstants.TRACKELEMENT;
+import static hu.bme.mit.trainbenchmark.constants.ModelConstants.*;
+import static hu.bme.mit.trainbenchmark.constants.ModelConstants.ROUTE;
 
 public class DoltSerializer extends ModelSerializer {
 
-	protected String sqlRawPath = "Z://models/railway-raw.sql";
+	protected String sqlRawPath = "models/railway-raw.sql";
 	protected BufferedWriter writer;
 	protected String SQL_FORMAT_DIR = "subprojects/benchmark/";
 	protected String SQL_METAMODEL_DIR = SQL_FORMAT_DIR + "src/jmh/resources/dolt/metamodel/";
@@ -54,7 +43,7 @@ public class DoltSerializer extends ModelSerializer {
 	@Override
 	public void initModel() throws IOException {
 		DoltProcess.cleanDolt();
-		DoltProcess.cleanSql();
+//		DoltProcess.cleanSql();
 		DoltProcess.initDolt();
 
 		// header file (DDL operations)
@@ -93,7 +82,7 @@ public class DoltSerializer extends ModelSerializer {
 
 	public void persist() throws IOException, InterruptedException {
 //		log("Loading the raw model");
-		DoltProcess.runShell(String.format("dolt sql < %s", sqlRawPath));
+		DoltProcess.runShell(String.format("dolt sql < %s", sqlRawPath.replace("models", "..")));
 		writer = new BufferedWriter(new FileWriter(sqlRawFile, false));
 	}
 
@@ -163,12 +152,74 @@ public class DoltSerializer extends ModelSerializer {
 
 	@Override
 	public void removeEdge(String label, Object from, Object to) throws IOException {
+		if (from == null || to == null) {
+			return;
+		}
 
+		String deleteQuery;
+		switch (label) {
+		// n:m edges
+		case MONITORED_BY:
+			deleteQuery = String.format("DELETE FROM %s WHERE TrackElement_id = %s AND Sensor_id = %s;", label, from, to);
+			break;
+		case CONNECTS_TO:
+			deleteQuery = String.format("DELETE FROM %s WHERE TrackElement1_id = %s AND TrackElement2_id = %s;", label, from, to);
+			break;
+		case REQUIRES:
+			deleteQuery = String.format("DELETE FROM %s WHERE Route_id = %s AND Sensor_id = %s;", label, from, to);
+			break;
+		// n:1 edges
+		case FOLLOWS:
+			deleteQuery = String.format("UPDATE %s SET `%s` = %s WHERE `%s` = %s;", SWITCHPOSITION, "route", "NULL", ID, to);
+			break;
+		case SENSORS:
+			deleteQuery = String.format("UPDATE %s SET `%s` = %s WHERE `%s` = %s;", SENSOR, "region", "NULL", ID, to);
+			break;
+		case ELEMENTS:
+			deleteQuery = String.format("UPDATE %s SET `%s` = %s WHERE `%s` = %s;", TRACKELEMENT, "region", "NULL", ID, to);
+			break;
+		case SEMAPHORES:
+			deleteQuery = String.format("UPDATE %s SET `%s` = %s WHERE `%s` = %s;", SEMAPHORE, "segment", "NULL", ID, to);
+			break;
+		//
+		case ENTRY:
+			deleteQuery = String.format("UPDATE %s SET `%s` = %s WHERE `%s` = %s;", ROUTE, "entry", "NULL", ID, to);
+			break;
+		default:
+			throw new UnsupportedOperationException("Label '" + label + "' not supported.");
+		}
+
+		write(deleteQuery);
 	}
 
 	@Override
 	public void setAttribute(String label, Object object, Object value) throws IOException {
+		if (object == null) {
+			return;
+		}
 
+		String updateQuery;
+		switch (label) {
+		case ACTIVE:
+			updateQuery = String.format("UPDATE %s SET `%s` = %s WHERE `%s` = %s;", ROUTE, ACTIVE, valueToString(value), ID, object);
+			break;
+		case LENGTH:
+			updateQuery = String.format("UPDATE %s SET `%s` = %s WHERE `%s` = %s;", SEGMENT, LENGTH, valueToString(value), ID, object);
+			break;
+		case SIGNAL:
+			updateQuery = String.format("UPDATE %s SET `%s` = %s WHERE `%s` = %s;", SEMAPHORE, SIGNAL, valueToString(value), ID, object);
+			break;
+		case CURRENTPOSITION:
+			updateQuery = String.format("UPDATE %s SET `%s` = %s WHERE `%s` = %s;", SWITCH, CURRENTPOSITION, valueToString(value), ID, object);
+			break;
+		case POSITION:
+			updateQuery = String.format("UPDATE %s SET `%s` = %s WHERE `%s` = %s;", SWITCHPOSITION, POSITION, valueToString(value), ID, object);
+			break;
+		default:
+			throw new UnsupportedOperationException("Label '" + label + "' not supported.");
+		}
+
+		write(updateQuery);
 	}
 
 	@Override

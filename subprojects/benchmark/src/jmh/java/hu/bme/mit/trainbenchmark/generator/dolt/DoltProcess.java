@@ -18,7 +18,7 @@ public class DoltProcess {
 	// hangs. Therefore, we recommend using the simple ProcessBuilder instead.
 
 	private static final String SCRIPT_DIRECTORY = "subprojects/benchmark/src/jmh/scripts/";
-	private static final String WORKING_DIRECTORY = "Z:/models/dolt/";
+	private static final String WORKING_DIRECTORY = "models/dolt/";
 
 	public static void cleanDolt() throws IOException {
 		runScript(SCRIPT_DIRECTORY + "clean-dolt.sh");
@@ -55,11 +55,11 @@ public class DoltProcess {
 		ByteArrayOutputStream stdout = new ByteArrayOutputStream();
 		PumpStreamHandler psh = new PumpStreamHandler(stdout);
 		executor.setStreamHandler(psh);
-		System.out.println(shellCommand);
+//		System.out.println(shellCommand);
 		final CommandLine commandLine = new CommandLine("bash");
 		commandLine.addArgument("-c");
 		commandLine.addArgument(shellCommand, false);
-		System.out.println(commandLine);
+//		System.out.println(commandLine);
 		executor.execute(commandLine);
 		return stdout.toString(Charset.defaultCharset());
 	}
