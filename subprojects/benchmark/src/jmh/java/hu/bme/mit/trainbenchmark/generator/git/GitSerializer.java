@@ -45,6 +45,13 @@ public class GitSerializer extends CSVSerializer {
 	@Override
 	public void restore(long version) {
 		try {
+			for(String type : types) {
+				writers.get(type).close();
+			}
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+		try {
 			GitProcess.runShell("git checkout " + version);
 		} catch (IOException e) {
 			try {
@@ -52,6 +59,14 @@ public class GitSerializer extends CSVSerializer {
 			} catch (IOException ex) {
 				throw new RuntimeException(ex);
 			}
+		}
+		try {
+			GitProcess.runShell("git restore .");
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+		for(String type : types) {
+			initType(writers, type, true);
 		}
 
 	}

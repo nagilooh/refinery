@@ -13,12 +13,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-public class CSVSerializer extends ModelSerializer {
+public abstract class CSVSerializer extends ModelSerializer {
 
 	protected String MODEL_PATH = "models/csv/";
 
-	String[] types;
-	Map<String, BufferedWriter> writers;
+	protected String[] types;
+	protected Map<String, BufferedWriter> writers;
 
 	public CSVSerializer() {
 		super();
@@ -31,15 +31,20 @@ public class CSVSerializer extends ModelSerializer {
 			if(writer == null) {
 				System.out.println(type);
 			}
-			writer.write(String.join(",", s) + "\n");
+			writer.write(String.join(",", s));
+			writer.newLine();
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
 	}
 
 	protected void initType(Map<String, BufferedWriter> writers, String name) {
+		initType(writers, name, false);
+	}
+
+	protected void initType(Map<String, BufferedWriter> writers, String name, boolean append) {
 		try {
-			writers.put(name, new BufferedWriter(new FileWriter(MODEL_PATH + name + ".csv", false)));
+			writers.put(name, new BufferedWriter(new FileWriter(MODEL_PATH + name + ".csv", append)));
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
@@ -111,14 +116,16 @@ public class CSVSerializer extends ModelSerializer {
 	public void removeEdge(String label, Object from, Object to) {
 		try {
 			persist();
+			writers.get(label).close();
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
 		try {
 			String content = Files.readString(Paths.get(MODEL_PATH + label + ".csv"), Charset.defaultCharset());
+			initType(writers, label);
 			for (String line : content.split("\n")) {
-				if (!line.equals(String.join(",", String.valueOf(from), String.valueOf(to)))) {
-					write(label, String.valueOf(from), String.valueOf(to));
+				if (!line.strip().equals(String.join(",", String.valueOf(from), String.valueOf(to)))) {
+					write(label, line.strip());
 				}
 			}
 		} catch (IOException e) {

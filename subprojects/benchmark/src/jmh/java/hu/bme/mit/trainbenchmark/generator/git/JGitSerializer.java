@@ -2,6 +2,7 @@ package hu.bme.mit.trainbenchmark.generator.git;
 
 import hu.bme.mit.trainbenchmark.generator.CSVSerializer;
 import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.ResetCommand;
 import org.eclipse.jgit.api.errors.*;
 import org.eclipse.jgit.revwalk.RevCommit;
 
@@ -52,30 +53,24 @@ public class JGitSerializer extends CSVSerializer {
 			var commit = git.commit().setMessage("trainbenchmark").call();
 			versions.put(commits, commit);
 			return commits++;
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		} catch (NoHeadException e) {
-			throw new RuntimeException(e);
-		} catch (UnmergedPathsException e) {
-			throw new RuntimeException(e);
-		} catch (NoFilepatternException e) {
-			throw new RuntimeException(e);
-		} catch (WrongRepositoryStateException e) {
-			throw new RuntimeException(e);
-		} catch (ServiceUnavailableException e) {
-			throw new RuntimeException(e);
-		} catch (ConcurrentRefUpdateException e) {
-			throw new RuntimeException(e);
-		} catch (AbortedByHookException e) {
-			throw new RuntimeException(e);
-		} catch (NoMessageException e) {
-			throw new RuntimeException(e);
-		} catch (GitAPIException e) {
+		} catch (IOException | GitAPIException e) {
 			throw new RuntimeException(e);
 		}
 	}
 	@Override
 	public void restore(long version) {
+		try {
+			for(String type : types) {
+				writers.get(type).close();
+			}
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+		try {
+			git.reset().setMode(ResetCommand.ResetType.HARD).call();
+		} catch (GitAPIException e) {
+			throw new RuntimeException(e);
+		}
 		var branchName = String.valueOf(version);
 		if (branches.contains(branchName)) {
 			try {
@@ -87,9 +82,13 @@ public class JGitSerializer extends CSVSerializer {
 		else {
 			try {
 				git.checkout().setStartPoint(versions.get(version)).setCreateBranch(true).setName(branchName).call();
+				branches.add(branchName);
 			} catch (GitAPIException e) {
 				throw new RuntimeException(e);
 			}
+		}
+		for(String type : types) {
+			initType(writers, type, true);
 		}
 
 	}
