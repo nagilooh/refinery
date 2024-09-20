@@ -13,6 +13,7 @@ import tools.refinery.store.map.VersionedMapStoreFactoryBuilder;
 import tools.refinery.store.model.ModelStore;
 import tools.refinery.store.model.ModelStoreBuilder;
 import tools.refinery.store.model.ModelStoreConfiguration;
+import tools.refinery.store.model.TupleHashProvider;
 import tools.refinery.store.representation.AnySymbol;
 import tools.refinery.store.representation.Symbol;
 import tools.refinery.store.tuple.Tuple;
@@ -25,6 +26,8 @@ public class ModelStoreBuilderImpl implements ModelStoreBuilder {
 	private final LinkedHashSet<AnySymbol> allSymbols = new LinkedHashSet<>();
 	private final LinkedHashMap<SymbolEquivalenceClass<?>, List<AnySymbol>> equivalenceClasses = new LinkedHashMap<>();
 	private final List<ModelAdapterBuilder> adapters = new ArrayList<>();
+	private VersionedMapStoreFactoryBuilder.StoreStrategy strategy =
+			VersionedMapStoreFactoryBuilder.StoreStrategy.DELTA;
 
 	@Override
 	public ModelStoreBuilder cancellationToken(CancellationToken cancellationToken) {
@@ -70,6 +73,12 @@ public class ModelStoreBuilderImpl implements ModelStoreBuilder {
 	}
 
 	@Override
+	public ModelStoreBuilder strategy(VersionedMapStoreFactoryBuilder.StoreStrategy strategy) {
+		this.strategy = strategy;
+		return this;
+	}
+
+	@Override
 	public <T extends ModelAdapterBuilder> Optional<T> tryGetAdapter(Class<? extends T> adapterType) {
 		return AdapterUtils.tryGetAdapter(adapters, adapterType);
 	}
@@ -87,7 +96,7 @@ public class ModelStoreBuilderImpl implements ModelStoreBuilder {
 		}
 		var stores = new LinkedHashMap<AnySymbol, VersionedMapStore<Tuple, ?>>(allSymbols.size());
 		for (var entry : equivalenceClasses.entrySet()) {
-			createStores(stores, entry.getKey(), entry.getValue());
+			createStores(stores, entry.getKey(), entry.getValue(), strategy);
 		}
 		var modelStore = new ModelStoreImpl(stores, adapters.size(), cancellationToken == null ?
 				CancellationToken.NONE : cancellationToken);
@@ -99,13 +108,23 @@ public class ModelStoreBuilderImpl implements ModelStoreBuilder {
 	}
 
 	private <T> void createStores(Map<AnySymbol, VersionedMapStore<Tuple, ?>> stores,
-								  SymbolEquivalenceClass<T> equivalenceClass, List<AnySymbol> symbols) {
+								  SymbolEquivalenceClass<T> equivalenceClass, List<AnySymbol> symbols,
+								  VersionedMapStoreFactoryBuilder.StoreStrategy strategy) {
 		int size = symbols.size();
-		VersionedMapStoreFactory<Tuple, T> mapFactory = VersionedMapStore
-				.<Tuple, T>builder()
-				.strategy(VersionedMapStoreFactoryBuilder.StoreStrategy.DELTA)
-				.defaultValue(equivalenceClass.defaultValue())
-				.build();
+		VersionedMapStoreFactory<Tuple, T> mapFactory = switch (strategy) {
+			case STATE -> VersionedMapStore
+					.<Tuple, T>builder()
+					.stateBasedHashProvider(new TupleHashProvider())
+					.stateBasedSharingStrategy(VersionedMapStoreFactoryBuilder.SharingStrategy.SHARED_NODE_CACHE)
+					.strategy(strategy)
+					.defaultValue(equivalenceClass.defaultValue())
+					.build();
+			case DELTA -> VersionedMapStore
+					.<Tuple, T>builder()
+					.strategy(strategy)
+					.defaultValue(equivalenceClass.defaultValue())
+					.build();
+		};
 		var storeGroup = mapFactory.createGroup(size);
 		for (int i = 0; i < size; i++) {
 			stores.put(symbols.get(i), storeGroup.get(i));

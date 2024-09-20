@@ -6,6 +6,7 @@
 package tools.refinery.store.model;
 
 import tools.refinery.store.adapter.ModelAdapterBuilder;
+import tools.refinery.store.map.VersionedMapStoreFactoryBuilder;
 import tools.refinery.store.representation.AnySymbol;
 import tools.refinery.store.representation.Symbol;
 import tools.refinery.store.util.CancellationToken;
@@ -31,6 +32,8 @@ public interface ModelStoreBuilder {
 	}
 
 	<T> ModelStoreBuilder symbol(Symbol<T> symbol);
+
+	ModelStoreBuilder strategy(VersionedMapStoreFactoryBuilder.StoreStrategy strategy);
 
 	ModelStoreBuilder with(ModelAdapterBuilder adapterBuilder);
 
