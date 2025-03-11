@@ -32,14 +32,12 @@ public class DirectedCrossReferenceConfidenceTranslator implements ModelStoreCon
 	private final ConfidencePartialRelation linkType;
 	private final DirectedCrossReferenceConfidenceInfo info;
 	private final Symbol<TruthValueConfidence> confidenceSymbol;
-	private final Symbol<TruthValue> symbol;
 
 	public DirectedCrossReferenceConfidenceTranslator(ConfidencePartialRelation linkType,
 													  DirectedCrossReferenceConfidenceInfo info) {
 		this.linkType = linkType;
 		this.info = info;
 		confidenceSymbol = Symbol.of(linkType.name(), 2, TruthValueConfidence.class, info.defaultValue());
-		symbol = Symbol.of(info.partialRelation().name(), 2, TruthValue.class, info.defaultValue().getTruthValue());
 	}
 
 	@Override
