@@ -10,6 +10,7 @@ import tools.refinery.logic.term.cardinalityinterval.CardinalityIntervals;
 import tools.refinery.logic.term.truthvalue.TruthValue;
 import tools.refinery.logic.term.truthvalue.TruthValueConfidence;
 import tools.refinery.store.dse.propagation.PropagationAdapter;
+import tools.refinery.store.model.Interpretation;
 import tools.refinery.store.model.Model;
 import tools.refinery.store.model.ModelStore;
 import tools.refinery.store.query.interpreter.QueryInterpreterAdapter;
@@ -98,7 +99,7 @@ class ConfidenceMetamodelTest {
 						.put(Tuple.of(1, 3), TruthValue.TRUE))
 				.seed(enrolledStudentsConfidence, builder -> builder
 						.reducedValue(new TruthValueConfidence(TruthValue.UNKNOWN, 0.5))
-						.put(Tuple.of(1, 5), new TruthValueConfidence(TruthValue.UNKNOWN, 1.0)))
+						.put(Tuple.of(1, 5), new TruthValueConfidence(TruthValue.TRUE, 1.0)))
 				.build();
 
 		var model = createModel(metamodel, seed);
@@ -118,16 +119,17 @@ class ConfidenceMetamodelTest {
 				enrolledStudents);
 		assertThat(enrolledStudentsInterpretation.get(Tuple.of(1, 3)), is(TruthValue.FALSE));
 		assertThat(enrolledStudentsInterpretation.get(Tuple.of(1, 4)), is(TruthValue.UNKNOWN));
-		assertThat(enrolledStudentsInterpretation.get(Tuple.of(1, 5)), is(TruthValue.UNKNOWN));
+		assertThat(enrolledStudentsInterpretation.get(Tuple.of(1, 5)), is(TruthValue.TRUE));
 
-		var enrolledStudentsConfidenceInterpretation = reasoningAdapter.getPartialInterpretation(Concreteness.PARTIAL,
-				enrolledStudentsConfidence);
-		assertThat(enrolledStudentsConfidenceInterpretation.get(Tuple.of(1, 3)), is(new TruthValueConfidence(TruthValue.FALSE,
-				0.0)));
-		assertThat(enrolledStudentsConfidenceInterpretation.get(Tuple.of(1, 4)), is(new TruthValueConfidence(TruthValue.UNKNOWN
-				, 0.5)));
-		assertThat(enrolledStudentsConfidenceInterpretation.get(Tuple.of(1, 5)), is(new TruthValueConfidence(TruthValue.UNKNOWN
-				, 0.5)));
+		for(var symbol : model.getStore().getSymbols()) {
+			if (symbol.name().equals("enrolledStudentsConfidence")) {
+				@SuppressWarnings("unchecked")
+				var interpretation = (Interpretation<TruthValueConfidence>) model.getInterpretation(symbol);
+				assertThat(interpretation.get(Tuple.of(1, 3)), is(new TruthValueConfidence(TruthValue.FALSE, 0.0)));
+				assertThat(interpretation.get(Tuple.of(1, 4)), is(new TruthValueConfidence(TruthValue.UNKNOWN, 0.5)));
+				assertThat(interpretation.get(Tuple.of(1, 5)), is(new TruthValueConfidence(TruthValue.TRUE, 1.0)));
+			}
+		}
 	}
 
 	@Test

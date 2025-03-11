@@ -374,8 +374,7 @@ public final class ConfidencePartialRelationTranslator extends PartialSymbolTran
 
 	private void createFallbackInterpretation() {
 		if (interpretationFactory == null) {
-			interpretationFactory = new QueryBasedConfidenceRelationInterpretationFactory(may, must, candidateMayMerged,
-					candidateMustMerged);
+			interpretationFactory = new QueryBasedConfidenceRelationInterpretationFactory();
 		}
 	}
 
