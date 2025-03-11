@@ -9,7 +9,7 @@ import tools.refinery.logic.AbstractDomain;
 import tools.refinery.logic.AbstractValue;
 
 public sealed interface PartialSymbol<A extends AbstractValue<A, C>, C> extends AnyPartialSymbol
-		permits PartialFunction, PartialRelation {
+		permits ConfidencePartialRelation, PartialFunction, PartialRelation {
 	@Override
 	AbstractDomain<A, C> abstractDomain();
 

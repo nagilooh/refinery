@@ -9,14 +9,16 @@ import tools.refinery.logic.dnf.Dnf;
 import tools.refinery.logic.rewriter.AbstractRecursiveRewriter;
 import tools.refinery.store.reasoning.interpretation.PartialRelationRewriter;
 import tools.refinery.store.reasoning.lifting.DnfLifter;
+import tools.refinery.store.reasoning.representation.ConfidencePartialRelation;
 import tools.refinery.store.reasoning.representation.PartialRelation;
+import tools.refinery.store.reasoning.representation.PartialSymbol;
 
 import java.util.HashMap;
 import java.util.Map;
 
 class PartialQueryRewriter extends AbstractRecursiveRewriter {
 	private final DnfLifter lifter;
-	private final Map<PartialRelation, PartialRelationRewriter> relationRewriterMap = new HashMap<>();
+	private final Map<PartialSymbol, PartialRelationRewriter> relationRewriterMap = new HashMap<>();
 
 	PartialQueryRewriter(DnfLifter lifter) {
 		this.lifter = lifter;
@@ -34,7 +36,21 @@ class PartialQueryRewriter extends AbstractRecursiveRewriter {
 		return rewriter;
 	}
 
+	PartialRelationRewriter getRelationRewriter(ConfidencePartialRelation partialRelation) {
+		var rewriter = relationRewriterMap.get(partialRelation);
+		if (rewriter == null) {
+			throw new IllegalArgumentException("Do not know how to interpret partial relation: " + partialRelation);
+		}
+		return rewriter;
+	}
+
 	public void addRelationRewriter(PartialRelation partialRelation, PartialRelationRewriter interpreter) {
+		if (relationRewriterMap.put(partialRelation, interpreter) != null) {
+			throw new IllegalArgumentException("Duplicate partial relation: " + partialRelation);
+		}
+	}
+
+	public void addRelationRewriter(ConfidencePartialRelation partialRelation, PartialRelationRewriter interpreter) {
 		if (relationRewriterMap.put(partialRelation, interpreter) != null) {
 			throw new IllegalArgumentException("Duplicate partial relation: " + partialRelation);
 		}
