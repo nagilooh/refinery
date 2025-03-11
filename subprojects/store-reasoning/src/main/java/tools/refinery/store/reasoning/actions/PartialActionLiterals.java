@@ -7,6 +7,8 @@ package tools.refinery.store.reasoning.actions;
 
 import tools.refinery.logic.AbstractValue;
 import tools.refinery.logic.term.NodeVariable;
+import tools.refinery.logic.term.truthvalue.TruthValueConfidence;
+import tools.refinery.store.reasoning.representation.ConfidencePartialRelation;
 import tools.refinery.store.reasoning.representation.PartialRelation;
 import tools.refinery.store.reasoning.representation.PartialSymbol;
 import tools.refinery.logic.term.truthvalue.TruthValue;
@@ -28,9 +30,19 @@ public final class PartialActionLiterals {
 		return merge(partialRelation, TruthValue.TRUE, parameters);
 	}
 
+	public static MergeActionLiteral<TruthValueConfidence, Boolean> add(ConfidencePartialRelation partialRelation,
+															  NodeVariable... parameters) {
+		return merge(partialRelation, new TruthValueConfidence(TruthValue.TRUE, 1.0), parameters);
+	}
+
 	public static MergeActionLiteral<TruthValue, Boolean> remove(PartialRelation partialRelation,
 																 NodeVariable... parameters) {
 		return merge(partialRelation, TruthValue.FALSE, parameters);
+	}
+
+	public static MergeActionLiteral<TruthValueConfidence, Boolean> remove(ConfidencePartialRelation partialRelation,
+																 NodeVariable... parameters) {
+		return merge(partialRelation, new TruthValueConfidence(TruthValue.FALSE, 0.0), parameters);
 	}
 
 	public static FocusActionLiteral focus(NodeVariable parent, NodeVariable child) {
