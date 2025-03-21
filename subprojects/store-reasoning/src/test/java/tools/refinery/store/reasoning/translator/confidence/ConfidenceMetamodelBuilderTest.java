@@ -3,13 +3,14 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package tools.refinery.store.reasoning.translator.metamodel;
+package tools.refinery.store.reasoning.translator.confidence;
 
 import org.junit.jupiter.api.Test;
 import tools.refinery.logic.term.cardinalityinterval.CardinalityIntervals;
 import tools.refinery.store.reasoning.representation.ConfidencePartialRelation;
 import tools.refinery.store.reasoning.representation.PartialRelation;
 import tools.refinery.store.reasoning.translator.TranslationException;
+import tools.refinery.store.reasoning.translator.metamodel.ConfidenceMetamodel;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 

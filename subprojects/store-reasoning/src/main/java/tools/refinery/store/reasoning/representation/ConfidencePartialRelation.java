@@ -11,7 +11,6 @@ import tools.refinery.logic.term.Parameter;
 import tools.refinery.logic.term.truthvalue.TruthValue;
 import tools.refinery.logic.term.truthvalue.TruthValueConfidence;
 import tools.refinery.logic.term.truthvalue.TruthValueConfidenceDomain;
-import tools.refinery.logic.term.truthvalue.TruthValueDomain;
 
 import java.util.Arrays;
 import java.util.List;
