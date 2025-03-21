@@ -119,7 +119,7 @@ public class ReasoningBuilderImpl extends AbstractModelAdapterBuilder<ReasoningS
 			if (translator instanceof PartialRelationTranslator relationConfiguration) {
 				doConfigure(storeBuilder, relationConfiguration);
 			}
-			else if (translator instanceof  ConfidencePartialRelationTranslator relationConfiguration) {
+			else if (translator instanceof ConfidencePartialRelationTranslator relationConfiguration) {
 				doConfigure(storeBuilder, relationConfiguration);
 			} else {
 				throw new IllegalArgumentException("Unknown partial symbol translator %s for partial symbol %s"
@@ -150,19 +150,9 @@ public class ReasoningBuilderImpl extends AbstractModelAdapterBuilder<ReasoningS
 	private void doConfigure(ModelStoreBuilder storeBuilder,
 							 ConfidencePartialRelationTranslator relationConfiguration) {
 		var confidencePartialRelation = relationConfiguration.getConfidencePartialRelation();
-		queryRewriter.addRelationRewriter(confidencePartialRelation, relationConfiguration.getRewriter());
 		var confidenceInterpretationFactory = relationConfiguration.getInterpretationFactory();
 		confidenceInterpretationFactory.configure(storeBuilder, requiredInterpretations);
 		symbolInterpreters.put(confidencePartialRelation, confidenceInterpretationFactory);
-		var refiner = relationConfiguration.getInterpretationRefiner();
-		if (refiner != null) {
-			symbolRefiners.put(confidencePartialRelation, refiner);
-		}
-
-		var partialRelation = relationConfiguration.getPartialRelation();
-		var interpretationFactory = relationConfiguration.getDerivedInterpretationFactory();
-		interpretationFactory.configure(storeBuilder, requiredInterpretations);
-		symbolInterpreters.put(partialRelation, interpretationFactory);
 	}
 
 	@Override

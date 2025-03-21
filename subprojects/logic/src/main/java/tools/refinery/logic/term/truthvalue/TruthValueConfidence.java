@@ -9,6 +9,9 @@ import org.jetbrains.annotations.Nullable;
 import tools.refinery.logic.AbstractValue;
 
 public class TruthValueConfidence implements AbstractValue<TruthValueConfidence, Boolean> {
+	public static final TruthValueConfidence TRUE = new TruthValueConfidence(TruthValue.TRUE, 1.0);
+	public static final TruthValueConfidence FALSE = new TruthValueConfidence(TruthValue.FALSE, 0.0);
+	public static final TruthValueConfidence ERROR = new TruthValueConfidence(TruthValue.ERROR, Double.NaN);
 
 	private final TruthValue truthValue;
 	private final double confidence;

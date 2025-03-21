@@ -17,11 +17,12 @@ import tools.refinery.store.tuple.Tuple;
 import java.util.Objects;
 
 public class ConcreteRelationConfidenceRefiner extends
-		AbstractPartialInterpretationRefiner.ConcretizationAware<TruthValueConfidence, Boolean> {
+		AbstractPartialInterpretationRefiner.ConcretizationAware<TruthValue, Boolean> {
 	private final Interpretation<TruthValueConfidence> interpretation;
 	private final RoundingMode roundingMode;
+	private Double confidenceCost = 0.0;
 
-	protected ConcreteRelationConfidenceRefiner(ReasoningAdapter adapter, PartialSymbol<TruthValueConfidence, Boolean> partialSymbol,
+	protected ConcreteRelationConfidenceRefiner(ReasoningAdapter adapter, PartialSymbol<TruthValue, Boolean> partialSymbol,
                                                 Symbol<TruthValueConfidence> concreteSymbol, RoundingMode roundingMode) {
 		super(adapter, partialSymbol);
 		interpretation = adapter.getModel().getInterpretation(concreteSymbol);
@@ -29,29 +30,38 @@ public class ConcreteRelationConfidenceRefiner extends
 	}
 
 	@Override
-	public boolean merge(Tuple key, TruthValueConfidence value) {
+	public boolean merge(Tuple key, TruthValue value) {
 		var currentValue = get(key);
 		var mergedValue = concretizationAwareMeet(currentValue, value);
 		if (!Objects.equals(currentValue, mergedValue)) {
 			put(key, mergedValue);
+			confidenceCost += Math.log(Math.abs(mergedValue.getConfidence() - currentValue.getConfidence()));
+			
 		}
 		return true;
 	}
 
-	protected TruthValueConfidence concretizationAwareMeet(TruthValueConfidence currentValue, TruthValueConfidence value) {
-		return forbiddenByConcretization(currentValue, value) ? new TruthValueConfidence(TruthValue.ERROR, 1.0) :
-				currentValue.meet(value);
+	protected TruthValueConfidence concretizationAwareMeet(TruthValueConfidence currentValue, TruthValue value) {
+		if (forbiddenByConcretization(currentValue, value)) {
+			return TruthValueConfidence.ERROR;
+		}
+		return switch (value) {
+			case UNKNOWN -> currentValue;
+			case ERROR -> TruthValueConfidence.ERROR;
+			case TRUE -> currentValue.may() ? TruthValueConfidence.TRUE : TruthValueConfidence.ERROR;
+			case FALSE -> currentValue.must() ? TruthValueConfidence.ERROR : TruthValueConfidence.FALSE;
+		};
 	}
 
-	protected boolean forbiddenByConcretization(TruthValueConfidence oldValue, TruthValueConfidence newValue) {
+	protected boolean forbiddenByConcretization(TruthValueConfidence oldValue, TruthValue newValue) {
 		return shouldCheckConcretization(oldValue, newValue) && concretizationInProgress();
 	}
 
-	protected boolean shouldCheckConcretization(TruthValueConfidence oldValue, TruthValueConfidence newValue) {
+	protected boolean shouldCheckConcretization(TruthValueConfidence oldValue, TruthValue newValue) {
 		return switch (roundingMode) {
 			case NONE -> false;
-			case PREFER_FALSE -> !oldValue.must() && newValue.getTruthValue() == TruthValue.TRUE;
-			case PREFER_TRUE -> oldValue.may() && newValue.getTruthValue() == TruthValue.FALSE;
+			case PREFER_FALSE -> !oldValue.must() && newValue == TruthValue.TRUE;
+			case PREFER_TRUE -> oldValue.may() && newValue == TruthValue.FALSE;
 		};
 	}
 
@@ -63,10 +73,7 @@ public class ConcreteRelationConfidenceRefiner extends
 		return interpretation.put(key, value);
 	}
 
-	public static Factory<TruthValueConfidence, Boolean> of(Symbol<TruthValueConfidence> concreteSymbol, RoundingMode roundingMode) {
-		if (roundingMode == RoundingMode.NONE) {
-			return ConcreteSymbolRefiner.of(concreteSymbol);
-		}
+	public static Factory<TruthValue, Boolean> of(Symbol<TruthValueConfidence> concreteSymbol, RoundingMode roundingMode) {
 		return (adapter, partialSymbol) -> new ConcreteRelationConfidenceRefiner(adapter, partialSymbol, concreteSymbol,
 				roundingMode);
 	}

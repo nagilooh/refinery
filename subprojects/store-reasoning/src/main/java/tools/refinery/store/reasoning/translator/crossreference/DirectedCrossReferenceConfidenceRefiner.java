@@ -5,10 +5,12 @@
  */
 package tools.refinery.store.reasoning.translator.crossreference;
 
+import tools.refinery.logic.term.truthvalue.TruthValue;
 import tools.refinery.logic.term.truthvalue.TruthValueConfidence;
 import tools.refinery.store.reasoning.ReasoningAdapter;
 import tools.refinery.store.reasoning.refinement.ConcreteRelationConfidenceRefiner;
 import tools.refinery.store.reasoning.refinement.TypeConstraintRefiner;
+import tools.refinery.store.reasoning.representation.ConfidencePartialRelation;
 import tools.refinery.store.reasoning.representation.PartialRelation;
 import tools.refinery.store.reasoning.representation.PartialSymbol;
 import tools.refinery.store.reasoning.seed.ModelSeed;
@@ -19,6 +21,7 @@ import tools.refinery.store.tuple.Tuple;
 import java.util.Set;
 
 class DirectedCrossReferenceConfidenceRefiner extends ConcreteRelationConfidenceRefiner {
+	private final ConfidencePartialRelation confidenceLinkType;
 	private final PartialRelation sourceType;
 	private final PartialRelation targetType;
 	private final Set<PartialRelation> supersets;
@@ -26,13 +29,14 @@ class DirectedCrossReferenceConfidenceRefiner extends ConcreteRelationConfidence
 	private TypeConstraintRefiner typeConstraintRefiner;
 
 	protected DirectedCrossReferenceConfidenceRefiner(
-			ReasoningAdapter adapter, PartialSymbol<TruthValueConfidence, Boolean> partialSymbol,
-			Symbol<TruthValueConfidence> concreteSymbol, DirectedCrossReferenceConfidenceInfo info, RoundingMode roundingMode) {
+			ReasoningAdapter adapter, PartialSymbol<TruthValue, Boolean> partialSymbol,
+			Symbol<TruthValueConfidence> concreteSymbol, DirectedCrossReferenceConfidenceInfo info, RoundingMode roundingMode, ConfidencePartialRelation confidenceLinkType) {
 		super(adapter, partialSymbol, concreteSymbol, roundingMode);
 		this.sourceType = info.sourceType();
 		this.targetType = info.targetType();
 		this.supersets = info.supersets();
 		this.oppositeSupersets = info.oppositeSupersets();
+		this.confidenceLinkType = confidenceLinkType;
 	}
 
 	@Override
@@ -43,7 +47,7 @@ class DirectedCrossReferenceConfidenceRefiner extends ConcreteRelationConfidence
 	}
 
 	@Override
-	public boolean merge(Tuple key, TruthValueConfidence value) {
+	public boolean merge(Tuple key, TruthValue value) {
 		if (!super.merge(key, value)) {
 			return false;
 		}
@@ -56,13 +60,23 @@ class DirectedCrossReferenceConfidenceRefiner extends ConcreteRelationConfidence
 	@Override
 	public void afterInitialize(ModelSeed modelSeed) {
 		var linkType = getPartialSymbol();
-//		TODO: Do we need this
-//		typeConstraintRefiner.mergeFromSeed(linkType, modelSeed);
+		var cursor = modelSeed.getCursor(confidenceLinkType);
+		while (cursor.move()) {
+			var value = cursor.getValue();
+			if (value.must()) {
+				var key = cursor.getKey();
+				if (!typeConstraintRefiner.merge(key)) {
+					throw new IllegalArgumentException("Failed to merge type constraints of %s for key %s"
+							.formatted(linkType, key));
+				}
+			}
+		}
 	}
 
-	public static Factory<TruthValueConfidence, Boolean> of(Symbol<TruthValueConfidence> concreteSymbol, DirectedCrossReferenceConfidenceInfo info,
-												  RoundingMode roundingMode) {
+	public static Factory<TruthValue, Boolean> of(Symbol<TruthValueConfidence> concreteSymbol,
+										 DirectedCrossReferenceConfidenceInfo info,
+												  RoundingMode roundingMode, ConfidencePartialRelation confidenceLinkType) {
 		return (adapter, partialSymbol) -> new DirectedCrossReferenceConfidenceRefiner(adapter, partialSymbol,
-				concreteSymbol, info, roundingMode);
+				concreteSymbol, info, roundingMode, confidenceLinkType);
 	}
 }

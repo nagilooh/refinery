@@ -3,7 +3,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package tools.refinery.store.reasoning.translator.metamodel;
+package tools.refinery.store.reasoning.translator.confidence;
 
 import org.junit.jupiter.api.Test;
 import tools.refinery.logic.term.cardinalityinterval.CardinalityIntervals;
@@ -13,6 +13,7 @@ import tools.refinery.store.dse.propagation.PropagationAdapter;
 import tools.refinery.store.model.Interpretation;
 import tools.refinery.store.model.Model;
 import tools.refinery.store.model.ModelStore;
+import tools.refinery.store.query.ModelQueryAdapter;
 import tools.refinery.store.query.interpreter.QueryInterpreterAdapter;
 import tools.refinery.store.reasoning.ReasoningAdapter;
 import tools.refinery.store.reasoning.ReasoningStoreAdapter;
@@ -21,6 +22,8 @@ import tools.refinery.store.reasoning.representation.ConfidencePartialRelation;
 import tools.refinery.store.reasoning.representation.PartialRelation;
 import tools.refinery.store.reasoning.seed.ModelSeed;
 import tools.refinery.store.reasoning.translator.containment.ContainmentHierarchyTranslator;
+import tools.refinery.store.reasoning.translator.metamodel.ConfidenceMetamodel;
+import tools.refinery.store.reasoning.translator.metamodel.ConfidenceMetamodelTranslator;
 import tools.refinery.store.reasoning.translator.multiobject.MultiObjectTranslator;
 import tools.refinery.store.tuple.Tuple;
 
@@ -102,7 +105,7 @@ class ConfidenceMetamodelTest {
 						.put(Tuple.of(1, 5), new TruthValueConfidence(TruthValue.TRUE, 1.0)))
 				.build();
 
-		var model = createModel(metamodel, seed);
+		try (var model = createModel(metamodel, seed)) {
 		var reasoningAdapter = model.getAdapter(ReasoningAdapter.class);
 
 		var coursesInterpretation = reasoningAdapter.getPartialInterpretation(Concreteness.PARTIAL, courses);
@@ -121,16 +124,28 @@ class ConfidenceMetamodelTest {
 		assertThat(enrolledStudentsInterpretation.get(Tuple.of(1, 4)), is(TruthValue.UNKNOWN));
 		assertThat(enrolledStudentsInterpretation.get(Tuple.of(1, 5)), is(TruthValue.TRUE));
 
-		for(var symbol : model.getStore().getSymbols()) {
-			if (symbol.name().equals("enrolledStudentsConfidence")) {
-				@SuppressWarnings("unchecked")
-				var interpretation = (Interpretation<TruthValueConfidence>) model.getInterpretation(symbol);
-				assertThat(interpretation.get(Tuple.of(1, 3)), is(new TruthValueConfidence(TruthValue.FALSE, 0.0)));
-				assertThat(interpretation.get(Tuple.of(1, 4)), is(new TruthValueConfidence(TruthValue.UNKNOWN, 0.5)));
-				assertThat(interpretation.get(Tuple.of(1, 5)), is(new TruthValueConfidence(TruthValue.TRUE, 1.0)));
-			}
-		}
-	}
+		var interpretation = reasoningAdapter.getPartialInterpretation(Concreteness.PARTIAL,
+				enrolledStudentsConfidence);
+		assertThat(interpretation.get(Tuple.of(1, 3)), is(new TruthValueConfidence(TruthValue.FALSE, 0.0)));
+		assertThat(interpretation.get(Tuple.of(1, 4)), is(new TruthValueConfidence(TruthValue.UNKNOWN, 0.5)));
+		assertThat(interpretation.get(Tuple.of(1, 5)), is(new TruthValueConfidence(TruthValue.TRUE, 1.0)));
+
+		var candidateInterpretation = reasoningAdapter.getPartialInterpretation(Concreteness.CANDIDATE,
+				enrolledStudentsConfidence);
+		assertThat(candidateInterpretation.get(Tuple.of(1, 3)), is(new TruthValueConfidence(TruthValue.FALSE, 0.0)));
+		assertThat(candidateInterpretation.get(Tuple.of(1, 4)), is(new TruthValueConfidence(TruthValue.FALSE, 0.0)));
+		assertThat(candidateInterpretation.get(Tuple.of(1, 5)), is(new TruthValueConfidence(TruthValue.TRUE, 1.0)));
+
+		var refiner = reasoningAdapter.getRefiner(enrolledStudents);
+		refiner.merge(Tuple.of(1, 4), TruthValue.TRUE);
+
+		var queryEngine = model.getAdapter(ModelQueryAdapter.class);
+		queryEngine.flushChanges();
+
+		assertThat(interpretation.get(Tuple.of(1, 4)), is(new TruthValueConfidence(TruthValue.TRUE, 1.0)));
+		assertThat(enrolledStudentsInterpretation.get(Tuple.of(1, 4)), is(TruthValue.TRUE));
+		assertThat(candidateInterpretation.get(Tuple.of(1, 4)), is(new TruthValueConfidence(TruthValue.TRUE, 1.0)));
+	}}
 
 	@Test
 	void simpleContainmentTest() {
@@ -165,14 +180,15 @@ class ConfidenceMetamodelTest {
 						.put(Tuple.of(2, 3), TruthValue.TRUE))
 				.build();
 
-		var model = createModel(metamodel, seed);
-		var coursesInterpretation = model.getAdapter(ReasoningAdapter.class)
-				.getPartialInterpretation(Concreteness.PARTIAL, courses);
+		try (var model = createModel(metamodel, seed)) {
+			var coursesInterpretation = model.getAdapter(ReasoningAdapter.class)
+					.getPartialInterpretation(Concreteness.PARTIAL, courses);
 
-		assertThat(coursesInterpretation.get(Tuple.of(0, 1)), is(TruthValue.UNKNOWN));
-		assertThat(coursesInterpretation.get(Tuple.of(0, 3)), is(TruthValue.FALSE));
-		assertThat(coursesInterpretation.get(Tuple.of(2, 1)), is(TruthValue.UNKNOWN));
-		assertThat(coursesInterpretation.get(Tuple.of(2, 3)), is(TruthValue.TRUE));
+			assertThat(coursesInterpretation.get(Tuple.of(0, 1)), is(TruthValue.UNKNOWN));
+			assertThat(coursesInterpretation.get(Tuple.of(0, 3)), is(TruthValue.FALSE));
+			assertThat(coursesInterpretation.get(Tuple.of(2, 1)), is(TruthValue.UNKNOWN));
+			assertThat(coursesInterpretation.get(Tuple.of(2, 3)), is(TruthValue.TRUE));
+		}
 	}
 
 	private static Model createModel(ConfidenceMetamodel metamodel, ModelSeed seed) {

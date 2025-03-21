@@ -14,11 +14,14 @@ import tools.refinery.store.dse.propagation.PropagationBuilder;
 import tools.refinery.store.dse.transition.Rule;
 import tools.refinery.store.model.ModelStoreBuilder;
 import tools.refinery.store.model.ModelStoreConfiguration;
+import tools.refinery.store.query.view.MayConfidenceView;
+import tools.refinery.store.query.view.MustConfidenceView;
 import tools.refinery.store.reasoning.ReasoningAdapter;
 import tools.refinery.store.reasoning.representation.ConfidencePartialRelation;
 import tools.refinery.store.reasoning.representation.PartialRelation;
 import tools.refinery.store.reasoning.translator.*;
 import tools.refinery.store.reasoning.translator.multiplicity.ConfidenceInvalidMultiplicityErrorTranslator;
+import tools.refinery.store.reasoning.translator.multiplicity.InvalidMultiplicityErrorTranslator;
 import tools.refinery.store.reasoning.translator.multiplicity.Multiplicity;
 import tools.refinery.store.representation.Symbol;
 
@@ -49,10 +52,16 @@ public class DirectedCrossReferenceConfidenceTranslator implements ModelStoreCon
 			throw new TranslationException(linkType, "Unsupported default value %s for directed cross reference %s"
 					.formatted(defaultValue, linkType));
 		}
-		// TODO: Create translator for the derived PartialRelation without confidence value here? Or should
-		//  ConfidencePartialRelationTranslator take care of it?
-		var translator = ConfidencePartialRelationTranslator.of(linkType, info.partialRelation());
-		translator.symbol(confidenceSymbol);
+		var partialRelation = info.partialRelation();
+		var translator = PartialRelationTranslator.of(partialRelation)
+				.may(Query.of(partialRelation.name() + "#may", (builder, p1, p2) -> builder
+						.clause(
+								new MayConfidenceView(confidenceSymbol).call(p1, p2)
+						)))
+				.must(Query.of(partialRelation.name() + "#must", (builder, p1, p2) -> builder
+						.clause(
+								new MustConfidenceView(confidenceSymbol).call(p1, p2)
+						)));
 		if (defaultValue.may()) {
 			throw new TranslationException(linkType,
 					"Unsupported default value %s for directed cross reference %s".formatted(defaultValue, linkType));
@@ -60,25 +69,27 @@ public class DirectedCrossReferenceConfidenceTranslator implements ModelStoreCon
 			configureWithDefaultFalse(storeBuilder);
 		}
 		var roundingMode = info.concretizationSettings().concretize() ? RoundingMode.PREFER_FALSE : RoundingMode.NONE;
-		translator.refiner(DirectedCrossReferenceConfidenceRefiner.of(confidenceSymbol, info, roundingMode));
 		translator.roundingMode(roundingMode);
+		translator.refiner(DirectedCrossReferenceConfidenceRefiner.of(confidenceSymbol, info, roundingMode, linkType));
 		if (info.concretizationSettings().decide()) {
 			translator.decision(Rule.of(linkType.name(), (builder, source, target) -> builder
 					.clause(
-							may(linkType.call(source, target)),
-							not(candidateMust(linkType.call(source, target))),
+							may(partialRelation.call(source, target)),
+							not(candidateMust(partialRelation.call(source, target))),
 							not(MULTI_VIEW.call(source)),
 							not(MULTI_VIEW.call(target))
 					)
 					.action(
-							add(linkType, source, target)
+							add(partialRelation, source, target)
 					)));
 		}
 		storeBuilder.with(translator);
-		storeBuilder.with(new ConfidenceInvalidMultiplicityErrorTranslator(sourceType, linkType, false,
+		storeBuilder.with(new InvalidMultiplicityErrorTranslator(sourceType, partialRelation, false,
 				info.sourceMultiplicity()));
-		storeBuilder.with(new ConfidenceInvalidMultiplicityErrorTranslator(targetType, linkType, true,
+		storeBuilder.with(new InvalidMultiplicityErrorTranslator(targetType, partialRelation, true,
 				info.targetMultiplicity()));
+		storeBuilder.with(new ConfidencePartialRelationTranslator(linkType, roundingMode)
+				.symbol(confidenceSymbol));
 	}
 
 
@@ -102,35 +113,36 @@ public class DirectedCrossReferenceConfidenceTranslator implements ModelStoreCon
 		var mayNewSource = createMayHelper(sourceType, info.sourceMultiplicity(), false);
 		var mayNewTarget = createMayHelper(targetType, info.targetMultiplicity(), true);
 		var superset = createSupersetHelper();
+		var partialRelation = info.partialRelation();
 		// Fail if there is no {@link PropagationBuilder}, since it is required for soundness.
 		var propagationBuilder = storeBuilder.getAdapter(PropagationBuilder.class);
 		propagationBuilder.rule(Rule.of(name + "#invalidLink", (builder, p1, p2) -> {
 			builder.clause(
-					may(linkType.call(p1, p2)),
+					may(partialRelation.call(p1, p2)),
 					not(may(sourceType.call(p1)))
 			);
 			builder.clause(
-					may(linkType.call(p1, p2)),
+					may(partialRelation.call(p1, p2)),
 					not(may(targetType.call(p2)))
 			);
 			builder.clause(
-					may(linkType.call(p1, p2)),
+					may(partialRelation.call(p1, p2)),
 					not(may(superset.call(p1, p2)))
 			);
 			if (info.isConstrained()) {
 				builder.clause(
-						may(linkType.call(p1, p2)),
-						not(must(linkType.call(p1, p2))),
+						may(partialRelation.call(p1, p2)),
+						not(must(partialRelation.call(p1, p2))),
 						not(mayNewSource.call(p1))
 				);
 				builder.clause(
-						may(linkType.call(p1, p2)),
-						not(must(linkType.call(p1, p2))),
+						may(partialRelation.call(p1, p2)),
+						not(must(partialRelation.call(p1, p2))),
 						not(mayNewTarget.call(p2))
 				);
 			}
 			builder.action(
-					remove(linkType, p1, p2)
+					remove(partialRelation, p1, p2)
 			);
 		}));
 		if (info.concretizationSettings().concretize()) {
@@ -144,26 +156,26 @@ public class DirectedCrossReferenceConfidenceTranslator implements ModelStoreCon
 			var queryBuilder = Query.builder(name + "#invalidLinkConcretizationPrecondition")
 					.parameters(p1, p2)
 					.clause(
-							candidateMay(linkType.call(p1, p2)),
+							candidateMay(partialRelation.call(p1, p2)),
 							not(candidateMay(sourceType.call(p1)))
 					)
 					.clause(
-							candidateMay(linkType.call(p1, p2)),
+							candidateMay(partialRelation.call(p1, p2)),
 							not(candidateMay(targetType.call(p2)))
 					)
 					.clause(
-							candidateMay(linkType.call(p1, p2)),
+							candidateMay(partialRelation.call(p1, p2)),
 							not(candidateMay(superset.call(p1, p2)))
 					);
 			if (info.isConstrained()) {
 				queryBuilder.clause(
-						candidateMay(linkType.call(p1, p2)),
-						not(candidateMust(linkType.call(p1, p2))),
+						candidateMay(partialRelation.call(p1, p2)),
+						not(candidateMust(partialRelation.call(p1, p2))),
 						not(candidateMayNewSource.call(p1))
 				);
 				queryBuilder.clause(
-						candidateMay(linkType.call(p1, p2)),
-						not(candidateMust(linkType.call(p1, p2))),
+						candidateMay(partialRelation.call(p1, p2)),
+						not(candidateMust(partialRelation.call(p1, p2))),
 						not(candidateMayNewTarget.call(p2))
 				);
 			}
@@ -173,7 +185,7 @@ public class DirectedCrossReferenceConfidenceTranslator implements ModelStoreCon
 					candidateMust(ReasoningAdapter.EXISTS_SYMBOL.call(p2))
 			);
 			builder.action(
-					remove(linkType, p1, p2)
+					remove(partialRelation, p1, p2)
 			);
 		}));
 	}
