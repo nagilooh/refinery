@@ -16,6 +16,8 @@ public class TruthValueConfidence implements AbstractValue<TruthValueConfidence,
 	private final TruthValue truthValue;
 	private final double confidence;
 
+	private static final double THRESHOLD = 0.000001;
+
 	public TruthValueConfidence(TruthValue truthValue, Double confidence) {
 		this.truthValue = truthValue;
 		this.confidence = confidence;
@@ -75,8 +77,11 @@ public class TruthValueConfidence implements AbstractValue<TruthValueConfidence,
 			return false;
 		}
 
+		var otherConfidence = ((TruthValueConfidence) other).getConfidence();
+
 		return truthValue.equals(((TruthValueConfidence) other).getTruthValue())
-				&& confidence == ((TruthValueConfidence) other).getConfidence();
+				&& Double.isNaN(confidence) ? Double.isNaN(otherConfidence) :
+				Math.abs(confidence - otherConfidence) < THRESHOLD;
 	}
 
 	@Override
