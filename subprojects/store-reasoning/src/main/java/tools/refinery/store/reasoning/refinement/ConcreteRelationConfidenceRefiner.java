@@ -30,7 +30,9 @@ public class ConcreteRelationConfidenceRefiner extends
 	}
 
 	private static void increaseConfidenceCost(double cost) {
-		confidenceCost += cost;
+		if (!confidenceCost.isNaN()) {
+			confidenceCost += cost;
+		}
 	}
 
 	@Override
