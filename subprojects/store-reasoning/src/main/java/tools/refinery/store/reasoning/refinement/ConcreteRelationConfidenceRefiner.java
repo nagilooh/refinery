@@ -20,7 +20,7 @@ public class ConcreteRelationConfidenceRefiner extends
 		AbstractPartialInterpretationRefiner.ConcretizationAware<TruthValue, Boolean> {
 	private final Interpretation<TruthValueConfidence> interpretation;
 	private final RoundingMode roundingMode;
-	private Double confidenceCost = 0.0;
+	private static Double confidenceCost = 0.0;
 
 	protected ConcreteRelationConfidenceRefiner(ReasoningAdapter adapter, PartialSymbol<TruthValue, Boolean> partialSymbol,
                                                 Symbol<TruthValueConfidence> concreteSymbol, RoundingMode roundingMode) {
@@ -29,14 +29,17 @@ public class ConcreteRelationConfidenceRefiner extends
 		this.roundingMode = roundingMode;
 	}
 
+	private static void increaseConfidenceCost(double cost) {
+		confidenceCost += cost;
+	}
+
 	@Override
 	public boolean merge(Tuple key, TruthValue value) {
 		var currentValue = get(key);
 		var mergedValue = concretizationAwareMeet(currentValue, value);
 		if (!Objects.equals(currentValue, mergedValue)) {
 			put(key, mergedValue);
-			confidenceCost += Math.log(Math.abs(mergedValue.getConfidence() - currentValue.getConfidence()));
-			
+			increaseConfidenceCost(Math.log(Math.abs(mergedValue.getConfidence() - currentValue.getConfidence())));
 		}
 		return true;
 	}
@@ -76,5 +79,9 @@ public class ConcreteRelationConfidenceRefiner extends
 	public static Factory<TruthValue, Boolean> of(Symbol<TruthValueConfidence> concreteSymbol, RoundingMode roundingMode) {
 		return (adapter, partialSymbol) -> new ConcreteRelationConfidenceRefiner(adapter, partialSymbol, concreteSymbol,
 				roundingMode);
+	}
+
+	public static Double getConfidenceCost() {
+		return confidenceCost;
 	}
 }
