@@ -10,7 +10,6 @@ import tools.refinery.logic.term.cardinalityinterval.CardinalityIntervals;
 import tools.refinery.logic.term.truthvalue.TruthValue;
 import tools.refinery.logic.term.truthvalue.TruthValueConfidence;
 import tools.refinery.store.dse.propagation.PropagationAdapter;
-import tools.refinery.store.model.Interpretation;
 import tools.refinery.store.model.Model;
 import tools.refinery.store.model.ModelStore;
 import tools.refinery.store.query.ModelQueryAdapter;
@@ -18,6 +17,7 @@ import tools.refinery.store.query.interpreter.QueryInterpreterAdapter;
 import tools.refinery.store.reasoning.ReasoningAdapter;
 import tools.refinery.store.reasoning.ReasoningStoreAdapter;
 import tools.refinery.store.reasoning.literal.Concreteness;
+import tools.refinery.store.reasoning.refinement.ConcreteRelationConfidenceRefiner;
 import tools.refinery.store.reasoning.representation.ConfidencePartialRelation;
 import tools.refinery.store.reasoning.representation.PartialRelation;
 import tools.refinery.store.reasoning.seed.ModelSeed;
@@ -29,6 +29,7 @@ import tools.refinery.store.tuple.Tuple;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.closeTo;
 
 class ConfidenceMetamodelTest {
 	private final PartialRelation person = new PartialRelation("Person", 1);
@@ -44,6 +45,8 @@ class ConfidenceMetamodelTest {
 			"enrolledStudentsConfidence",	2);
 	private final PartialRelation enrolledStudents = new PartialRelation("enrolledStudents", 2);
 	private final PartialRelation invalidStudentCount = new PartialRelation("invalidStudentCount", 1);
+
+	private static final double PRECISION = 0.00001;
 
 	@Test
 	void metamodelTest() {
@@ -101,51 +104,68 @@ class ConfidenceMetamodelTest {
 						.reducedValue(TruthValue.FALSE)
 						.put(Tuple.of(1, 3), TruthValue.TRUE))
 				.seed(enrolledStudentsConfidence, builder -> builder
-						.reducedValue(new TruthValueConfidence(TruthValue.UNKNOWN, 0.5))
+						.reducedValue(new TruthValueConfidence(TruthValue.FALSE, 0.0))
+						.put(Tuple.of(1, 4), new TruthValueConfidence(TruthValue.UNKNOWN, 0.7))
 						.put(Tuple.of(1, 5), new TruthValueConfidence(TruthValue.TRUE, 1.0)))
 				.build();
 
 		try (var model = createModel(metamodel, seed)) {
-		var reasoningAdapter = model.getAdapter(ReasoningAdapter.class);
+			var reasoningAdapter = model.getAdapter(ReasoningAdapter.class);
 
-		var coursesInterpretation = reasoningAdapter.getPartialInterpretation(Concreteness.PARTIAL, courses);
-		assertThat(coursesInterpretation.get(Tuple.of(0, 1)), is(TruthValue.TRUE));
-		assertThat(coursesInterpretation.get(Tuple.of(0, 2)), is(TruthValue.UNKNOWN));
-		assertThat(coursesInterpretation.get(Tuple.of(0, 3)), is(TruthValue.FALSE));
+			var coursesInterpretation = reasoningAdapter.getPartialInterpretation(Concreteness.PARTIAL, courses);
+			assertThat(coursesInterpretation.get(Tuple.of(0, 1)), is(TruthValue.TRUE));
+			assertThat(coursesInterpretation.get(Tuple.of(0, 2)), is(TruthValue.UNKNOWN));
+			assertThat(coursesInterpretation.get(Tuple.of(0, 3)), is(TruthValue.FALSE));
 
-		var invalidLecturerCountInterpretation = reasoningAdapter.getPartialInterpretation(Concreteness.PARTIAL,
-				invalidLecturerCount);
-		assertThat(invalidLecturerCountInterpretation.get(Tuple.of(1)), is(TruthValue.FALSE));
-		assertThat(invalidLecturerCountInterpretation.get(Tuple.of(2)), is(TruthValue.ERROR));
+			var invalidLecturerCountInterpretation = reasoningAdapter.getPartialInterpretation(Concreteness.PARTIAL,
+					invalidLecturerCount);
+			assertThat(invalidLecturerCountInterpretation.get(Tuple.of(1)), is(TruthValue.FALSE));
+			assertThat(invalidLecturerCountInterpretation.get(Tuple.of(2)), is(TruthValue.ERROR));
 
-		var enrolledStudentsInterpretation = reasoningAdapter.getPartialInterpretation(Concreteness.PARTIAL,
-				enrolledStudents);
-		assertThat(enrolledStudentsInterpretation.get(Tuple.of(1, 3)), is(TruthValue.FALSE));
-		assertThat(enrolledStudentsInterpretation.get(Tuple.of(1, 4)), is(TruthValue.UNKNOWN));
-		assertThat(enrolledStudentsInterpretation.get(Tuple.of(1, 5)), is(TruthValue.TRUE));
+			var enrolledStudentsInterpretation = reasoningAdapter.getPartialInterpretation(Concreteness.PARTIAL,
+					enrolledStudents);
+			assertThat(enrolledStudentsInterpretation.get(Tuple.of(1, 3)), is(TruthValue.FALSE));
+			assertThat(enrolledStudentsInterpretation.get(Tuple.of(1, 4)), is(TruthValue.UNKNOWN));
+			assertThat(enrolledStudentsInterpretation.get(Tuple.of(1, 5)), is(TruthValue.TRUE));
 
-		var interpretation = reasoningAdapter.getPartialInterpretation(Concreteness.PARTIAL,
-				enrolledStudentsConfidence);
-		assertThat(interpretation.get(Tuple.of(1, 3)), is(new TruthValueConfidence(TruthValue.FALSE, 0.0)));
-		assertThat(interpretation.get(Tuple.of(1, 4)), is(new TruthValueConfidence(TruthValue.UNKNOWN, 0.5)));
-		assertThat(interpretation.get(Tuple.of(1, 5)), is(new TruthValueConfidence(TruthValue.TRUE, 1.0)));
+			var interpretation = reasoningAdapter.getPartialInterpretation(Concreteness.PARTIAL,
+					enrolledStudentsConfidence);
+			assertThat(interpretation.get(Tuple.of(1, 3)), is(TruthValueConfidence.FALSE));
+			assertThat(interpretation.get(Tuple.of(1, 4)), is(new TruthValueConfidence(TruthValue.UNKNOWN, 0.7)));
+			assertThat(interpretation.get(Tuple.of(1, 5)), is(TruthValueConfidence.TRUE));
 
-		var candidateInterpretation = reasoningAdapter.getPartialInterpretation(Concreteness.CANDIDATE,
-				enrolledStudentsConfidence);
-		assertThat(candidateInterpretation.get(Tuple.of(1, 3)), is(new TruthValueConfidence(TruthValue.FALSE, 0.0)));
-		assertThat(candidateInterpretation.get(Tuple.of(1, 4)), is(new TruthValueConfidence(TruthValue.FALSE, 0.0)));
-		assertThat(candidateInterpretation.get(Tuple.of(1, 5)), is(new TruthValueConfidence(TruthValue.TRUE, 1.0)));
+			var candidateInterpretation = reasoningAdapter.getPartialInterpretation(Concreteness.CANDIDATE,
+					enrolledStudentsConfidence);
+			assertThat(candidateInterpretation.get(Tuple.of(1, 3)), is(TruthValueConfidence.FALSE));
+			assertThat(candidateInterpretation.get(Tuple.of(1, 4)), is(TruthValueConfidence.FALSE));
+			assertThat(candidateInterpretation.get(Tuple.of(1, 5)), is(new TruthValueConfidence(TruthValue.TRUE, 1.0)));
 
-		var refiner = reasoningAdapter.getRefiner(enrolledStudents);
-		refiner.merge(Tuple.of(1, 4), TruthValue.TRUE);
+			assertThat(ConcreteRelationConfidenceRefiner.getConfidenceCost(), closeTo(0.0, PRECISION));
 
-		var queryEngine = model.getAdapter(ModelQueryAdapter.class);
-		queryEngine.flushChanges();
+			var refiner = reasoningAdapter.getRefiner(enrolledStudents);
+			refiner.merge(Tuple.of(1, 4), TruthValue.TRUE);
 
-		assertThat(interpretation.get(Tuple.of(1, 4)), is(new TruthValueConfidence(TruthValue.TRUE, 1.0)));
-		assertThat(enrolledStudentsInterpretation.get(Tuple.of(1, 4)), is(TruthValue.TRUE));
-		assertThat(candidateInterpretation.get(Tuple.of(1, 4)), is(new TruthValueConfidence(TruthValue.TRUE, 1.0)));
-	}}
+			assertThat(ConcreteRelationConfidenceRefiner.getConfidenceCost(), closeTo(Math.log(0.3), PRECISION));
+
+			var queryEngine = model.getAdapter(ModelQueryAdapter.class);
+			queryEngine.flushChanges();
+
+			assertThat(interpretation.get(Tuple.of(1, 4)), is(TruthValueConfidence.TRUE));
+			assertThat(enrolledStudentsInterpretation.get(Tuple.of(1, 4)), is(TruthValue.TRUE));
+			assertThat(candidateInterpretation.get(Tuple.of(1, 4)), is(TruthValueConfidence.TRUE));
+
+
+			refiner.merge(Tuple.of(1, 4), TruthValue.FALSE);
+			queryEngine.flushChanges();
+
+			assertThat(ConcreteRelationConfidenceRefiner.getConfidenceCost(), is(Double.NaN));
+
+
+			assertThat(interpretation.get(Tuple.of(1, 4)), is(TruthValueConfidence.ERROR));
+			assertThat(enrolledStudentsInterpretation.get(Tuple.of(1, 4)), is(TruthValue.ERROR));
+			assertThat(candidateInterpretation.get(Tuple.of(1, 4)), is(TruthValueConfidence.ERROR));
+		}
+	}
 
 	@Test
 	void simpleContainmentTest() {
