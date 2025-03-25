@@ -53,14 +53,12 @@ public class TruthValueConfidence implements AbstractValue<TruthValueConfidence,
 
 	@Override
 	public TruthValueConfidence join(TruthValueConfidence other) {
-		// TODO: This is definitely not correct
-		return new TruthValueConfidence(truthValue.join(other.getTruthValue()), Math.max(this.confidence, other.getConfidence()));
+		throw new UnsupportedOperationException("join() not defined for two TruthValueConfidence values");
 	}
 
 	@Override
 	public TruthValueConfidence meet(TruthValueConfidence other) {
-		// TODO: This is definitely not correct
-		return new TruthValueConfidence(truthValue.meet(other.getTruthValue()), Math.min(this.confidence, other.getConfidence()));
+		throw new UnsupportedOperationException("meet() not defined for two TruthValueConfidence values");
 	}
 
 	public boolean must() {
