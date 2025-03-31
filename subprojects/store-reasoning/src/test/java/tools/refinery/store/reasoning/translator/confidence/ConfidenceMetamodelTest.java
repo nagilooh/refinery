@@ -40,6 +40,7 @@ class ConfidenceMetamodelTest {
 	private final PartialRelation courses = new PartialRelation("courses", 2);
 	private final PartialRelation location = new PartialRelation("location", 2);
 	private final PartialRelation lecturer = new PartialRelation("lecturer", 2);
+	private final ConfidencePartialRelation lecturerConfidence = new ConfidencePartialRelation("lecturerConfidence", 2);
 	private final PartialRelation invalidLecturerCount = new PartialRelation("invalidLecturerCount", 1);
 	private final ConfidencePartialRelation enrolledStudentsConfidence = new ConfidencePartialRelation(
 			"enrolledStudentsConfidence",	2);
@@ -106,7 +107,7 @@ class ConfidenceMetamodelTest {
 				.seed(enrolledStudentsConfidence, builder -> builder
 						.reducedValue(new TruthValueConfidence(TruthValue.FALSE, 0.0))
 						.put(Tuple.of(1, 4), new TruthValueConfidence(TruthValue.UNKNOWN, 0.7))
-						.put(Tuple.of(1, 5), new TruthValueConfidence(TruthValue.TRUE, 1.0)))
+						.put(Tuple.of(1, 5), TruthValueConfidence.TRUE))
 				.build();
 
 		var translator = new ConfidenceMetamodelTranslator(metamodel);
@@ -140,7 +141,7 @@ class ConfidenceMetamodelTest {
 					enrolledStudentsConfidence);
 			assertThat(candidateInterpretation.get(Tuple.of(1, 3)), is(TruthValueConfidence.FALSE));
 			assertThat(candidateInterpretation.get(Tuple.of(1, 4)), is(TruthValueConfidence.FALSE));
-			assertThat(candidateInterpretation.get(Tuple.of(1, 5)), is(new TruthValueConfidence(TruthValue.TRUE, 1.0)));
+			assertThat(candidateInterpretation.get(Tuple.of(1, 5)), is(TruthValueConfidence.TRUE));
 
 			assertThat(ConcreteRelationConfidenceRefiner.getConfidenceCost(), closeTo(0.0, PRECISION));
 
@@ -166,6 +167,146 @@ class ConfidenceMetamodelTest {
 			assertThat(interpretation.get(Tuple.of(1, 4)), is(TruthValueConfidence.ERROR));
 			assertThat(enrolledStudentsInterpretation.get(Tuple.of(1, 4)), is(TruthValue.ERROR));
 			assertThat(candidateInterpretation.get(Tuple.of(1, 4)), is(TruthValueConfidence.ERROR));
+		}
+	}
+
+	@Test
+	void confidenceCalculationTest() {
+		var metamodel = ConfidenceMetamodel.builder()
+				.type(person, true)
+				.type(student, person)
+				.type(teacher, person)
+				.type(course)
+				.directedReference(lecturerConfidence, builder -> builder
+						.source(course)
+						.multiplicity(CardinalityIntervals.ONE, invalidLecturerCount)
+						.target(teacher)
+						.partialSymbol(lecturer))
+				.directedReference(enrolledStudentsConfidence, builder -> builder
+						.source(course)
+						.multiplicity(CardinalityIntervals.SOME, invalidStudentCount)
+						.target(student)
+						.partialSymbol(enrolledStudents))
+				.build();
+
+		var seed = ModelSeed.builder(6)
+				.seed(MultiObjectTranslator.COUNT_SYMBOL, builder -> builder
+						.reducedValue(CardinalityIntervals.ONE)
+						.put(Tuple.of(1), CardinalityIntervals.SET)
+						.put(Tuple.of(4), CardinalityIntervals.SET))
+				.seed(ContainmentHierarchyTranslator.CONTAINER_SYMBOL, builder -> builder
+						.reducedValue(TruthValue.UNKNOWN))
+				.seed(ContainmentHierarchyTranslator.CONTAINED_SYMBOL, builder -> builder
+						.reducedValue(TruthValue.UNKNOWN))
+				.seed(ContainmentHierarchyTranslator.CONTAINS_SYMBOL, builder -> builder
+						.reducedValue(TruthValue.UNKNOWN))
+				.seed(person, builder -> builder.reducedValue(TruthValue.UNKNOWN))
+				.seed(student, builder -> builder.reducedValue(TruthValue.UNKNOWN))
+				.seed(teacher, builder -> builder.reducedValue(TruthValue.UNKNOWN))
+				.seed(course, builder -> builder
+						.reducedValue(TruthValue.UNKNOWN)
+						.put(Tuple.of(0), TruthValue.TRUE)
+						.put(Tuple.of(1), TruthValue.TRUE)
+				)
+				.seed(lecturerConfidence, builder -> builder
+						.reducedValue(TruthValueConfidence.FALSE)
+						.put(Tuple.of(0, 2), new TruthValueConfidence(TruthValue.UNKNOWN, 0.3))
+						.put(Tuple.of(0, 3), new TruthValueConfidence(TruthValue.UNKNOWN, 0.8))
+				)
+				.seed(enrolledStudentsConfidence, builder -> builder
+						.reducedValue(TruthValueConfidence.FALSE)
+						.put(Tuple.of(0, 4), TruthValueConfidence.TRUE)
+						.put(Tuple.of(0, 5), new TruthValueConfidence(TruthValue.UNKNOWN, 0.9))
+						.put(Tuple.of(1, 4), new TruthValueConfidence(TruthValue.UNKNOWN, 0.7))
+						.put(Tuple.of(1, 5), TruthValueConfidence.FALSE)
+				)
+				.build();
+
+		var translator = new ConfidenceMetamodelTranslator(metamodel);
+
+		try (var model = createModel(translator, seed)) {
+			var reasoningAdapter = model.getAdapter(ReasoningAdapter.class);
+			var lecturerRefiner = reasoningAdapter.getRefiner(lecturer);
+			var enrolledStudentsRefiner = reasoningAdapter.getRefiner(enrolledStudents);
+			var queryEngine = model.getAdapter(ModelQueryAdapter.class);
+
+			var upQuery = translator.getUpQuery();
+			var lowQuery = translator.getLowQuery();
+			var currentQuery = translator.getCurrentQuery();
+
+			var enrolledStudentsInterpretation = reasoningAdapter.getPartialInterpretation(Concreteness.PARTIAL,
+					enrolledStudents);
+			assertThat(enrolledStudentsInterpretation.get(Tuple.of(0, 4)), is(TruthValue.TRUE));
+			assertThat(enrolledStudentsInterpretation.get(Tuple.of(0, 5)), is(TruthValue.UNKNOWN));
+			assertThat(enrolledStudentsInterpretation.get(Tuple.of(1, 4)), is(TruthValue.UNKNOWN));
+			assertThat(enrolledStudentsInterpretation.get(Tuple.of(1, 5)), is(TruthValue.FALSE));
+
+			var enrolledStudentsConfidenceInterpretation = reasoningAdapter.getPartialInterpretation(Concreteness.PARTIAL,
+					enrolledStudentsConfidence);
+			assertThat(enrolledStudentsConfidenceInterpretation.get(Tuple.of(0, 4)), is(TruthValueConfidence.TRUE));
+			assertThat(enrolledStudentsConfidenceInterpretation.get(Tuple.of(0, 5)), is(new TruthValueConfidence(TruthValue.UNKNOWN, 0.9)));
+			assertThat(enrolledStudentsConfidenceInterpretation.get(Tuple.of(1, 4)), is(new TruthValueConfidence(TruthValue.UNKNOWN, 0.7)));
+			assertThat(enrolledStudentsConfidenceInterpretation.get(Tuple.of(1, 5)), is(TruthValueConfidence.FALSE));
+
+			var enrolledStudentsConfidenceCandidateInterpretation = reasoningAdapter.getPartialInterpretation(Concreteness.CANDIDATE,
+					enrolledStudentsConfidence);
+			assertThat(enrolledStudentsConfidenceCandidateInterpretation.get(Tuple.of(0, 4)), is(TruthValueConfidence.TRUE));
+			assertThat(enrolledStudentsConfidenceCandidateInterpretation.get(Tuple.of(0, 5)), is(TruthValueConfidence.FALSE));
+			assertThat(enrolledStudentsConfidenceCandidateInterpretation.get(Tuple.of(1, 4)), is(TruthValueConfidence.FALSE));
+			assertThat(enrolledStudentsConfidenceCandidateInterpretation.get(Tuple.of(1, 5)), is(TruthValueConfidence.FALSE));
+
+			assertThat(ConcreteRelationConfidenceRefiner.getConfidenceCost(), closeTo(0.0, PRECISION));
+
+			assertThat(queryEngine.getResultSet(upQuery).get(Tuple.of()),
+					closeTo(Math.log(0.7) + Math.log(0.8) + Math.log(0.9) + Math.log(0.7), PRECISION));
+			assertThat(queryEngine.getResultSet(lowQuery).get(Tuple.of()),
+					closeTo(Math.log(0.3) + Math.log(0.2) + Math.log(0.1) + Math.log(0.3), PRECISION));
+			assertThat(queryEngine.getResultSet(currentQuery).get(Tuple.of()),
+					closeTo(Math.log(0.7) + Math.log(0.2) + Math.log(0.1) + Math.log(0.3), PRECISION));
+
+			// Refinement
+			enrolledStudentsRefiner.merge(Tuple.of(1, 4), TruthValue.TRUE);
+
+			assertThat(ConcreteRelationConfidenceRefiner.getConfidenceCost(), closeTo(Math.log(0.3), PRECISION));
+
+			queryEngine.flushChanges();
+
+			assertThat(queryEngine.getResultSet(upQuery).get(Tuple.of()),
+					closeTo(Math.log(0.7) + Math.log(0.8) + Math.log(0.9), PRECISION));
+			assertThat(queryEngine.getResultSet(lowQuery).get(Tuple.of()),
+					closeTo(Math.log(0.3) + Math.log(0.2) + Math.log(0.1), PRECISION));
+			assertThat(queryEngine.getResultSet(currentQuery).get(Tuple.of()),
+					closeTo(Math.log(0.7) + Math.log(0.2) + Math.log(0.1), PRECISION));
+
+			// Refinement
+			lecturerRefiner.merge(Tuple.of(0, 2), TruthValue.FALSE);
+
+
+			var lecturerInterpretation = reasoningAdapter.getPartialInterpretation(Concreteness.PARTIAL,
+					enrolledStudents);
+			var lecturerConfidenceInterpretation = reasoningAdapter.getPartialInterpretation(Concreteness.PARTIAL,
+					enrolledStudentsConfidence);
+			var lecturerConfidenceCandidateInterpretation = reasoningAdapter.getPartialInterpretation(Concreteness.CANDIDATE,
+					enrolledStudentsConfidence);
+			assertThat(lecturerConfidenceInterpretation.get(Tuple.of(0, 2)), is(TruthValueConfidence.FALSE));
+			assertThat(lecturerInterpretation.get(Tuple.of(0, 2)), is(TruthValue.FALSE));
+			assertThat(lecturerConfidenceCandidateInterpretation.get(Tuple.of(0, 2)), is(TruthValueConfidence.FALSE));
+
+			assertThat(ConcreteRelationConfidenceRefiner.getConfidenceCost(), closeTo(Math.log(0.3) + Math.log(0.3),
+					PRECISION));
+
+			queryEngine.flushChanges();
+
+			assertThat(enrolledStudentsConfidenceInterpretation.get(Tuple.of(1, 4)), is(TruthValueConfidence.TRUE));
+			assertThat(enrolledStudentsInterpretation.get(Tuple.of(1, 4)), is(TruthValue.TRUE));
+			assertThat(enrolledStudentsConfidenceCandidateInterpretation.get(Tuple.of(1, 4)), is(TruthValueConfidence.TRUE));
+
+			assertThat(queryEngine.getResultSet(upQuery).get(Tuple.of()),
+					closeTo(Math.log(0.8) + Math.log(0.9), PRECISION));
+			assertThat(queryEngine.getResultSet(lowQuery).get(Tuple.of()),
+					closeTo(Math.log(0.2) + Math.log(0.1), PRECISION));
+			assertThat(queryEngine.getResultSet(currentQuery).get(Tuple.of()),
+					closeTo(Math.log(0.2) + Math.log(0.1), PRECISION));
 		}
 	}
 
