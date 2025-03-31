@@ -20,19 +20,20 @@ public class ConcreteRelationConfidenceRefiner extends
 		AbstractPartialInterpretationRefiner.ConcretizationAware<TruthValue, Boolean> {
 	private final Interpretation<TruthValueConfidence> interpretation;
 	private final RoundingMode roundingMode;
-	private static Double confidenceCost = 0.0;
+	public static final Symbol<Double> confidenceAgg = new Symbol<>("confidenceAgg", 0, Double.class, 0.0);
+	private final Interpretation<Double> confidenceAggInterpretation;
 
 	protected ConcreteRelationConfidenceRefiner(ReasoningAdapter adapter, PartialSymbol<TruthValue, Boolean> partialSymbol,
                                                 Symbol<TruthValueConfidence> concreteSymbol, RoundingMode roundingMode) {
 		super(adapter, partialSymbol);
 		interpretation = adapter.getModel().getInterpretation(concreteSymbol);
+		confidenceAggInterpretation = adapter.getModel().getInterpretation(confidenceAgg);
+
 		this.roundingMode = roundingMode;
 	}
 
-	private static void increaseConfidenceCost(double cost) {
-		if (!confidenceCost.isNaN()) {
-			confidenceCost += cost;
-		}
+	private void increaseConfidenceCost(double cost) {
+		confidenceAggInterpretation.put(Tuple.of(), confidenceAggInterpretation.get(Tuple.of()) + cost);
 	}
 
 	@Override
@@ -83,7 +84,7 @@ public class ConcreteRelationConfidenceRefiner extends
 				roundingMode);
 	}
 
-	public static Double getConfidenceCost() {
-		return confidenceCost;
+	public Double getConfidenceCost() {
+		return confidenceAggInterpretation.get(Tuple.of());
 	}
 }
