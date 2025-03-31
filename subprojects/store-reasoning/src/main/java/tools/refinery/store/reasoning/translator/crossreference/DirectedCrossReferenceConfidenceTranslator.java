@@ -41,7 +41,7 @@ public class DirectedCrossReferenceConfidenceTranslator implements ModelStoreCon
 	private final Symbol<TruthValueConfidence> confidenceSymbol;
 	private final ConfidenceView confidenceView;
 	private final FunctionalQuery<Double> upQuery;
-	private final FunctionalQuery<Double> downQuery;
+	private final FunctionalQuery<Double> lowQuery;
 	private final FunctionalQuery<Double> currentQuery;
 
 	public DirectedCrossReferenceConfidenceTranslator(ConfidencePartialRelation linkType,
@@ -60,14 +60,14 @@ public class DirectedCrossReferenceConfidenceTranslator implements ModelStoreCon
 				.clause(
 						output.assign(upHelper.aggregate(REAL_SUM, Variable.of(), Variable.of()))
 				));
-		var downHelper = Query.of(linkType.name() + "#down#helper", Double.class, (builder, p1, p2, output) -> builder
+		var lowHelper = Query.of(linkType.name() + "#low#helper", Double.class, (builder, p1, p2, output) -> builder
 				.clause(Double.class, d1 -> List.of(
 						confidenceView.call(p1, p2, d1),
 						output.assign(RealTerms.min(RealTerms.log(d1), RealTerms.log(RealTerms.sub(RealTerms.constant(1.0), d1))))
 				)));
-		downQuery = Query.of(linkType.name() + "#down", Double.class, (builder, output) -> builder
+		lowQuery = Query.of(linkType.name() + "#low", Double.class, (builder, output) -> builder
 				.clause(
-						output.assign(downHelper.aggregate(REAL_SUM, Variable.of(), Variable.of()))
+						output.assign(lowHelper.aggregate(REAL_SUM, Variable.of(), Variable.of()))
 				));
 		var currentHelper = Query.of(linkType.name() + "#current#helper", Double.class,
 				(builder, p1, p2, output) -> builder
@@ -235,8 +235,8 @@ public class DirectedCrossReferenceConfidenceTranslator implements ModelStoreCon
 		return upQuery;
 	}
 
-	public FunctionalQuery<Double> getDownQuery() {
-		return downQuery;
+	public FunctionalQuery<Double> getLowQuery() {
+		return lowQuery;
 	}
 
 	public FunctionalQuery<Double> getCurrentQuery() {
