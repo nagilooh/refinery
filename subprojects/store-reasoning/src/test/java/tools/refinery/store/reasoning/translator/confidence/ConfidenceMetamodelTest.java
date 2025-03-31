@@ -9,9 +9,12 @@ import org.junit.jupiter.api.Test;
 import tools.refinery.logic.term.cardinalityinterval.CardinalityIntervals;
 import tools.refinery.logic.term.truthvalue.TruthValue;
 import tools.refinery.logic.term.truthvalue.TruthValueConfidence;
+import tools.refinery.store.adapter.ModelStoreAdapter;
 import tools.refinery.store.dse.propagation.PropagationAdapter;
+import tools.refinery.store.model.Interpretation;
 import tools.refinery.store.model.Model;
 import tools.refinery.store.model.ModelStore;
+import tools.refinery.store.model.ModelStoreBuilder;
 import tools.refinery.store.query.ModelQueryAdapter;
 import tools.refinery.store.query.interpreter.QueryInterpreterAdapter;
 import tools.refinery.store.reasoning.ReasoningAdapter;
@@ -143,12 +146,14 @@ class ConfidenceMetamodelTest {
 			assertThat(candidateInterpretation.get(Tuple.of(1, 4)), is(TruthValueConfidence.FALSE));
 			assertThat(candidateInterpretation.get(Tuple.of(1, 5)), is(TruthValueConfidence.TRUE));
 
-			assertThat(ConcreteRelationConfidenceRefiner.getConfidenceCost(), closeTo(0.0, PRECISION));
+			var confidenceAggInterpretation = model.getInterpretation(ConcreteRelationConfidenceRefiner.confidenceAgg);
+
+			assertThat(confidenceAggInterpretation.get(Tuple.of()), closeTo(0.0, PRECISION));
 
 			var refiner = reasoningAdapter.getRefiner(enrolledStudents);
 			refiner.merge(Tuple.of(1, 4), TruthValue.TRUE);
 
-			assertThat(ConcreteRelationConfidenceRefiner.getConfidenceCost(), closeTo(Math.log(0.3), PRECISION));
+			assertThat(confidenceAggInterpretation.get(Tuple.of()), closeTo(Math.log(0.3), PRECISION));
 
 			var queryEngine = model.getAdapter(ModelQueryAdapter.class);
 			queryEngine.flushChanges();
@@ -161,7 +166,7 @@ class ConfidenceMetamodelTest {
 			refiner.merge(Tuple.of(1, 4), TruthValue.FALSE);
 			queryEngine.flushChanges();
 
-			assertThat(ConcreteRelationConfidenceRefiner.getConfidenceCost(), is(Double.NaN));
+			assertThat(confidenceAggInterpretation.get(Tuple.of()), is(Double.NaN));
 
 
 			assertThat(interpretation.get(Tuple.of(1, 4)), is(TruthValueConfidence.ERROR));
@@ -255,7 +260,10 @@ class ConfidenceMetamodelTest {
 			assertThat(enrolledStudentsConfidenceCandidateInterpretation.get(Tuple.of(1, 4)), is(TruthValueConfidence.FALSE));
 			assertThat(enrolledStudentsConfidenceCandidateInterpretation.get(Tuple.of(1, 5)), is(TruthValueConfidence.FALSE));
 
-			assertThat(ConcreteRelationConfidenceRefiner.getConfidenceCost(), closeTo(0.0, PRECISION));
+
+			var confidenceAggInterpretation = model.getInterpretation(ConcreteRelationConfidenceRefiner.confidenceAgg);
+
+			assertThat(confidenceAggInterpretation.get(Tuple.of()), closeTo(0.0, PRECISION));
 
 			assertThat(queryEngine.getResultSet(upQuery).get(Tuple.of()),
 					closeTo(Math.log(0.7) + Math.log(0.8) + Math.log(0.9) + Math.log(0.7), PRECISION));
@@ -266,8 +274,7 @@ class ConfidenceMetamodelTest {
 
 			// Refinement
 			enrolledStudentsRefiner.merge(Tuple.of(1, 4), TruthValue.TRUE);
-
-			assertThat(ConcreteRelationConfidenceRefiner.getConfidenceCost(), closeTo(Math.log(0.3), PRECISION));
+			assertThat(confidenceAggInterpretation.get(Tuple.of()), closeTo(0.3, PRECISION));
 
 			queryEngine.flushChanges();
 
@@ -292,8 +299,7 @@ class ConfidenceMetamodelTest {
 			assertThat(lecturerInterpretation.get(Tuple.of(0, 2)), is(TruthValue.FALSE));
 			assertThat(lecturerConfidenceCandidateInterpretation.get(Tuple.of(0, 2)), is(TruthValueConfidence.FALSE));
 
-			assertThat(ConcreteRelationConfidenceRefiner.getConfidenceCost(), closeTo(Math.log(0.3) + Math.log(0.3),
-					PRECISION));
+			assertThat(confidenceAggInterpretation.get(Tuple.of()), closeTo(Math.log(0.3) + Math.log(0.3), PRECISION));
 
 			queryEngine.flushChanges();
 

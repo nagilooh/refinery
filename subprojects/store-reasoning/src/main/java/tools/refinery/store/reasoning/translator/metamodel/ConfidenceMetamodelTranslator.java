@@ -11,6 +11,7 @@ import tools.refinery.logic.term.Variable;
 import tools.refinery.store.model.ModelStoreBuilder;
 import tools.refinery.store.model.ModelStoreConfiguration;
 import tools.refinery.store.query.ModelQueryBuilder;
+import tools.refinery.store.reasoning.refinement.ConcreteRelationConfidenceRefiner;
 import tools.refinery.store.reasoning.translator.containment.ContainerTypeInferenceTranslator;
 import tools.refinery.store.reasoning.translator.containment.ContainmentHierarchyTranslator;
 import tools.refinery.store.reasoning.translator.crossreference.DirectedCrossReferenceConfidenceTranslator;
@@ -54,6 +55,8 @@ public class ConfidenceMetamodelTranslator implements ModelStoreConfiguration {
 			currentQueries.add(translator.getCurrentQuery());
 			storeBuilder.with(translator);
 		}
+
+		storeBuilder.symbol(ConcreteRelationConfidenceRefiner.confidenceAgg);
 
 		var upOutputVariable = Variable.of("upOutput", Double.class);
 		var upHelperBuilder = Query.builder().output(upOutputVariable);
