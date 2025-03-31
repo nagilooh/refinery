@@ -24,10 +24,8 @@ import tools.refinery.logic.term.uppercardinality.UpperCardinalityTerms;
 import tools.refinery.logic.util.CircularReferenceException;
 import tools.refinery.store.reasoning.ReasoningAdapter;
 import tools.refinery.store.reasoning.literal.*;
-import tools.refinery.store.reasoning.representation.ConfidencePartialRelation;
 import tools.refinery.store.reasoning.representation.PartialRelation;
 import tools.refinery.store.reasoning.translator.TranslationException;
-import tools.refinery.store.reasoning.representation.PartialSymbol;
 import tools.refinery.store.reasoning.translator.multiobject.MultiObjectTranslator;
 
 import java.util.*;
@@ -77,8 +75,6 @@ class PartialClauseRewriter {
 				switch (constraint) {
 				case Dnf dnf -> rewriteRecursively(callLiteral, modality, concreteness, dnf);
 				case PartialRelation partialRelation -> rewrite(callLiteral, modality, concreteness, partialRelation);
-				case ConfidencePartialRelation partialRelation -> rewrite(callLiteral, modality, concreteness,
-						partialRelation);
 				default -> throw new IllegalArgumentException("Cannot interpret modal constraint: " + modalConstraint);
 				}
 			}
@@ -232,17 +228,6 @@ class PartialClauseRewriter {
 		int length = literals.size();
 		for (int i = length - 1; i >= 0; i--) {
 			addWithTrace(literals.get(i), partialRelation);
-		}
-	}
-
-	private void rewrite(AbstractCallLiteral callLiteral, Modality modality, Concreteness concreteness,
-						 ConfidencePartialRelation partialRelation) {
-		var relationRewriter = rewriter.getRelationRewriter(partialRelation);
-		var literals = relationRewriter.rewriteLiteral(unmodifiablePositiveVariables, callLiteral, modality,
-				concreteness);
-		int length = literals.size();
-		for (int i = length - 1; i >= 0; i--) {
-			workList.addFirst(literals.get(i));
 		}
 	}
 
