@@ -135,16 +135,16 @@ public class DirectedCrossReferenceConfidenceTranslator implements ModelStoreCon
 
 
 	private RelationalQuery createMayHelper(PartialRelation type, Multiplicity multiplicity, boolean inverse) {
-		return CrossReferenceUtils.createMayHelper(linkType, type, multiplicity, inverse);
+		return CrossReferenceUtils.createMayHelper(info.partialRelation(), type, multiplicity, inverse);
 	}
 
 	private RelationalQuery createCandidateMayHelper(PartialRelation type, Multiplicity multiplicity,
 													 boolean inverse) {
-		return CrossReferenceUtils.createCandidateMayHelper(linkType, type, multiplicity, inverse);
+		return CrossReferenceUtils.createCandidateMayHelper(info.partialRelation(), type, multiplicity, inverse);
 	}
 
 	private Dnf createSupersetHelper() {
-		return TranslatorUtils.createSupersetHelper(linkType, info.supersets(), info.oppositeSupersets());
+		return TranslatorUtils.createSupersetHelper(info.partialRelation(), info.supersets(), info.oppositeSupersets());
 	}
 
 	private void configureWithDefaultFalse(ModelStoreBuilder storeBuilder) {

@@ -6,17 +6,12 @@
 package tools.refinery.store.reasoning.representation;
 
 import tools.refinery.logic.AbstractDomain;
-import tools.refinery.logic.Constraint;
-import tools.refinery.logic.term.Parameter;
 import tools.refinery.logic.term.truthvalue.TruthValue;
 import tools.refinery.logic.term.truthvalue.TruthValueConfidence;
 import tools.refinery.logic.term.truthvalue.TruthValueConfidenceDomain;
 
-import java.util.Arrays;
-import java.util.List;
-
-public record ConfidencePartialRelation(String name, int arity) implements PartialSymbol<TruthValueConfidence, Boolean>,
-		Constraint {
+public record ConfidencePartialRelation(String name, int arity)
+		implements PartialSymbol<TruthValueConfidence, Boolean> {
 	@Override
 	public AbstractDomain<TruthValueConfidence, Boolean> abstractDomain() {
 		return TruthValueConfidenceDomain.INSTANCE;
@@ -25,18 +20,6 @@ public record ConfidencePartialRelation(String name, int arity) implements Parti
 	@Override
 	public TruthValueConfidence defaultValue() {
 		return new TruthValueConfidence(TruthValue.FALSE, 0.0);
-	}
-
-	@Override
-	public List<Parameter> getParameters() {
-		var parameters = new Parameter[arity];
-		Arrays.fill(parameters, Parameter.NODE_OUT);
-		return List.of(parameters);
-	}
-
-	@Override
-	public String toReferenceString() {
-		return name;
 	}
 
 	@Override
