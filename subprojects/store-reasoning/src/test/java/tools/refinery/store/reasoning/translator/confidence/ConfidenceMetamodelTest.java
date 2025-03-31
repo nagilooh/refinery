@@ -109,7 +109,9 @@ class ConfidenceMetamodelTest {
 						.put(Tuple.of(1, 5), new TruthValueConfidence(TruthValue.TRUE, 1.0)))
 				.build();
 
-		try (var model = createModel(metamodel, seed)) {
+		var translator = new ConfidenceMetamodelTranslator(metamodel);
+
+		try (var model = createModel(translator, seed)) {
 			var reasoningAdapter = model.getAdapter(ReasoningAdapter.class);
 
 			var coursesInterpretation = reasoningAdapter.getPartialInterpretation(Concreteness.PARTIAL, courses);
@@ -200,7 +202,9 @@ class ConfidenceMetamodelTest {
 						.put(Tuple.of(2, 3), TruthValue.TRUE))
 				.build();
 
-		try (var model = createModel(metamodel, seed)) {
+		var translator = new ConfidenceMetamodelTranslator(metamodel);
+
+		try (var model = createModel(translator, seed)) {
 			var coursesInterpretation = model.getAdapter(ReasoningAdapter.class)
 					.getPartialInterpretation(Concreteness.PARTIAL, courses);
 
@@ -211,13 +215,13 @@ class ConfidenceMetamodelTest {
 		}
 	}
 
-	private static Model createModel(ConfidenceMetamodel metamodel, ModelSeed seed) {
+	private static Model createModel(ConfidenceMetamodelTranslator metamodelTranslator, ModelSeed seed) {
 		var store = ModelStore.builder()
 				.with(QueryInterpreterAdapter.builder())
 				.with(PropagationAdapter.builder())
 				.with(ReasoningAdapter.builder())
 				.with(new MultiObjectTranslator())
-				.with(new ConfidenceMetamodelTranslator(metamodel))
+				.with(metamodelTranslator)
 				.build();
 
 		return store.getAdapter(ReasoningStoreAdapter.class).createInitialModel(seed);

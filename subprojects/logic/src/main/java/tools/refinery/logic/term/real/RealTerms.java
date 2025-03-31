@@ -37,6 +37,10 @@ public final class RealTerms {
 		return new RealMinusTerm(body);
 	}
 
+	public static Term<Double> log(Term<Double> body) {
+		return new RealLogTerm(body);
+	}
+
 	public static Term<Double> add(Term<Double> left, Term<Double> right) {
 		return new RealAddTerm(left, right);
 	}
