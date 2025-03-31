@@ -7,9 +7,7 @@ package tools.refinery.store.reasoning.translator.metamodel;
 
 import tools.refinery.logic.dnf.FunctionalQuery;
 import tools.refinery.logic.dnf.Query;
-import tools.refinery.logic.dnf.QueryBuilder;
 import tools.refinery.logic.term.Variable;
-import tools.refinery.logic.term.real.RealTerms;
 import tools.refinery.store.model.ModelStoreBuilder;
 import tools.refinery.store.model.ModelStoreConfiguration;
 import tools.refinery.store.query.ModelQueryBuilder;
@@ -29,11 +27,11 @@ import static tools.refinery.logic.term.real.RealTerms.REAL_SUM;
 public class ConfidenceMetamodelTranslator implements ModelStoreConfiguration {
 	private final ConfidenceMetamodel metamodel;
 	private final List<FunctionalQuery<Double>> upQueries = new ArrayList<>();
-	private final List<FunctionalQuery<Double>> downQueries = new ArrayList<>();
+	private final List<FunctionalQuery<Double>> lowQueries = new ArrayList<>();
 	private final List<FunctionalQuery<Double>> currentQueries = new ArrayList<>();
 
 	private FunctionalQuery<Double> upQuery;
-	private FunctionalQuery<Double> downQuery;
+	private FunctionalQuery<Double> lowQuery;
 	private FunctionalQuery<Double> currentQuery;
 
 	public ConfidenceMetamodelTranslator(ConfidenceMetamodel metamodel) {
@@ -52,7 +50,7 @@ public class ConfidenceMetamodelTranslator implements ModelStoreConfiguration {
 		for (var entry : metamodel.directedConfidenceCrossReferences().entrySet()) {
 			var translator = new DirectedCrossReferenceConfidenceTranslator(entry.getKey(), entry.getValue());
 			upQueries.add(translator.getUpQuery());
-			downQueries.add(translator.getDownQuery());
+			lowQueries.add(translator.getLowQuery());
 			currentQueries.add(translator.getCurrentQuery());
 			storeBuilder.with(translator);
 		}
@@ -70,11 +68,11 @@ public class ConfidenceMetamodelTranslator implements ModelStoreConfiguration {
 
 		var downOutputVariable = Variable.of("downOutput", Double.class);
 		var downHelperBuilder = Query.builder().output(downOutputVariable);
-		for(var query : downQueries) {
+		for(var query : lowQueries) {
 			downHelperBuilder.clause(downOutputVariable.assign(query.aggregate(REAL_SUM)));
 		}
 		var downHelper = downHelperBuilder.build();
-		downQuery = Query.of("down#sum", Double.class, (builder, output) -> builder
+		lowQuery = Query.of("down#sum", Double.class, (builder, output) -> builder
 				.clause(
 						output.assign(downHelper.aggregate(REAL_SUM))
 				));
@@ -92,7 +90,7 @@ public class ConfidenceMetamodelTranslator implements ModelStoreConfiguration {
 
 		var modelQueryBuilder = storeBuilder.getAdapter(ModelQueryBuilder.class);
 		modelQueryBuilder.query(upQuery);
-		modelQueryBuilder.query(downQuery);
+		modelQueryBuilder.query(lowQuery);
 		modelQueryBuilder.query(currentQuery);
 
 		for (var entry : metamodel.undirectedCrossReferences().entrySet()) {
@@ -107,8 +105,8 @@ public class ConfidenceMetamodelTranslator implements ModelStoreConfiguration {
 		return upQuery;
 	}
 
-	public FunctionalQuery<Double> getDownQuery() {
-		return downQuery;
+	public FunctionalQuery<Double> getLowQuery() {
+		return lowQuery;
 	}
 
 	public FunctionalQuery<Double> getCurrentQuery() {
