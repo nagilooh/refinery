@@ -6,9 +6,11 @@
 package tools.refinery.store.reasoning.translator.crossreference;
 
 import tools.refinery.logic.dnf.Dnf;
+import tools.refinery.logic.dnf.FunctionalQuery;
 import tools.refinery.logic.dnf.Query;
 import tools.refinery.logic.dnf.RelationalQuery;
-import tools.refinery.logic.term.truthvalue.TruthValue;
+import tools.refinery.logic.term.Variable;
+import tools.refinery.logic.term.real.RealTerms;
 import tools.refinery.logic.term.truthvalue.TruthValueConfidence;
 import tools.refinery.store.dse.propagation.PropagationBuilder;
 import tools.refinery.store.dse.transition.Rule;
@@ -20,12 +22,14 @@ import tools.refinery.store.reasoning.ReasoningAdapter;
 import tools.refinery.store.reasoning.representation.ConfidencePartialRelation;
 import tools.refinery.store.reasoning.representation.PartialRelation;
 import tools.refinery.store.reasoning.translator.*;
-import tools.refinery.store.reasoning.translator.multiplicity.ConfidenceInvalidMultiplicityErrorTranslator;
 import tools.refinery.store.reasoning.translator.multiplicity.InvalidMultiplicityErrorTranslator;
 import tools.refinery.store.reasoning.translator.multiplicity.Multiplicity;
 import tools.refinery.store.representation.Symbol;
 
+import java.util.List;
+
 import static tools.refinery.logic.literal.Literals.not;
+import static tools.refinery.logic.term.real.RealTerms.REAL_SUM;
 import static tools.refinery.store.reasoning.actions.PartialActionLiterals.add;
 import static tools.refinery.store.reasoning.actions.PartialActionLiterals.remove;
 import static tools.refinery.store.reasoning.literal.PartialLiterals.*;
@@ -35,12 +39,47 @@ public class DirectedCrossReferenceConfidenceTranslator implements ModelStoreCon
 	private final ConfidencePartialRelation linkType;
 	private final DirectedCrossReferenceConfidenceInfo info;
 	private final Symbol<TruthValueConfidence> confidenceSymbol;
+	private final ConfidenceView confidenceView;
+	private final FunctionalQuery<Double> upQuery;
+	private final FunctionalQuery<Double> downQuery;
+	private final FunctionalQuery<Double> currentQuery;
 
 	public DirectedCrossReferenceConfidenceTranslator(ConfidencePartialRelation linkType,
 													  DirectedCrossReferenceConfidenceInfo info) {
 		this.linkType = linkType;
 		this.info = info;
 		confidenceSymbol = Symbol.of(linkType.name(), 2, TruthValueConfidence.class, info.defaultValue());
+		confidenceView = new ConfidenceView(confidenceSymbol, linkType.name() + "#confidence");
+		var upHelper = Query.of(linkType.name() + "#up#helper", Double.class, (builder, p1, p2, output) -> builder
+				.clause(Double.class, d1 -> List.of(
+						confidenceView.call(p1, p2, d1),
+						output.assign(RealTerms.max(RealTerms.log(d1),
+								RealTerms.log(RealTerms.sub(RealTerms.constant(1.0), d1))))
+				)));
+		upQuery = Query.of(linkType.name() + "#up", Double.class, (builder, output) -> builder
+				.clause(
+						output.assign(upHelper.aggregate(REAL_SUM, Variable.of(), Variable.of()))
+				));
+		var downHelper = Query.of(linkType.name() + "#down#helper", Double.class, (builder, p1, p2, output) -> builder
+				.clause(Double.class, d1 -> List.of(
+						confidenceView.call(p1, p2, d1),
+						output.assign(RealTerms.min(RealTerms.log(d1), RealTerms.log(RealTerms.sub(RealTerms.constant(1.0), d1))))
+				)));
+		downQuery = Query.of(linkType.name() + "#down", Double.class, (builder, output) -> builder
+				.clause(
+						output.assign(downHelper.aggregate(REAL_SUM, Variable.of(), Variable.of()))
+				));
+		var currentHelper = Query.of(linkType.name() + "#current#helper", Double.class,
+				(builder, p1, p2, output) -> builder
+				.clause(Double.class, d1 -> List.of(
+						confidenceView.call(p1, p2, d1),
+						output.assign(RealTerms.log(RealTerms.sub(RealTerms.constant(1.0), d1)))
+				)));
+		currentQuery = Query.of(linkType.name() + "#current", Double.class, (builder, output) -> builder
+				.clause(
+						output.assign(currentHelper.aggregate(REAL_SUM, Variable.of(), Variable.of()))
+				));
+
 	}
 
 	@Override
@@ -90,6 +129,8 @@ public class DirectedCrossReferenceConfidenceTranslator implements ModelStoreCon
 				info.targetMultiplicity()));
 		storeBuilder.with(new ConfidencePartialRelationTranslator(linkType, roundingMode)
 				.symbol(confidenceSymbol));
+
+
 	}
 
 
@@ -190,4 +231,15 @@ public class DirectedCrossReferenceConfidenceTranslator implements ModelStoreCon
 		}));
 	}
 
+	public FunctionalQuery<Double> getUpQuery() {
+		return upQuery;
+	}
+
+	public FunctionalQuery<Double> getDownQuery() {
+		return downQuery;
+	}
+
+	public FunctionalQuery<Double> getCurrentQuery() {
+		return currentQuery;
+	}
 }
