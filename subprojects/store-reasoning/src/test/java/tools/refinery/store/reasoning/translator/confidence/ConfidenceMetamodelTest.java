@@ -33,6 +33,7 @@ import tools.refinery.store.tuple.Tuple;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.closeTo;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ConfidenceMetamodelTest {
 	private final PartialRelation person = new PartialRelation("Person", 1);
@@ -153,7 +154,7 @@ class ConfidenceMetamodelTest {
 			var refiner = reasoningAdapter.getRefiner(enrolledStudents);
 			refiner.merge(Tuple.of(1, 4), TruthValue.TRUE);
 
-			assertThat(confidenceAggInterpretation.get(Tuple.of()), closeTo(Math.log(0.3), PRECISION));
+			assertThat(confidenceAggInterpretation.get(Tuple.of()), closeTo(Math.log(0.7), PRECISION));
 
 			var queryEngine = model.getAdapter(ModelQueryAdapter.class);
 			queryEngine.flushChanges();
@@ -166,7 +167,7 @@ class ConfidenceMetamodelTest {
 			refiner.merge(Tuple.of(1, 4), TruthValue.FALSE);
 			queryEngine.flushChanges();
 
-			assertThat(confidenceAggInterpretation.get(Tuple.of()), is(Double.NaN));
+			assertThat(confidenceAggInterpretation.get(Tuple.of()), is(Double.POSITIVE_INFINITY));
 
 
 			assertThat(interpretation.get(Tuple.of(1, 4)), is(TruthValueConfidence.ERROR));
@@ -272,47 +273,63 @@ class ConfidenceMetamodelTest {
 			assertThat(queryEngine.getResultSet(currentQuery).get(Tuple.of()),
 					closeTo(Math.log(0.7) + Math.log(0.2) + Math.log(0.1) + Math.log(0.3), PRECISION));
 
-			// Refinement
+			// Refinement - to TRUE
 			enrolledStudentsRefiner.merge(Tuple.of(1, 4), TruthValue.TRUE);
-			assertThat(confidenceAggInterpretation.get(Tuple.of()), closeTo(0.3, PRECISION));
-
 			queryEngine.flushChanges();
 
+			assertThat(confidenceAggInterpretation.get(Tuple.of()), closeTo(Math.log(0.7), PRECISION));
+
 			assertThat(queryEngine.getResultSet(upQuery).get(Tuple.of()),
-					closeTo(Math.log(0.7) + Math.log(0.8) + Math.log(0.9), PRECISION));
+					closeTo(Math.log(0.7) + Math.log(0.7) + Math.log(0.8) + Math.log(0.9), PRECISION));
 			assertThat(queryEngine.getResultSet(lowQuery).get(Tuple.of()),
-					closeTo(Math.log(0.3) + Math.log(0.2) + Math.log(0.1), PRECISION));
+					closeTo(Math.log(0.7) + Math.log(0.3) + Math.log(0.2) + Math.log(0.1), PRECISION));
 			assertThat(queryEngine.getResultSet(currentQuery).get(Tuple.of()),
-					closeTo(Math.log(0.7) + Math.log(0.2) + Math.log(0.1), PRECISION));
+					closeTo(Math.log(0.7) + Math.log(0.7) + Math.log(0.2) + Math.log(0.1), PRECISION));
 
-			// Refinement
+			// Refinement - to FALSE
 			lecturerRefiner.merge(Tuple.of(0, 2), TruthValue.FALSE);
-
+			queryEngine.flushChanges();
 
 			var lecturerInterpretation = reasoningAdapter.getPartialInterpretation(Concreteness.PARTIAL,
-					enrolledStudents);
+					lecturer);
 			var lecturerConfidenceInterpretation = reasoningAdapter.getPartialInterpretation(Concreteness.PARTIAL,
-					enrolledStudentsConfidence);
+					lecturerConfidence);
 			var lecturerConfidenceCandidateInterpretation = reasoningAdapter.getPartialInterpretation(Concreteness.CANDIDATE,
-					enrolledStudentsConfidence);
+					lecturerConfidence);
+
 			assertThat(lecturerConfidenceInterpretation.get(Tuple.of(0, 2)), is(TruthValueConfidence.FALSE));
 			assertThat(lecturerInterpretation.get(Tuple.of(0, 2)), is(TruthValue.FALSE));
 			assertThat(lecturerConfidenceCandidateInterpretation.get(Tuple.of(0, 2)), is(TruthValueConfidence.FALSE));
 
-			assertThat(confidenceAggInterpretation.get(Tuple.of()), closeTo(Math.log(0.3) + Math.log(0.3), PRECISION));
-
-			queryEngine.flushChanges();
-
-			assertThat(enrolledStudentsConfidenceInterpretation.get(Tuple.of(1, 4)), is(TruthValueConfidence.TRUE));
-			assertThat(enrolledStudentsInterpretation.get(Tuple.of(1, 4)), is(TruthValue.TRUE));
-			assertThat(enrolledStudentsConfidenceCandidateInterpretation.get(Tuple.of(1, 4)), is(TruthValueConfidence.TRUE));
+			assertThat(confidenceAggInterpretation.get(Tuple.of()), closeTo(Math.log(0.7) + Math.log(0.7), PRECISION));
 
 			assertThat(queryEngine.getResultSet(upQuery).get(Tuple.of()),
-					closeTo(Math.log(0.8) + Math.log(0.9), PRECISION));
+					closeTo(Math.log(0.7) + Math.log(0.7) + Math.log(0.8) + Math.log(0.9), PRECISION));
 			assertThat(queryEngine.getResultSet(lowQuery).get(Tuple.of()),
-					closeTo(Math.log(0.2) + Math.log(0.1), PRECISION));
+					closeTo(Math.log(0.7) + Math.log(0.7) + Math.log(0.2) + Math.log(0.1), PRECISION));
 			assertThat(queryEngine.getResultSet(currentQuery).get(Tuple.of()),
-					closeTo(Math.log(0.2) + Math.log(0.1), PRECISION));
+					closeTo(Math.log(0.7) + Math.log(0.7) + Math.log(0.2) + Math.log(0.1), PRECISION));
+
+
+			// Refinement - no change
+			lecturerRefiner.merge(Tuple.of(0, 3), TruthValue.UNKNOWN);
+			queryEngine.flushChanges();
+			assertThat(confidenceAggInterpretation.get(Tuple.of()), closeTo(Math.log(0.7) + Math.log(0.7), PRECISION));
+
+
+			// Refinement - to ERROR
+			lecturerRefiner.merge(Tuple.of(0, 2), TruthValue.TRUE);
+			queryEngine.flushChanges();
+
+			assertThat(lecturerConfidenceInterpretation.get(Tuple.of(0, 2)), is(TruthValueConfidence.ERROR));
+			assertThat(lecturerInterpretation.get(Tuple.of(0, 2)), is(TruthValue.ERROR));
+			assertThat(lecturerConfidenceCandidateInterpretation.get(Tuple.of(0, 2)), is(TruthValueConfidence.ERROR));
+
+			assertThat(confidenceAggInterpretation.get(Tuple.of()), is(Double.POSITIVE_INFINITY));
+
+			assertThat(queryEngine.getResultSet(upQuery).get(Tuple.of()), is(Double.POSITIVE_INFINITY));
+			assertThat(queryEngine.getResultSet(lowQuery).get(Tuple.of()), is(Double.POSITIVE_INFINITY));
+			assertThat(queryEngine.getResultSet(currentQuery).get(Tuple.of()), is(Double.POSITIVE_INFINITY));
 		}
 	}
 

@@ -32,17 +32,32 @@ public class ConcreteRelationConfidenceRefiner extends
 		this.roundingMode = roundingMode;
 	}
 
-	private void increaseConfidenceCost(double cost) {
-		confidenceAggInterpretation.put(Tuple.of(), confidenceAggInterpretation.get(Tuple.of()) + cost);
-	}
-
 	@Override
 	public boolean merge(Tuple key, TruthValue value) {
 		var currentValue = get(key);
 		var mergedValue = concretizationAwareMeet(currentValue, value);
 		if (!Objects.equals(currentValue, mergedValue)) {
 			put(key, mergedValue);
-			increaseConfidenceCost(Math.log(Math.abs(mergedValue.getConfidence() - currentValue.getConfidence())));
+			switch (mergedValue.getTruthValue()) {
+				case TRUE: {
+					confidenceAggInterpretation.put(Tuple.of(),
+							confidenceAggInterpretation.get(Tuple.of()) + Math.log(currentValue.getConfidence()));
+					break;
+				}
+				case FALSE: {
+					confidenceAggInterpretation.put(Tuple.of(),
+							confidenceAggInterpretation.get(Tuple.of()) + Math.log(1.0 - currentValue.getConfidence()));
+					break;
+				}
+				case UNKNOWN: {
+					// This should not be possible
+					throw new IllegalArgumentException("Confidence merge is not defined for : " + value);
+				}
+				case ERROR: {
+					confidenceAggInterpretation.put(Tuple.of(), Double.POSITIVE_INFINITY);
+					break;
+				}
+			}
 		}
 		return true;
 	}

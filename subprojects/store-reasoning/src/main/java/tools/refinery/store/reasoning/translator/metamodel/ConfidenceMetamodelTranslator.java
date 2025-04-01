@@ -11,6 +11,7 @@ import tools.refinery.logic.term.Variable;
 import tools.refinery.store.model.ModelStoreBuilder;
 import tools.refinery.store.model.ModelStoreConfiguration;
 import tools.refinery.store.query.ModelQueryBuilder;
+import tools.refinery.store.query.view.FunctionView;
 import tools.refinery.store.reasoning.refinement.ConcreteRelationConfidenceRefiner;
 import tools.refinery.store.reasoning.translator.containment.ContainerTypeInferenceTranslator;
 import tools.refinery.store.reasoning.translator.containment.ContainmentHierarchyTranslator;
@@ -58,11 +59,14 @@ public class ConfidenceMetamodelTranslator implements ModelStoreConfiguration {
 
 		storeBuilder.symbol(ConcreteRelationConfidenceRefiner.confidenceAgg);
 
+		var confidenceAggView = new FunctionView<>(ConcreteRelationConfidenceRefiner.confidenceAgg);
+
 		var upOutputVariable = Variable.of("upOutput", Double.class);
 		var upHelperBuilder = Query.builder().output(upOutputVariable);
 		for(var query : upQueries) {
 			upHelperBuilder.clause(upOutputVariable.assign(query.aggregate(REAL_SUM)));
 		}
+		upHelperBuilder.clause(upOutputVariable.assign(confidenceAggView.aggregate(REAL_SUM)));
 		var upHelper = upHelperBuilder.build();
 		upQuery = Query.of("up#sum", Double.class, (builder, output) -> builder
 				.clause(
@@ -74,6 +78,7 @@ public class ConfidenceMetamodelTranslator implements ModelStoreConfiguration {
 		for(var query : lowQueries) {
 			downHelperBuilder.clause(downOutputVariable.assign(query.aggregate(REAL_SUM)));
 		}
+		downHelperBuilder.clause(downOutputVariable.assign(confidenceAggView.aggregate(REAL_SUM)));
 		var downHelper = downHelperBuilder.build();
 		lowQuery = Query.of("down#sum", Double.class, (builder, output) -> builder
 				.clause(
@@ -85,6 +90,7 @@ public class ConfidenceMetamodelTranslator implements ModelStoreConfiguration {
 		for(var query : currentQueries) {
 			currentHelperBuilder.clause(currentOutputVariable.assign(query.aggregate(REAL_SUM)));
 		}
+		currentHelperBuilder.clause(currentOutputVariable.assign(confidenceAggView.aggregate(REAL_SUM)));
 		var currentHelper = currentHelperBuilder.build();
 		currentQuery = Query.of("current#sum", Double.class, (builder, output) -> builder
 				.clause(
