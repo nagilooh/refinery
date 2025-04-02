@@ -9,12 +9,9 @@ import org.junit.jupiter.api.Test;
 import tools.refinery.logic.term.cardinalityinterval.CardinalityIntervals;
 import tools.refinery.logic.term.truthvalue.TruthValue;
 import tools.refinery.logic.term.truthvalue.TruthValueConfidence;
-import tools.refinery.store.adapter.ModelStoreAdapter;
 import tools.refinery.store.dse.propagation.PropagationAdapter;
-import tools.refinery.store.model.Interpretation;
 import tools.refinery.store.model.Model;
 import tools.refinery.store.model.ModelStore;
-import tools.refinery.store.model.ModelStoreBuilder;
 import tools.refinery.store.query.ModelQueryAdapter;
 import tools.refinery.store.query.interpreter.QueryInterpreterAdapter;
 import tools.refinery.store.reasoning.ReasoningAdapter;
@@ -33,7 +30,6 @@ import tools.refinery.store.tuple.Tuple;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.closeTo;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ConfidenceMetamodelTest {
 	private final PartialRelation person = new PartialRelation("Person", 1);
