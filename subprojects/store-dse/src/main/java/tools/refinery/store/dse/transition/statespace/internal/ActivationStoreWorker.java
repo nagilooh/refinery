@@ -8,6 +8,7 @@ package tools.refinery.store.dse.transition.statespace.internal;
 import tools.refinery.store.dse.transition.Transformation;
 import tools.refinery.store.dse.transition.VersionWithObjectiveValue;
 import tools.refinery.store.dse.transition.statespace.ActivationStore;
+import tools.refinery.visualization.statespace.VisualizationStore;
 
 import java.util.List;
 import java.util.Random;
@@ -29,8 +30,16 @@ public class ActivationStoreWorker {
 		return result;
 	}
 
+	public List<Transformation> getTransformations() {
+		return transformations;
+	}
 
-	public ActivationStore.VisitResult fireRandomActivation(VersionWithObjectiveValue thisVersion, Random random) {
+	public Transformation getTransformation(int index) {
+		return transformations.get(index);
+	}
+
+
+	public ActivationStore.FireResult fireRandomActivation(VersionWithObjectiveValue thisVersion, Random random) {
 		var result = store.getRandomAndMarkAsVisited(thisVersion, random);
 		if (result.successfulVisit()) {
 			int selectedTransformation = result.transformation();
@@ -41,15 +50,17 @@ public class ActivationStoreWorker {
 
 			boolean success = transformation.fireActivation(tuple);
 			if (success) {
-				return result;
-			} else {
-				return new ActivationStore.VisitResult(
-						false,
+				return new ActivationStore.FireResult(
+						result.successfulVisit(),
 						result.mayHaveMore(),
-						selectedTransformation,
-						selectedActivation);
+						transformation,
+						tuple);
 			}
 		}
-		return result;
+		return new ActivationStore.FireResult(
+				result.successfulVisit(),
+				result.mayHaveMore(),
+				null,
+				null);
 	}
 }

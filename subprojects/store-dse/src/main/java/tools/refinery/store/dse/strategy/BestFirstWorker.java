@@ -30,6 +30,7 @@ public class BestFirstWorker {
 	final VisualizationStore visualizationStore;
 	final boolean isVisualizationEnabled;
 
+
 	public BestFirstWorker(BestFirstStoreManager storeManager, Model model) {
 		this.storeManager = storeManager;
 		this.model = model;
@@ -64,7 +65,7 @@ public class BestFirstWorker {
 		return new SubmitResult(false, false, null, null);
 	}
 
-	private SubmitResult submitNew() {
+	protected SubmitResult submitNew() {
 		Version version = model.commit();
 		ObjectiveValue objectiveValue = explorationAdapter.getObjectiveValue();
 		var versionWithObjectiveValue = new VersionWithObjectiveValue(version, objectiveValue);
@@ -92,7 +93,7 @@ public class BestFirstWorker {
 		return new SubmitResult(true, accepted, objectiveValue, last);
 	}
 
-	private VersionWithObjectiveValue concretizeIfNeeded(VersionWithObjectiveValue originalValue) {
+	protected VersionWithObjectiveValue concretizeIfNeeded(VersionWithObjectiveValue originalValue) {
 		if (propagationAdapter == null) {
 			return originalValue;
 		}
@@ -195,7 +196,7 @@ public class BestFirstWorker {
 		if (isVisualizationEnabled && submitResult.newVersion() != null) {
 			var newVersion = submitResult.newVersion().version();
 			visualizationStore.addTransition(oldVersion, newVersion,
-					"fire: " + visitResult.transformation() + ", " + visitResult.activation());
+					"fire: " + visitResult.transformation().getDefinition().getName() + ", " + visitResult.activation());
 		}
 		return new RandomVisitResult(submitResult, visitResult.mayHaveMore());
 	}

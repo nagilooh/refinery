@@ -7,6 +7,7 @@ package tools.refinery.visualization.internal;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tools.refinery.logic.term.truthvalue.TruthValueConfidence;
 import tools.refinery.store.map.Version;
 import tools.refinery.store.model.Interpretation;
 import tools.refinery.store.model.Model;
@@ -185,6 +186,12 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 
 	private String drawEdge(Tuple edge, AnySymbol symbol, Interpretation<?> interpretation) {
 		var value = interpretation.get(edge);
+		var confidence = 1.0;
+
+		if (value instanceof TruthValueConfidence truthValueConfidence) {
+			value = truthValueConfidence.getTruthValue();
+			confidence = truthValueConfidence.getConfidence();
+		}
 
 		if (value == null || value.equals(TruthValue.FALSE) || value.equals(false)) {
 			return "";
@@ -208,7 +215,7 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 				.append(" [\n\tstyle=").append(style)
 				.append("\n\tcolor=").append(color)
 				.append("\n\tfontcolor=").append(color)
-				.append("\n\tlabel=\"").append(name)
+				.append("\n\tlabel=\"").append(name).append(": ").append(confidence)
 				.append("\"]\n");
 		return sb.toString();
 	}

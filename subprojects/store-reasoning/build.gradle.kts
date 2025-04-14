@@ -16,4 +16,5 @@ dependencies {
 	api(project(":refinery-store-dse"))
 	testImplementation(testFixtures(project(":refinery-logic")))
 	testImplementation(project(":refinery-store-query-interpreter"))
+	testImplementation(project(":refinery-store-dse-visualization"))
 }

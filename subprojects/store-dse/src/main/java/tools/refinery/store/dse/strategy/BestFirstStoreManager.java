@@ -5,6 +5,7 @@
  */
 package tools.refinery.store.dse.strategy;
 
+import tools.refinery.logic.dnf.FunctionalQuery;
 import tools.refinery.store.dse.transition.DesignSpaceExplorationStoreAdapter;
 import tools.refinery.store.dse.transition.VersionWithObjectiveValue;
 import tools.refinery.store.dse.transition.statespace.ActivationStore;
@@ -76,13 +77,27 @@ public class BestFirstStoreManager {
 	}
 
 	public void startExploration(Version initial) {
-		startExploration(initial, 1);
+		startExploration(initial, 1, null);
+	}
+	public void startExploration(Version initial, long randomSeed) {
+		startExploration(initial, randomSeed, null);
 	}
 
-	public void startExploration(Version initial, long randomSeed) {
+	public void startExploration(Version initial, FunctionalQuery<Double> upQuery) {
+		startExploration(initial, 1, upQuery);
+	}
+
+
+	public void startExploration(Version initial, long randomSeed, FunctionalQuery<Double> upQuery) {
 		try (var model = modelStore.createModelForState(initial)) {
-			BestFirstExplorer bestFirstExplorer = new BestFirstExplorer(this, model, randomSeed);
-			bestFirstExplorer.explore();
+			if (upQuery == null) {
+				BestFirstExplorer bestFirstExplorer = new BestFirstExplorer(this, model, randomSeed);
+				bestFirstExplorer.explore();
+			}
+			else {
+				OptimalExplorer optimalExplorer = new OptimalExplorer(this, model, randomSeed, upQuery);
+				optimalExplorer.explore();
+			}
 		}
 	}
 }
