@@ -196,7 +196,7 @@ public class BestFirstWorker {
 		if (isVisualizationEnabled && submitResult.newVersion() != null) {
 			var newVersion = submitResult.newVersion().version();
 			visualizationStore.addTransition(oldVersion, newVersion,
-					"fire: " + visitResult.transformation().getDefinition().getName() + ", " + visitResult.activation());
+					"fire: " + visitResult.transformation().getDefinition().getName() + "\n" + visitResult.activation());
 		}
 		return new RandomVisitResult(submitResult, visitResult.mayHaveMore());
 	}
@@ -205,7 +205,7 @@ public class BestFirstWorker {
 		return storeManager.solutionStore.hasEnoughSolution();
 	}
 
-	private void checkSynchronized() {
+	void checkSynchronized() {
 		if (last != null && !last.version().equals(model.getState())) {
 			throw new AssertionError("Worker is not synchronized with model state");
 		}

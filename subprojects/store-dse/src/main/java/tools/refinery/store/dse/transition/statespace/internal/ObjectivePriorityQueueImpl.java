@@ -46,6 +46,11 @@ public class ObjectivePriorityQueueImpl implements ObjectivePriorityQueue {
 	}
 
 	@Override
+	public synchronized void removeWorse(VersionWithObjectiveValue versionWithObjectiveValue) {
+		priorityQueue.removeIf(o -> getComparator().compare(o, versionWithObjectiveValue) > 0);
+	}
+
+	@Override
 	public synchronized int getSize() {
 		return priorityQueue.size();
 	}

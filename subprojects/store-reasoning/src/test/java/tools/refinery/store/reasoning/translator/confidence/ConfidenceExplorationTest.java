@@ -145,7 +145,7 @@ class ConfidenceExplorationTest {
 			var queryEngine = model.getAdapter(ModelQueryAdapter.class);
 			queryEngine.flushChanges();
 			var bestFirst = new BestFirstStoreManager(modelStore, 50);
-			bestFirst.startExploration(initialVersion, 0, translator.getUpQuery());
+			bestFirst.startExploration(initialVersion, 0, translator.getUpQuery(), translator.getLowQuery(), translator.getCurrentQuery());
 			var resultStore = bestFirst.getSolutionStore();
 			System.out.println("states size: " + resultStore.getSolutions().size());
 			model.getAdapter(ModelVisualizerAdapter.class).visualize(bestFirst.getVisualizationStore());

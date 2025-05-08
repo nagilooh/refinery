@@ -35,6 +35,11 @@ public class VisualizationStoreImpl implements VisualizationStore {
 	}
 
 	@Override
+	public synchronized void addBestSolution(Version state) {
+		designSpaceBuilder.append(states.get(state)).append(" [peripheries = 3, fillcolor=green]\n");
+	}
+
+	@Override
 	public synchronized void addTransition(Version from, Version to, String label) {
 		designSpaceBuilder.append(states.get(from)).append(" -> ").append(states.get(to))
 				.append(" [label=\"").append(transitionCounter++).append(": ").append(label).append("\"]\n");

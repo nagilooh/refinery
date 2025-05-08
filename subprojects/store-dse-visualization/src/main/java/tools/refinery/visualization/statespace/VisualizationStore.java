@@ -12,6 +12,7 @@ import java.util.Map;
 public interface VisualizationStore {
 	void addState(Version state, String label);
 	void addSolution(Version state);
+	void addBestSolution(Version state);
 	void addTransition(Version from, Version to, String label);
 	StringBuilder getDesignSpaceStringBuilder();
 	Map<Version, Integer> getStates();

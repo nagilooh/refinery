@@ -15,6 +15,7 @@ public interface ObjectivePriorityQueue {
 	Comparator<VersionWithObjectiveValue> getComparator();
 	void submit(VersionWithObjectiveValue versionWithObjectiveValue);
 	void remove(VersionWithObjectiveValue versionWithObjectiveValue);
+	void removeWorse(VersionWithObjectiveValue versionWithObjectiveValue);
 	int getSize();
 	VersionWithObjectiveValue getBest();
 	VersionWithObjectiveValue getRandom(Random random);

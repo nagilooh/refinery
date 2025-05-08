@@ -77,25 +77,26 @@ public class BestFirstStoreManager {
 	}
 
 	public void startExploration(Version initial) {
-		startExploration(initial, 1, null);
+		startExploration(initial, 1, null, null, null);
 	}
 	public void startExploration(Version initial, long randomSeed) {
-		startExploration(initial, randomSeed, null);
+		startExploration(initial, randomSeed, null, null, null);
 	}
 
-	public void startExploration(Version initial, FunctionalQuery<Double> upQuery) {
-		startExploration(initial, 1, upQuery);
+	public void startExploration(Version initial, FunctionalQuery<Double> upQuery, FunctionalQuery<Double> lowQuery, FunctionalQuery<Double> currentQuery) {
+		startExploration(initial, 1, upQuery, lowQuery, currentQuery);
 	}
 
 
-	public void startExploration(Version initial, long randomSeed, FunctionalQuery<Double> upQuery) {
+	public void startExploration(Version initial, long randomSeed, FunctionalQuery<Double> upQuery,
+								 FunctionalQuery<Double> lowQuery, FunctionalQuery<Double> currentQuery) {
 		try (var model = modelStore.createModelForState(initial)) {
 			if (upQuery == null) {
 				BestFirstExplorer bestFirstExplorer = new BestFirstExplorer(this, model, randomSeed);
 				bestFirstExplorer.explore();
 			}
 			else {
-				OptimalExplorer optimalExplorer = new OptimalExplorer(this, model, randomSeed, upQuery);
+				OptimalExplorer optimalExplorer = new OptimalExplorer(this, model, randomSeed, upQuery, lowQuery, currentQuery);
 				optimalExplorer.explore();
 			}
 		}
