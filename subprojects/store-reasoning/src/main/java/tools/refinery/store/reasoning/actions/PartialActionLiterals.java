@@ -32,7 +32,7 @@ public final class PartialActionLiterals {
 
 	public static MergeActionLiteral<TruthValueConfidence, Boolean> add(ConfidencePartialRelation partialRelation,
 															  NodeVariable... parameters) {
-		return merge(partialRelation, new TruthValueConfidence(TruthValue.TRUE, 1.0), parameters);
+		return merge(partialRelation, TruthValueConfidence.TRUE, parameters);
 	}
 
 	public static MergeActionLiteral<TruthValue, Boolean> remove(PartialRelation partialRelation,
@@ -42,7 +42,7 @@ public final class PartialActionLiterals {
 
 	public static MergeActionLiteral<TruthValueConfidence, Boolean> remove(ConfidencePartialRelation partialRelation,
 																 NodeVariable... parameters) {
-		return merge(partialRelation, new TruthValueConfidence(TruthValue.FALSE, 0.0), parameters);
+		return merge(partialRelation, TruthValueConfidence.FALSE, parameters);
 	}
 
 	public static FocusActionLiteral focus(NodeVariable parent, NodeVariable child) {

@@ -116,14 +116,14 @@ public class ReasoningBuilderImpl extends AbstractModelAdapterBuilder<ReasoningS
 				.ifPresent(stateCoderBuilder -> stateCoderBuilder.exclude(ReasoningAdapterImpl.NODE_COUNT_SYMBOL));
 		for (var translator : translators.values()) {
 			translator.configure(storeBuilder);
-			if (translator instanceof PartialRelationTranslator relationConfiguration) {
-				doConfigure(storeBuilder, relationConfiguration);
-			}
-			else if (translator instanceof ConfidencePartialRelationTranslator relationConfiguration) {
-				doConfigure(storeBuilder, relationConfiguration);
-			} else {
-				throw new IllegalArgumentException("Unknown partial symbol translator %s for partial symbol %s"
-						.formatted(translator, translator.getPartialSymbol()));
+			switch (translator) {
+				case PartialRelationTranslator relationConfiguration ->
+					doConfigure(storeBuilder, relationConfiguration);
+				case ConfidencePartialRelationTranslator relationConfiguration ->
+					doConfigure(storeBuilder, relationConfiguration);
+				default ->
+					throw new IllegalArgumentException("Unknown partial symbol translator %s for partial symbol %s"
+							.formatted(translator, translator.getPartialSymbol()));
 			}
 		}
 		storeBuilder.symbols(registeredStorageRefiners.keySet());
