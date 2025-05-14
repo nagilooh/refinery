@@ -14,7 +14,6 @@ import tools.refinery.logic.term.Variable;
 import tools.refinery.logic.term.uppercardinality.FiniteUpperCardinality;
 import tools.refinery.store.reasoning.literal.CountCandidateLowerBoundLiteral;
 import tools.refinery.store.reasoning.literal.CountLowerBoundLiteral;
-import tools.refinery.store.reasoning.representation.ConfidencePartialRelation;
 import tools.refinery.store.reasoning.representation.PartialRelation;
 import tools.refinery.store.reasoning.translator.multiplicity.Multiplicity;
 

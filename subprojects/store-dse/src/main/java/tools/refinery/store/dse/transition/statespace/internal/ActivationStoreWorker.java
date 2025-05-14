@@ -8,7 +8,6 @@ package tools.refinery.store.dse.transition.statespace.internal;
 import tools.refinery.store.dse.transition.Transformation;
 import tools.refinery.store.dse.transition.VersionWithObjectiveValue;
 import tools.refinery.store.dse.transition.statespace.ActivationStore;
-import tools.refinery.visualization.statespace.VisualizationStore;
 
 import java.util.List;
 import java.util.Random;
@@ -29,15 +28,6 @@ public class ActivationStoreWorker {
 		}
 		return result;
 	}
-
-	public List<Transformation> getTransformations() {
-		return transformations;
-	}
-
-	public Transformation getTransformation(int index) {
-		return transformations.get(index);
-	}
-
 
 	public ActivationStore.FireResult fireRandomActivation(VersionWithObjectiveValue thisVersion, Random random) {
 		var result = store.getRandomAndMarkAsVisited(thisVersion, random);

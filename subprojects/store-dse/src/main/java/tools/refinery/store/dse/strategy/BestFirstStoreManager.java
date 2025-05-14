@@ -79,6 +79,7 @@ public class BestFirstStoreManager {
 	public void startExploration(Version initial) {
 		startExploration(initial, 1, null, null, null);
 	}
+
 	public void startExploration(Version initial, long randomSeed) {
 		startExploration(initial, randomSeed, null, null, null);
 	}
@@ -86,7 +87,6 @@ public class BestFirstStoreManager {
 	public void startExploration(Version initial, FunctionalQuery<Double> upQuery, FunctionalQuery<Double> lowQuery, FunctionalQuery<Double> currentQuery) {
 		startExploration(initial, 1, upQuery, lowQuery, currentQuery);
 	}
-
 
 	public void startExploration(Version initial, long randomSeed, FunctionalQuery<Double> upQuery,
 								 FunctionalQuery<Double> lowQuery, FunctionalQuery<Double> currentQuery) {

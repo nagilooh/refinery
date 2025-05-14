@@ -7,7 +7,6 @@ package tools.refinery.store.dse.transition.statespace;
 
 import tools.refinery.store.dse.transition.Transformation;
 import tools.refinery.store.dse.transition.VersionWithObjectiveValue;
-import tools.refinery.store.map.Version;
 import tools.refinery.store.tuple.Tuple;
 
 import java.util.Random;

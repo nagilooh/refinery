@@ -6,7 +6,6 @@
 package tools.refinery.store.dse.transition.statespace;
 
 import tools.refinery.store.dse.transition.VersionWithObjectiveValue;
-import tools.refinery.store.map.Version;
 
 import java.util.Comparator;
 import java.util.Random;

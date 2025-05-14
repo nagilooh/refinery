@@ -5,7 +5,6 @@
  */
 package tools.refinery.store.query.view;
 
-import tools.refinery.logic.term.truthvalue.TruthValue;
 import tools.refinery.logic.term.truthvalue.TruthValueConfidence;
 import tools.refinery.store.representation.Symbol;
 import tools.refinery.store.tuple.Tuple;
