@@ -55,6 +55,11 @@ class TransitionBuildTests {
 					output.assign(friendView.count(Variable.of(), Variable.of()))
 			));
 
+	FunctionalQuery<Integer> numberOfPeople = Query.of(Integer.class, (builder, output) -> builder
+			.clause(
+					output.assign(personView.count(Variable.of()))
+			));
+
 	@Test
 	void acceptTest() {
 		Model model = getModel();
@@ -117,19 +122,32 @@ class TransitionBuildTests {
 		var dse = model.getAdapter(DesignSpaceExplorationAdapter.class);
 		var query = model.getAdapter(ModelQueryAdapter.class);
 		var friendI = model.getInterpretation(friend);
+		var personI = model.getInterpretation(person);
 
 		assertEquals(0.0, dse.getObjectiveValue().get(0), 0.01);
+		assertEquals(0.0, dse.getObjectiveValue().get(1), 0.01);
 
 		friendI.put(Tuple.of(1, 2), true);
 
 		query.flushChanges();
 		assertEquals(1.0, dse.getObjectiveValue().get(0), 0.01);
+		assertEquals(0.0, dse.getObjectiveValue().get(1), 0.01);
+
+		personI.put(Tuple.of(1), true);
+
+		query.flushChanges();
+		assertEquals(1.0, dse.getObjectiveValue().get(0), 0.01);
+		assertEquals(1.0, dse.getObjectiveValue().get(1), 0.01);
 
 		friendI.put(Tuple.of(1, 3), true);
 		friendI.put(Tuple.of(1, 4), true);
+		personI.put(Tuple.of(2), true);
+		personI.put(Tuple.of(3), true);
+		personI.put(Tuple.of(4), true);
 
 		query.flushChanges();
 		assertEquals(3.0, dse.getObjectiveValue().get(0), 0.01);
+		assertEquals(4.0, dse.getObjectiveValue().get(1), 0.01);
 	}
 
 	private Model getModel() {
@@ -139,7 +157,7 @@ class TransitionBuildTests {
 				.with(StateCoderAdapter.builder())
 				.with(ModificationAdapter.builder())
 				.with(DesignSpaceExplorationAdapter.builder()
-						.objective(Objectives.value(numberOfFriends))
+						.objectives(Objectives.value(numberOfFriends), Objectives.value(numberOfPeople))
 						.exclude(Criteria.whenHasMatch(moreThan3Friends))
 						.accept(Criteria.whenNoMatch(somebodyHasNoFriend)))
 				.build();
