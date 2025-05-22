@@ -24,6 +24,8 @@ import tools.refinery.store.representation.Symbol;
 import tools.refinery.store.statecoding.StateCoderAdapter;
 import tools.refinery.store.tuple.Tuple;
 
+import java.util.Comparator;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class ComparatorTest {
@@ -111,6 +113,41 @@ class ComparatorTest {
 			assertEquals(-1, comparator.compare(v6, v10));
 			assertEquals(0, comparator.compare(v9, v10));
 			assertEquals(1, comparator.compare(v10, v11));
+		}
+	}
+
+	@Test
+	void paretoComparatorTest() {
+		var comparator = new ParetoComparator<VersionWithObjectiveValue>();
+		comparator.add(Comparator.comparingDouble(o -> o.objectiveValue().get(0)));
+		comparator.add(Comparator.comparingDouble(o -> -1.0 * o.objectiveValue().get(1)));
+		var store = ModelStore.builder()
+				.symbols(person, friend)
+				.with(QueryInterpreterAdapter.builder())
+				.with(StateCoderAdapter.builder())
+				.with(ModificationAdapter.builder())
+				.with(DesignSpaceExplorationAdapter.builder()
+						.objectives(Objectives.value(numberOfFriends), Objectives.value(numberOfPeople)))
+				.build();
+		try (var model = store.createEmptyModel()) {
+
+			Version state = model.commit();
+			var v1 = new VersionWithObjectiveValue(state, ObjectiveValue.of(0.0, 0.0));
+			var v2 = new VersionWithObjectiveValue(state, ObjectiveValue.of(0.0, 0.0));
+			var v3 = new VersionWithObjectiveValue(state, ObjectiveValue.of(1.0, 0.0));
+			var v4 = new VersionWithObjectiveValue(state, ObjectiveValue.of(0.0, 1.0));
+			var v5 = new VersionWithObjectiveValue(state, ObjectiveValue.of(1.0, 1.0));
+
+			assertEquals(0, comparator.compare(v1, v1));
+			assertEquals(0, comparator.compare(v1, v2));
+			assertEquals(0, comparator.compare(v2, v1));
+			assertEquals(-1, comparator.compare(v1, v3));
+			assertEquals(1, comparator.compare(v1, v4));
+			assertEquals(1, comparator.compare(v3, v4));
+			assertEquals(-1, comparator.compare(v4, v3));
+			assertEquals(-1, comparator.compare(v4, v5));
+			assertEquals(1, comparator.compare(v5, v4));
+			assertEquals(0, comparator.compare(v1, v5));
 		}
 	}
 }
