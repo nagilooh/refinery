@@ -85,4 +85,11 @@ public class BestFirstStoreManager {
 			bestFirstExplorer.explore();
 		}
 	}
+
+	public void manualStep(Version initial, int numberOfSteps) {
+		try (var model = modelStore.createModelForState(initial)) {
+			BestFirstExplorer bestFirstExplorer = new BestFirstExplorer(this, model, 1);
+			bestFirstExplorer.manualStep(numberOfSteps);
+		}
+	}
 }

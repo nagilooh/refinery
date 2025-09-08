@@ -15,6 +15,7 @@ import tools.refinery.store.map.Version;
 import tools.refinery.store.model.Model;
 import tools.refinery.store.query.ModelQueryAdapter;
 import tools.refinery.store.statecoding.StateCoderAdapter;
+import tools.refinery.visualization.ModelVisualizerAdapter;
 import tools.refinery.visualization.statespace.VisualizationStore;
 
 import java.util.Random;
@@ -27,6 +28,7 @@ public class BestFirstWorker {
 	final DesignSpaceExplorationAdapter explorationAdapter;
 	final ModelQueryAdapter queryAdapter;
 	final @Nullable PropagationAdapter propagationAdapter;
+	final @Nullable ModelVisualizerAdapter modelVisualizerAdapter;
 	final VisualizationStore visualizationStore;
 	final boolean isVisualizationEnabled;
 
@@ -41,7 +43,8 @@ public class BestFirstWorker {
 		activationStoreWorker = new ActivationStoreWorker(storeManager.getActivationStore(),
 				explorationAdapter.getTransformations());
 		visualizationStore = storeManager.getVisualizationStore();
-		isVisualizationEnabled = visualizationStore != null;
+		modelVisualizerAdapter = model.tryGetAdapter(ModelVisualizerAdapter.class).orElse(null);
+		isVisualizationEnabled = modelVisualizerAdapter != null;
 	}
 
 	protected VersionWithObjectiveValue last = null;
@@ -174,6 +177,39 @@ public class BestFirstWorker {
 		}
 
 		var visitResult = activationStoreWorker.fireRandomActivation(this.last, random);
+
+		if (!visitResult.successfulVisit()) {
+			return new RandomVisitResult(null, visitResult.mayHaveMore());
+		}
+
+		if (propagationAdapter != null) {
+			var propagationResult = propagationAdapter.propagate();
+			if (propagationResult.isRejected()) {
+				return new RandomVisitResult(null, visitResult.mayHaveMore());
+			}
+		}
+		queryAdapter.flushChanges();
+
+		Version oldVersion = null;
+		if (isVisualizationEnabled) {
+			oldVersion = last.version();
+		}
+		var submitResult = submit();
+		if (isVisualizationEnabled && submitResult.newVersion() != null) {
+			var newVersion = submitResult.newVersion().version();
+			visualizationStore.addTransition(oldVersion, newVersion,
+					"fire: " + visitResult.transformation() + ", " + visitResult.activation());
+		}
+		return new RandomVisitResult(submitResult, visitResult.mayHaveMore());
+	}
+
+	public RandomVisitResult selectAndVisitUnvisited() {
+		checkSynchronized();
+		if (model.hasUncommittedChanges()) {
+			throw new IllegalStateException("The model has uncommitted changes!");
+		}
+
+		var visitResult = activationStoreWorker.selectAndFireActivation(this.last);
 
 		if (!visitResult.successfulVisit()) {
 			return new RandomVisitResult(null, visitResult.mayHaveMore());

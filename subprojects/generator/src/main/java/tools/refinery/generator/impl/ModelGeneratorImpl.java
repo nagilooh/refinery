@@ -21,11 +21,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class ModelGeneratorImpl extends ConcreteModelFacade implements ModelGenerator {
-	private final Version initialVersion;
-	private final CancellableCancellationToken cancellationToken;
-	private long randomSeed = 1;
-	private int maxNumberOfSolutions = 1;
-	private SolutionStore solutionStore;
+	final Version initialVersion;
+	final CancellableCancellationToken cancellationToken;
+	long randomSeed = 1;
+	int maxNumberOfSolutions = 1;
+	SolutionStore solutionStore;
 
 	public ModelGeneratorImpl(Args args, CancellableCancellationToken cancellationToken) {
 		super(args);

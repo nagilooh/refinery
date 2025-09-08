@@ -5,6 +5,7 @@
  */
 package tools.refinery.store.dse.strategy;
 
+import tools.refinery.store.dse.transition.VersionWithObjectiveValue;
 import tools.refinery.store.model.Model;
 
 import java.util.Random;
@@ -12,6 +13,8 @@ import java.util.Random;
 public class BestFirstExplorer extends BestFirstWorker {
 	final long id;
 	Random random;
+
+	private VersionWithObjectiveValue lastBest;
 
 	public BestFirstExplorer(BestFirstStoreManager storeManager, Model model, long id) {
 		super(storeManager, model);
@@ -28,8 +31,27 @@ public class BestFirstExplorer extends BestFirstWorker {
 		return !hasEnoughSolution();
 	}
 
+	public void startExploration() {
+		lastBest = submit().newVersion();
+		if (isVisualizationEnabled) {
+			modelVisualizerAdapter.visualize(lastBest.version());
+		}
+	}
+
+	public void manualStep(int numberOfSteps) {
+		if (lastBest == null) {
+			startExploration();
+		}
+		for (int i = 0; i < numberOfSteps; i++) {
+			var visitResult = this.selectAndVisitUnvisited();
+			if (isVisualizationEnabled) {
+				modelVisualizerAdapter.visualize(visitResult.submitResult().newVersion().version());
+			}
+		}
+	}
+
 	public void explore() {
-		var lastBest = submit().newVersion();
+		startExploration();
 		while (shouldRun()) {
 			if (lastBest == null) {
 				if (random.nextInt(10) == 0) {

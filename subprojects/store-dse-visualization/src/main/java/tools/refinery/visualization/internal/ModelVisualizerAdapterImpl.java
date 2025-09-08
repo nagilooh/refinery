@@ -33,6 +33,7 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 	private final Set<FileFormat> formats;
 	private final boolean renderDesignSpace;
 	private final boolean renderStates;
+	private Integer nextStateId = 0;
 
 	private static final Map<Object, String> truthValueToDot = Map.of(
 			TruthValue.TRUE, "1",
@@ -287,12 +288,12 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 	}
 
 	private String buildDesignSpaceDot() {
-		designSpaceBuilder.append("}");
+//		designSpaceBuilder.append("}");
 		return designSpaceBuilder.toString();
 	}
 
 	private boolean saveDesignSpace(String path) {
-		saveDot(buildDesignSpaceDot(), path + "/designSpace.dot");
+		saveDot(buildDesignSpaceDot() + "}", path + "/designSpace.dot");
 		for (var entry : states.entrySet()) {
 			saveDot(createDotForModelState(entry.getKey()), path + "/" + entry.getValue() + ".dot");
 		}
@@ -317,7 +318,7 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 			}
 		}
 		if (renderDesignSpace) {
-			var designSpaceDot = buildDesignSpaceDot();
+			var designSpaceDot = buildDesignSpaceDot() + "}";
 			for (var format : formats) {
 				if (format == FileFormat.DOT) {
 					saveDot(designSpaceDot, path + "/designSpace.dot");
@@ -334,5 +335,19 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 		this.designSpaceBuilder.append(visualizationStore.getDesignSpaceStringBuilder());
 		this.states.putAll(visualizationStore.getStates());
 		renderDesignSpace(outputPath, formats);
+	}
+
+	@Override
+	public void visualize(Version version) {
+		var stateDot = createDotForModelState(version);
+		for (var format : formats) {
+			if (format == FileFormat.DOT) {
+				saveDot(stateDot, outputPath + "/" + nextStateId + ".dot");
+			}
+			else {
+				renderDot(stateDot, format, outputPath + "/" + nextStateId + "." + format.getFormat());
+			}
+		}
+		nextStateId++;
 	}
 }
