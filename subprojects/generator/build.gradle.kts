@@ -15,6 +15,7 @@ mavenArtifact {
 
 dependencies {
 	api(project(":refinery-language-semantics"))
+	implementation(project(":refinery-store-dse-manual"))
 	implementation(project(":refinery-store-dse-visualization"))
 	implementation(project(":refinery-store-query-interpreter"))
 	implementation(project(":refinery-store-reasoning-scope"))

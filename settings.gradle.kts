@@ -29,6 +29,7 @@ include(
 		"logic",
 		"store",
 		"store-dse",
+		"store-dse-manual",
 		"store-dse-visualization",
 		"store-query",
 		"store-query-interpreter",

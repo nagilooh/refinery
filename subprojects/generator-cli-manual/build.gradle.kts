@@ -11,6 +11,7 @@ plugins {
 dependencies {
 	implementation(project(":refinery-generator"))
 	implementation(project(":refinery-generator-cli"))
+	implementation(project(":refinery-store-dse-manual"))
 	implementation(project(":refinery-store-dse-visualization"))
 	implementation(libs.jcommander)
 	implementation(libs.slf4j)

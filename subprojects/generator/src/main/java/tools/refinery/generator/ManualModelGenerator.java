@@ -7,5 +7,5 @@ package tools.refinery.generator;
 
 public interface ManualModelGenerator extends ModelGenerator {
 
-	void manualStep(int numberOfSteps);
+	void manualStep();
 }

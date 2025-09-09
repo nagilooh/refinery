@@ -11,9 +11,9 @@ import com.google.inject.Inject;
 import tools.refinery.generator.ManualModelGeneratorFactory;
 import tools.refinery.generator.ModelGeneratorFactory;
 import tools.refinery.generator.cli.manual.RefineryCliManual;
-import tools.refinery.generator.cli.manual.utils.CliProblemLoader;
-import tools.refinery.generator.cli.manual.utils.CliProblemSerializer;
-import tools.refinery.generator.cli.manual.utils.CliUtils;
+import tools.refinery.generator.cli.utils.CliProblemLoader;
+import tools.refinery.generator.cli.utils.CliProblemSerializer;
+import tools.refinery.generator.cli.utils.CliUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -83,17 +83,7 @@ public class GenerateCommand implements Command {
 		try (var generator = generatorFactory.createGenerator(problem)) {
 			generator.setRandomSeed(randomSeed);
 			generator.setMaxNumberOfSolutions(count);
-			generator.manualStep(10);
-			if (count == 1) {
-				serializer.saveModel(generator, outputPath);
-			} else {
-				int solutionCount = generator.getSolutionCount();
-				for (int i = 0; i < solutionCount; i++) {
-					generator.loadSolution(i);
-					var pathWithIndex = CliUtils.getFileNameWithIndex(outputPath, i + 1);
-					serializer.saveModel(generator, pathWithIndex, false);
-				}
-			}
+			generator.manualStep();
 		}
 		return RefineryCliManual.EXIT_SUCCESS;
 	}
