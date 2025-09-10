@@ -20,7 +20,7 @@ public class ManualModelGeneratorImpl extends ModelGeneratorImpl implements Manu
 		if (cancellationToken.isCancelled()) {
 			throw new IllegalStateException("Model generation was previously cancelled");
 		}
-		var manual = new ManualStoreManager(getModelStore());
+		var manual = new ManualStoreManager(getModelStore(), this.getProblemTrace());
 		try {
 			manual.manualStep(initialVersion);
 		} catch (PropagationRejectedException e) {

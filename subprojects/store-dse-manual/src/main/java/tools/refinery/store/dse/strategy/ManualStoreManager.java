@@ -1,5 +1,6 @@
 package tools.refinery.store.dse.strategy;
 
+import tools.refinery.language.semantics.ProblemTrace;
 import tools.refinery.store.dse.transition.DesignSpaceExplorationStoreAdapter;
 import tools.refinery.store.dse.transition.VersionWithObjectiveValue;
 import tools.refinery.store.dse.transition.statespace.ActivationStore;
@@ -15,9 +16,15 @@ public class ManualStoreManager {
 	ModelStore modelStore;
 	ActivationStore activationStore;
 	VisualizationStore visualizationStore;
+	ProblemTrace problemTrace;
 
 	public ManualStoreManager(ModelStore modelStore) {
+		this(modelStore, null);
+	}
+
+	public ManualStoreManager(ModelStore modelStore, ProblemTrace problemTrace) {
 		this.modelStore = modelStore;
+		this.problemTrace = problemTrace;
 		DesignSpaceExplorationStoreAdapter storeAdapter =
 				modelStore.getAdapter(DesignSpaceExplorationStoreAdapter.class);
 		Consumer<VersionWithObjectiveValue> whenAllActivationsVisited = x -> {};
@@ -40,7 +47,7 @@ public class ManualStoreManager {
 
 	public void manualStep(Version initial) {
 		try (var model = modelStore.createModelForState(initial)) {
-			ManualExplorer manualExplorer = new ManualExplorer(this, model);
+			ManualExplorer manualExplorer = new ManualExplorer(this, model, problemTrace);
 			var shouldContinue = true;
 			while(shouldContinue) {
 				shouldContinue = manualExplorer.manualStep();

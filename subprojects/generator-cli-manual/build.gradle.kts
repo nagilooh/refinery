@@ -16,6 +16,7 @@ dependencies {
 	implementation(libs.jcommander)
 	implementation(libs.slf4j)
 	testRuntimeOnly(libs.slf4j.simple)
+	testImplementation(project(":refinery-store-query-interpreter"))
 }
 
 application {

@@ -6,7 +6,10 @@
 package tools.refinery.language.semantics;
 
 import com.google.inject.Inject;
+import org.eclipse.collections.api.factory.primitive.IntObjectMaps;
 import org.eclipse.collections.api.factory.primitive.ObjectIntMaps;
+import org.eclipse.collections.api.map.primitive.IntObjectMap;
+import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
 import org.eclipse.collections.api.map.primitive.MutableObjectIntMap;
 import org.eclipse.collections.api.map.primitive.ObjectIntMap;
 import org.eclipse.xtext.naming.IQualifiedNameConverter;
@@ -36,6 +39,8 @@ class ProblemTraceImpl implements ProblemTrace {
 	private Metamodel metamodel;
 	private final MutableObjectIntMap<Node> mutableNodeTrace = ObjectIntMaps.mutable.empty();
 	private final ObjectIntMap<Node> nodeTrace = mutableNodeTrace.asUnmodifiable();
+	private final MutableIntObjectMap<Node> mutableIdTrace = IntObjectMaps.mutable.empty();
+	private final IntObjectMap<Node> idTrace = mutableIdTrace.asUnmodifiable();
 	private final Map<Relation, PartialRelation> mutableRelationTrace = new LinkedHashMap<>();
 	private final Map<Relation, PartialRelation> relationTrace =
 			Collections.unmodifiableMap(mutableRelationTrace);
@@ -68,9 +73,15 @@ class ProblemTraceImpl implements ProblemTrace {
 		return nodeTrace;
 	}
 
+	@Override
+	public IntObjectMap<Node> getIdTrace() {
+		return idTrace;
+	}
+
 	int collectNode(Node node) {
 		var nextId = mutableNodeTrace.size();
 		mutableNodeTrace.getIfAbsentPut(node, nextId);
+		mutableIdTrace.getIfAbsentPut(nextId, node);
 		return nextId;
 	}
 
@@ -94,6 +105,11 @@ class ProblemTraceImpl implements ProblemTrace {
 	public int getNodeId(String qualifiedName) {
 		var convertedName = qualifiedNameConverter.toQualifiedName(qualifiedName);
 		return getNodeId(convertedName);
+	}
+
+	@Override
+	public Node getIdNode(int id) {
+		return idTrace.get(id);
 	}
 
 	@Override

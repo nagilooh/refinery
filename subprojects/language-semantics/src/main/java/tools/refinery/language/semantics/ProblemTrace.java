@@ -5,6 +5,7 @@
  */
 package tools.refinery.language.semantics;
 
+import org.eclipse.collections.api.map.primitive.IntObjectMap;
 import org.eclipse.collections.api.map.primitive.ObjectIntMap;
 import org.eclipse.xtext.naming.QualifiedName;
 import tools.refinery.language.model.problem.Node;
@@ -26,11 +27,15 @@ public interface ProblemTrace {
 
 	ObjectIntMap<Node> getNodeTrace();
 
+	IntObjectMap<Node> getIdTrace();
+
 	int getNodeId(Node node);
 
 	int getNodeId(QualifiedName qualifiedName);
 
 	int getNodeId(String qualifiedName);
+
+	Node getIdNode(int id);
 
 	Map<Relation, PartialRelation> getRelationTrace();
 

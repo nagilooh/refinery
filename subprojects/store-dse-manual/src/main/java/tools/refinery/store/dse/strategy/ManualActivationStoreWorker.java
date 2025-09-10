@@ -2,6 +2,7 @@ package tools.refinery.store.dse.strategy;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tools.refinery.language.semantics.ProblemTrace;
 import tools.refinery.store.dse.transition.Transformation;
 import tools.refinery.store.dse.transition.VersionWithObjectiveValue;
 import tools.refinery.store.dse.transition.statespace.ActivationStore;
@@ -15,11 +16,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ManualActivationStoreWorker {
 	final ActivationStore store;
 	final List<Transformation> transformations;
+	final ProblemTrace problemTrace;
+
 	private static final Logger LOGGER = LoggerFactory.getLogger(ManualActivationStoreWorker.class);
 
-	public ManualActivationStoreWorker(ActivationStore store, List<Transformation> transformations) {
+	public ManualActivationStoreWorker(ActivationStore store, List<Transformation> transformations, ProblemTrace problemTrace) {
 		this.store = store;
 		this.transformations = transformations;
+		this.problemTrace = problemTrace;
 	}
 
 	public int[] calculateEmptyActivationSize() {
@@ -50,7 +54,17 @@ public class ManualActivationStoreWorker {
 				LOGGER.debug("Couldn't get rule name for transformation {}: {}", t, e.toString());
 			}
 			for (int i = 0; i < allActivations.size(); i++) {
-				String opt = String.format("%d: %s - [%d] %s", t, ruleName, i, allActivations.getKey(i));
+				String namesString = allActivations.getKey(i).toString();
+				var activation = allActivations.getKey(i);
+				if (problemTrace != null) {
+					var names = new String[activation.getSize()];
+					for (int j = 0; j < names.length; j++) {
+						var node = problemTrace.getIdNode(activation.get(j));
+						names[j] = node == null ? String.valueOf(activation.get(j)) : node.getName();
+					}
+					namesString = "[" + String.join(", ", names) + "]";
+				}
+				String opt = String.format("%d: %s - [%d] %s", t, ruleName, i, namesString);
 				options.add(opt);
 				mapping.add(new int[]{t, i});
 			}

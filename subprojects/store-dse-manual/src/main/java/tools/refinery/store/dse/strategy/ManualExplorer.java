@@ -1,6 +1,7 @@
 package tools.refinery.store.dse.strategy;
 
 import org.jetbrains.annotations.Nullable;
+import tools.refinery.language.semantics.ProblemTrace;
 import tools.refinery.store.dse.transition.DesignSpaceExplorationAdapter;
 import tools.refinery.store.dse.transition.ObjectiveValue;
 import tools.refinery.store.dse.transition.VersionWithObjectiveValue;
@@ -13,6 +14,7 @@ import tools.refinery.visualization.statespace.VisualizationStore;
 public class ManualExplorer {
 	final ManualStoreManager storeManager;
 	final Model model;
+	final ProblemTrace problemTrace;
 	final DesignSpaceExplorationAdapter explorationAdapter;
 	final ManualActivationStoreWorker activationStoreWorker;
 	final ModelQueryAdapter queryAdapter;
@@ -21,22 +23,20 @@ public class ManualExplorer {
 	final VisualizationStore visualizationStore;
 	final boolean isVisualizationEnabled;
 
-	public ManualExplorer(ManualStoreManager storeManager, Model model) {
+	public ManualExplorer(ManualStoreManager storeManager, Model model, ProblemTrace problemTrace) {
 		this.storeManager = storeManager;
 		this.model = model;
+		this.problemTrace = problemTrace;
 
 		explorationAdapter = model.getAdapter(DesignSpaceExplorationAdapter.class);
 		queryAdapter = model.getAdapter(ModelQueryAdapter.class);
 		activationStoreWorker = new ManualActivationStoreWorker(storeManager.getActivationStore(),
-				explorationAdapter.getTransformations());
+				explorationAdapter.getTransformations(), problemTrace);
 		visualizationStore = storeManager.getVisualizationStore();
 		modelVisualizerAdapter = model.tryGetAdapter(ModelVisualizerAdapter.class).orElse(null);
 		isVisualizationEnabled = modelVisualizerAdapter != null;
 
 		submit();
-		if (isVisualizationEnabled) {
-			modelVisualizerAdapter.visualize(last.version());
-		}
 	}
 
 	public VersionWithObjectiveValue submit() {
