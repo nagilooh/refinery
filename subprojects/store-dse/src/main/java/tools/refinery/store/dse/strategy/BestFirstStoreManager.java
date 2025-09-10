@@ -18,6 +18,7 @@ import tools.refinery.store.dse.transition.statespace.internal.SolutionStoreImpl
 import tools.refinery.store.map.Version;
 import tools.refinery.store.model.ModelStore;
 import tools.refinery.store.statecoding.StateCoderStoreAdapter;
+import tools.refinery.visualization.ModelVisualizerAdapter;
 import tools.refinery.visualization.statespace.VisualizationStore;
 import tools.refinery.visualization.statespace.internal.VisualizationStoreImpl;
 
@@ -79,10 +80,13 @@ public class BestFirstStoreManager {
 		startExploration(initial, 1);
 	}
 
-	public void startExploration(Version initial, long randomSeed) {
+	public long startExploration(Version initial, long randomSeed) {
 		try (var model = modelStore.createModelForState(initial)) {
 			BestFirstExplorer bestFirstExplorer = new BestFirstExplorer(this, model, randomSeed);
+			var start = System.currentTimeMillis();
 			bestFirstExplorer.explore();
+			var end = System.currentTimeMillis();
+			return (end - start);
 		}
 	}
 }

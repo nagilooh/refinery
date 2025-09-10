@@ -17,6 +17,8 @@ import tools.refinery.store.map.Version;
 import tools.refinery.store.reasoning.interpretation.PartialInterpretation;
 import tools.refinery.store.reasoning.representation.PartialSymbol;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
@@ -26,11 +28,13 @@ public class ModelGeneratorImpl extends ConcreteModelFacade implements ModelGene
 	private long randomSeed = 1;
 	private int maxNumberOfSolutions = 1;
 	private SolutionStore solutionStore;
+	private List<Long> generationTimes;
 
 	public ModelGeneratorImpl(Args args, CancellableCancellationToken cancellationToken) {
 		super(args);
 		this.cancellationToken = cancellationToken;
 		initialVersion = getModel().commit();
+		generationTimes = new ArrayList<Long>();
 	}
 
 	@Override
@@ -81,10 +85,10 @@ public class ModelGeneratorImpl extends ConcreteModelFacade implements ModelGene
 			throw new IllegalStateException("Model generation was previously cancelled");
 		}
 		solutionStore = null;
-		randomSeed++;
+//		randomSeed++;
 		var bestFirst = new BestFirstStoreManager(getModelStore(), maxNumberOfSolutions);
 		try {
-			bestFirst.startExploration(initialVersion, randomSeed);
+			generationTimes.add(bestFirst.startExploration(initialVersion, randomSeed));
 		} catch (PropagationRejectedException e) {
 			// Fatal propagation error.
 			throw getDiagnostics().wrapPropagationRejectedException(e, getProblemTrace());
@@ -111,6 +115,11 @@ public class ModelGeneratorImpl extends ConcreteModelFacade implements ModelGene
 				cancellationToken.reset();
 			}
 		}
+	}
+
+	@Override
+	public List<Long> getGenerationTimes() {
+		return generationTimes;
 	}
 
 	@Override
