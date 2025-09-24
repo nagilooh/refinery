@@ -80,17 +80,27 @@ public class GenerateCommand implements Command {
 		var problem = loader.loadProblem(inputPath, scopes, overrideScopes);
 		generatorFactory.partialInterpretationBasedNeighborhoods(count >= 2);
 		try (var generator = generatorFactory.createGenerator(problem)) {
+			System.out.println(generator.getProblemTrace().getNodeTrace());
+			var nodeTrace = generator.getProblemTrace().getNodeTrace().flipUniqueValues();
+			var keySet = nodeTrace.keySet();
+			for (var key : keySet.toArray()) {
+				System.out.println(key + ": " + nodeTrace.get(key).getName() + ", " + nodeTrace.get(key).getAnnotations() + ", " + nodeTrace.get(key).getClass());
+			}
 			generator.setRandomSeed(randomSeed);
 			generator.setMaxNumberOfSolutions(count);
 			generator.generate();
 			if (count == 1) {
 				serializer.saveModel(generator, outputPath);
+				var problemOut = generator.serialize();
+				System.out.println(problemOut.getNodes());
 			} else {
 				int solutionCount = generator.getSolutionCount();
 				for (int i = 0; i < solutionCount; i++) {
 					generator.loadSolution(i);
 					var pathWithIndex = CliUtils.getFileNameWithIndex(outputPath, i + 1);
 					serializer.saveModel(generator, pathWithIndex, false);
+					var problemOut = generator.serialize();
+					System.out.println(problemOut.getNodes());
 				}
 			}
 		}

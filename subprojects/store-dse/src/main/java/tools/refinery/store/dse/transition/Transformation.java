@@ -33,7 +33,7 @@ public class Transformation {
 		return decisionRule;
 	}
 
-	public ResultSet<Boolean> getAllActivationsAsResultSet() {
+	public OrderedResultSet<Boolean> getAllActivationsAsResultSet() {
 		return activations;
 	}
 

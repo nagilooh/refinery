@@ -6,6 +6,7 @@
 package tools.refinery.generator.standalone;
 
 import com.google.inject.Injector;
+import tools.refinery.generator.ManualExplorationFactory;
 import tools.refinery.generator.ModelGeneratorFactory;
 import tools.refinery.generator.ModelSemanticsFactory;
 import tools.refinery.language.ProblemStandaloneSetup;
@@ -34,6 +35,10 @@ public final class StandaloneRefinery {
 
 	public static ModelSemanticsFactory getSemanticsFactory() {
 		return getInstance(ModelSemanticsFactory.class);
+	}
+
+	public static ManualExplorationFactory getManualExplorationFactory() {
+		return getInstance(ManualExplorationFactory.class);
 	}
 
 	private static final class LazyHolder {

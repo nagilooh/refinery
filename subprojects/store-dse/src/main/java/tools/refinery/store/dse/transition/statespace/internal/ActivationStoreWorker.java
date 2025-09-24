@@ -29,9 +29,7 @@ public class ActivationStoreWorker {
 		return result;
 	}
 
-
-	public ActivationStore.VisitResult fireRandomActivation(VersionWithObjectiveValue thisVersion, Random random) {
-		var result = store.getRandomAndMarkAsVisited(thisVersion, random);
+	public ActivationStore.VisitResult visitActivation(ActivationStore.VisitResult result) {
 		if (result.successfulVisit()) {
 			int selectedTransformation = result.transformation();
 			int selectedActivation = result.activation();
@@ -51,5 +49,11 @@ public class ActivationStoreWorker {
 			}
 		}
 		return result;
+	}
+
+
+	public ActivationStore.VisitResult fireRandomActivation(VersionWithObjectiveValue thisVersion, Random random) {
+		var result = store.getRandomAndMarkAsVisited(thisVersion, random);
+		return visitActivation(result);
 	}
 }

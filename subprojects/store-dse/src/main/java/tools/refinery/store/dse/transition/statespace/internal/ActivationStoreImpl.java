@@ -13,9 +13,9 @@ import java.util.*;
 import java.util.function.Consumer;
 
 public class ActivationStoreImpl implements ActivationStore {
-	private final List<DecisionRule> transformations;
-	private final Consumer<VersionWithObjectiveValue> actionWhenAllActivationVisited;
-	private final Map<VersionWithObjectiveValue, List<ActivationStoreEntry>> versionToActivations;
+	final List<DecisionRule> transformations;
+	final Consumer<VersionWithObjectiveValue> actionWhenAllActivationVisited;
+	final Map<VersionWithObjectiveValue, List<ActivationStoreEntry>> versionToActivations;
 
 	public ActivationStoreImpl(List<DecisionRule> transformations,
 							   Consumer<VersionWithObjectiveValue> actionWhenAllActivationVisited) {

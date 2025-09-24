@@ -1,12 +1,7 @@
-/*
- * SPDX-FileCopyrightText: 2023-2024 The Refinery Authors <https://refinery.tools/>
- *
- * SPDX-License-Identifier: EPL-2.0
- */
 package tools.refinery.generator;
 
 import tools.refinery.generator.impl.CancellableCancellationToken;
-import tools.refinery.generator.impl.ModelGeneratorImpl;
+import tools.refinery.generator.impl.ManualExplorationImpl;
 import tools.refinery.language.model.problem.Problem;
 import tools.refinery.language.semantics.TracedException;
 import tools.refinery.store.dse.propagation.PropagationAdapter;
@@ -26,41 +21,38 @@ import tools.refinery.visualization.internal.FileFormat;
 import java.util.Collection;
 import java.util.Set;
 
-// This class is used as a fluent builder, so it's not necessary to use the return value of all of its methods.
-@SuppressWarnings("UnusedReturnValue")
-public final class ModelGeneratorFactory extends ModelFacadeFactory<ModelGeneratorFactory> {
+public final class ManualExplorationFactory extends ModelFacadeFactory<ManualExplorationFactory> {
 	private boolean debugPartialInterpretations;
 
 	private boolean partialInterpretationBasedNeighborhoods;
 
 	private int stateCoderDepth = NeighborhoodCalculator.DEFAULT_DEPTH;
 
-	public ModelGeneratorFactory() {
+	public ManualExplorationFactory() {
 		keepShadowPredicates(false);
 	}
-
 	@Override
-	protected ModelGeneratorFactory getSelf() {
+	protected ManualExplorationFactory getSelf() {
 		return this;
 	}
 
-	public ModelGeneratorFactory debugPartialInterpretations(boolean debugPartialInterpretations) {
+	public ManualExplorationFactory debugPartialInterpretations(boolean debugPartialInterpretations) {
 		this.debugPartialInterpretations = debugPartialInterpretations;
 		return this;
 	}
 
-	public ModelGeneratorFactory partialInterpretationBasedNeighborhoods(
+	public ManualExplorationFactory partialInterpretationBasedNeighborhoods(
 			boolean partialInterpretationBasedNeighborhoods) {
 		this.partialInterpretationBasedNeighborhoods = partialInterpretationBasedNeighborhoods;
 		return this;
 	}
 
-	public ModelGeneratorFactory stateCoderDepth(int stateCoderDepth) {
+	public ManualExplorationFactory stateCoderDepth(int stateCoderDepth) {
 		this.stateCoderDepth = stateCoderDepth;
 		return this;
 	}
 
-	public ModelGenerator tryCreateGenerator(Problem problem) {
+	public ModelExplorer tryCreateGenerator(Problem problem) {
 		var initializer = createModelInitializer();
 		try {
 			initializer.readProblem(problem);
@@ -91,24 +83,20 @@ public final class ModelGeneratorFactory extends ModelFacadeFactory<ModelGenerat
 		} catch (TracedException e) {
 			throw getDiagnostics().wrapTracedException(e, problem);
 		}
-		return new ModelGeneratorImpl(createConcreteFacadeArgs(initializer, storeBuilder), cancellationToken);
+		return new ManualExplorationImpl(createFacadeArgs(initializer, storeBuilder));
 	}
 
-	public ModelGenerator createGenerator(Problem problem) {
+	public ModelExplorer createGenerator(Problem problem) {
 		var generator = tryCreateGenerator(problem);
 		generator.throwIfInitializationFailed();
 		return generator;
 	}
 
 	private Collection<Concreteness> getRequiredInterpretations() {
-		return debugPartialInterpretations || partialInterpretationBasedNeighborhoods ?
-				Set.of(Concreteness.PARTIAL, Concreteness.CANDIDATE) :
-				Set.of(Concreteness.CANDIDATE);
+		return Set.of(Concreteness.PARTIAL, Concreteness.CANDIDATE);
 	}
 
 	private StateCodeCalculatorFactory getStateCodeCalculatorFactory() {
-		return partialInterpretationBasedNeighborhoods ?
-				PartialNeighborhoodCalculator.factory(Concreteness.PARTIAL, stateCoderDepth) :
-				NeighborhoodCalculator.factory(stateCoderDepth);
+		return PartialNeighborhoodCalculator.factory(Concreteness.PARTIAL, stateCoderDepth);
 	}
 }

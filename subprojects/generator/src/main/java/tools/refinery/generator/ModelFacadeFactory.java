@@ -21,7 +21,7 @@ import tools.refinery.store.util.CancellationToken;
 // This class is used as a fluent builder, so it's not necessary to use the return value of all of its methods.
 @SuppressWarnings("UnusedReturnValue")
 public abstract sealed class ModelFacadeFactory<T extends ModelFacadeFactory<T>> permits ModelSemanticsFactory,
-		ModelGeneratorFactory {
+		ModelGeneratorFactory, ManualExplorationFactory {
 	@Inject
 	private Provider<ModelInitializer> initializerProvider;
 

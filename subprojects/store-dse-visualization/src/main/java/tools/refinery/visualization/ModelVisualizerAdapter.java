@@ -20,4 +20,5 @@ public interface ModelVisualizerAdapter extends ModelAdapter {
 		return new ModelVisualizerBuilderImpl();
 	}
 	void visualize(VisualizationStore visualizationStore);
+	void visualize(Version version);
 }

@@ -111,7 +111,7 @@ class CRAExamplesTest {
 			));
 
 	@Test
-	@Disabled("This test is only for debugging purposes")
+//	@Disabled("This test is only for debugging purposes")
 	void craTest() {
 		var store = ModelStore.builder()
 				.symbols(classElement, encapsulates, attribute, method, dataDependency, functionalDependency, name)

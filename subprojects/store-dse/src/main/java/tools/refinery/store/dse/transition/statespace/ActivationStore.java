@@ -21,4 +21,9 @@ public interface ActivationStore {
 	boolean hasUnmarkedActivation(VersionWithObjectiveValue version);
 
 	VisitResult getRandomAndMarkAsVisited(VersionWithObjectiveValue version, Random random);
+
+	// Mark a specific activation as visited and return the visit result. Implementations may choose to
+	// return unsuccessful result if the activation was already visited concurrently.
+	VisitResult visitActivation(VersionWithObjectiveValue version, int transformationIndex, int activationIndex);
+
 }
