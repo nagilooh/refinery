@@ -11,6 +11,7 @@ import tools.refinery.logic.term.truthvalue.TruthValue;
 import tools.refinery.store.dse.propagation.PropagationBuilder;
 import tools.refinery.store.dse.transition.Rule;
 import tools.refinery.store.model.ModelStoreBuilder;
+import tools.refinery.store.reasoning.ReasoningAdapter;
 import tools.refinery.store.reasoning.ReasoningBuilder;
 import tools.refinery.store.reasoning.actions.PartialActionLiterals;
 import tools.refinery.store.reasoning.representation.PartialRelation;
@@ -112,7 +113,7 @@ public class ErrorPredicateTranslatorWithUnitPropagation extends PredicateTransl
 
 	private boolean toPropagate(CallLiteral literal) {
 		var target = literal.getTarget();
-		if (target instanceof PartialRelation(String name, int arity) && name.equals("equals") && arity == 2) {
+		if (target.equals(ReasoningAdapter.EQUALS_SYMBOL)) {
 			return false;
 		}
 
