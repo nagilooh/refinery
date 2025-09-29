@@ -1,6 +1,7 @@
 package tools.refinery.store.reasoning.translator.predicate;
 
 import org.jetbrains.annotations.NotNull;
+import tools.refinery.logic.dnf.DnfClause;
 import tools.refinery.logic.dnf.RelationalQuery;
 import tools.refinery.logic.literal.CallLiteral;
 import tools.refinery.logic.literal.CallPolarity;
@@ -26,18 +27,20 @@ import static tools.refinery.store.reasoning.literal.PartialLiterals.must;
 public class ErrorPredicateTranslatorWithUnitPropagation extends PredicateTranslator {
 
 	private final RelationalQuery query;
+	private final PartialRelation nodePartialRelation;
 
-	public ErrorPredicateTranslatorWithUnitPropagation(PartialRelation relation, RelationalQuery query, List<PartialRelation> parameterTypes, Set<PartialRelation> supersets, boolean mutable, TruthValue defaultValue) {
+	public ErrorPredicateTranslatorWithUnitPropagation(PartialRelation relation, RelationalQuery query,
+													   List<PartialRelation> parameterTypes,
+													   Set<PartialRelation> supersets, boolean mutable,
+													   TruthValue defaultValue, PartialRelation nodePartialRelation) {
 		super(relation, query, parameterTypes, supersets, mutable, defaultValue);
 		this.query = query;
+		this.nodePartialRelation = nodePartialRelation;
 	}
 
 	@Override
 	public void apply(ModelStoreBuilder storeBuilder) {
 		super.apply(storeBuilder);
-		var builder = storeBuilder.getAdapter(ReasoningBuilder.class);
-		////builder.
-
 		storeBuilder.tryGetAdapter(PropagationBuilder.class).ifPresent(this::errorPredicatePropagationRuleTranslator);
 	}
 
@@ -49,18 +52,15 @@ public class ErrorPredicateTranslatorWithUnitPropagation extends PredicateTransl
 			for (int literalIndex = 0; literalIndex < clause.literals().size(); literalIndex++) {
 				final var literalToPropagate = clause.literals().get(literalIndex);
 				if (literalToPropagate instanceof CallLiteral callLiteral) {
-					if (!toPropagate(callLiteral)) {
+					if (!toPropagate(callLiteral, clause)) {
 						continue;
 					}
-
-					System.out.println(literalToPropagate);
 
 					var target = callLiteral.getTarget();
 					if (target instanceof PartialRelation partialRelationTarget) {
 						String propagationName = "#propagateError#" + query.name() +
 								"#c" + clauseIndex + "l" + literalIndex;
 
-						//literalToPropagate.getInputVariables()
 						List<NodeVariable> parameters = new ArrayList<>();
 						for (var argument : callLiteral.getArguments()) {
 							if (argument instanceof NodeVariable nodeVariable) {
@@ -77,6 +77,14 @@ public class ErrorPredicateTranslatorWithUnitPropagation extends PredicateTransl
 								var lit = clause.literals().get(i);
 								if(lit instanceof CallLiteral calLit) {
 									precondition.add(must(calLit));
+									for (var arg :  calLit.getArguments()) {
+										 // Add node(arg) constraint
+										if (clause.positiveVariables().contains(arg)) {
+											var nodeConstraint = new CallLiteral(CallPolarity.POSITIVE,
+													nodePartialRelation, List.of(arg));
+											precondition.add(must(nodeConstraint));
+										}
+									}
 								} else {
 									throw new UnsupportedOperationException();
 								}
@@ -111,7 +119,7 @@ public class ErrorPredicateTranslatorWithUnitPropagation extends PredicateTransl
 		}
 	}
 
-	private boolean toPropagate(CallLiteral literal) {
+	private boolean toPropagate(CallLiteral literal, DnfClause clause) {
 		var target = literal.getTarget();
 		if (target.equals(ReasoningAdapter.EQUALS_SYMBOL)) {
 			return false;
@@ -119,7 +127,7 @@ public class ErrorPredicateTranslatorWithUnitPropagation extends PredicateTransl
 
 		if (literal.getPolarity() == CallPolarity.NEGATIVE) {
 			for (var arg : literal.getArguments()) {
-				if (arg.getName().startsWith("_")) {
+				if (!clause.positiveVariables().contains(arg)) {
 					return false;
 				}
 			}

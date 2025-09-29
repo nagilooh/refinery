@@ -143,6 +143,8 @@ public class ModelInitializer {
 
 	private int ruleCount;
 
+	private PartialRelation nodePartialRelation;
+
 	public void readProblem(Problem problem) {
 		if (this.problem != null) {
 			throw new IllegalArgumentException("Problem was already set");
@@ -183,6 +185,7 @@ public class ModelInitializer {
 			collectMetamodel();
 			metamodel = metamodelBuilder.build();
 			problemTrace.setMetamodel(metamodel);
+			nodePartialRelation = problemTrace.getPartialRelation(builtinSymbols.node());
 			fixClassDeclarationAssertions();
 			for (var entry : relationInfoMap.entrySet()) {
 				if (entry.getKey() instanceof ReferenceDeclaration) {
@@ -797,8 +800,8 @@ public class ModelInitializer {
 		var supersets = getSupersets(predicateDefinition);
 		final PredicateTranslator translator;
 		if(predicateDefinition.getKind() == PredicateKind.ERROR) {
-			translator = new ErrorPredicateTranslatorWithUnitPropagation(partialRelation,query,parameterTypes,
-					supersets,mutable,defaultValue);
+			translator = new ErrorPredicateTranslatorWithUnitPropagation(partialRelation, query, parameterTypes,
+					supersets, mutable, defaultValue, nodePartialRelation);
 		} else {
 //			translator = new PredicateTranslator(partialRelation, query, parameterTypes, supersets, mutable,
 //					defaultValue);
