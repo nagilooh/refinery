@@ -70,4 +70,58 @@ assignedTo(ship2, mission).
 
 assignedTo(ship1, mission).
 
+% TEST: not positively bound variable 1
+
+error test(a) <->
+    assignedTo(a, _),
+    supports(_, a),
+    supports(a, _).
+
+supports(x, s1).
+supports(s1, y).
+
+StarShip(s2).
+Vehicle(s3).
+Mission(m1).
+
+% EXPECT:
+
+!assignedTo(s1, *).
+
+% TEST: not positively bound variable 2
+
+error test(a) <->
+    assignedTo(a, _),
+    supports(_, a),
+    supports(a, _).
+
+assignedTo(s1, m1).
+supports(s1, y).
+
+StarShip(s2).
+Vehicle(s3).
+Mission(m1).
+
+% EXPECT:
+
+!supports(*, s1).
+
+% TEST: not positively bound variable 3
+
+error test(a) <->
+    assignedTo(a, _),
+    supports(_, a),
+    supports(a, _).
+
+assignedTo(s1, m1).
+supports(x, s1).
+
+StarShip(s2).
+Vehicle(s3).
+Mission(m1).
+
+% EXPECT:
+
+!supports(s1, *).
+
 
