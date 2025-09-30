@@ -124,4 +124,62 @@ Mission(m1).
 
 !supports(s1, *).
 
+% TEST: Disjunction in error predicate
+
+class Probe extends Vehicle.
+
+error supportLoop(a) <->
+    StarShip(a),
+    supports+(a, a)
+;
+    ShuttleCraft(a),
+    supports+(a, a).
+
+supports(s1, s2).
+supports(s2, s3).
+supports(s3, s4).
+supports(s4, s1).
+
+% EXPECT:
+
+!ShuttleCraft(s1).
+!ShuttleCraft(s2).
+!ShuttleCraft(s3).
+!ShuttleCraft(s4).
+!StarShip(s1).
+!StarShip(s2).
+!StarShip(s3).
+!StarShip(s4).
+Probe(s1).
+Probe(s2).
+Probe(s3).
+Probe(s4).
+
+% TEST: Negation in error predicate
+
+class Probe extends Vehicle.
+
+error supportLoop(a) <->
+    !Probe(a),
+    supports+(a, a).
+
+propagation rule supportLoopC1L1(a) <->
+    may Probe(a),
+    !must Probe(a),
+    must supports+(a, a)
+==>
+    Probe(a).
+
+supports(s1, s2).
+supports(s2, s3).
+supports(s3, s4).
+supports(s4, s1).
+
+% EXPECT:
+Probe(s1).
+Probe(s2).
+Probe(s3).
+Probe(s4).
+
+
 
