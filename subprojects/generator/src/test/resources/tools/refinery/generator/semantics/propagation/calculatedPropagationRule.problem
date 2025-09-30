@@ -1,0 +1,73 @@
+abstract class Vehicle {
+    Vehicle supports
+    Mission assignedTo
+}
+
+class StarShip extends Vehicle.
+class ShuttleCraft extends Vehicle.
+
+class Mission.
+
+% TEST: type constraint 1
+
+error invalidSupport(a, b) <->
+    StarShip(a),
+    ShuttleCraft(b),
+    supports(a, b).
+
+ShuttleCraft(shuttle1).
+supports(shuttle2, shuttle1).
+!supports(StarShip::new, *).
+
+% EXPECT:
+
+!StarShip(shuttle2).
+
+% TEST: type constraint 2
+
+error invalidSupport(a, b) <->
+    StarShip(a),
+    ShuttleCraft(b),
+    supports(a, b).
+
+StarShip(star).
+supports(star, ship2).
+default !supports(*, *).
+
+% EXPECT:
+
+!ShuttleCraft(ship2).
+
+% TEST: relation constraint
+
+
+error invalidSupport(a, b) <->
+    StarShip(a),
+    ShuttleCraft(b),
+    supports(a, b).
+
+StarShip(star).
+ShuttleCraft(shuttle).
+
+% EXPECT:
+
+!supports(StarShip::new, ShuttleCraft::new).
+!supports(StarShip::new, shuttle).
+!supports(star, ShuttleCraft::new).
+!supports(star, shuttle).
+
+% TEST: negated relation constraint
+
+error supportNotOnSupportedMission(a) <->
+    supports(a, b),
+    assignedTo(b, m),
+    !assignedTo(a, m).
+
+supports(ship1, ship2).
+assignedTo(ship2, mission).
+
+% EXPECT:
+
+assignedTo(ship1, mission).
+
+
