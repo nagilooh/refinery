@@ -2,6 +2,7 @@ package tools.refinery.store.reasoning.translator.predicate;
 
 import org.jetbrains.annotations.NotNull;
 import tools.refinery.logic.dnf.DnfClause;
+import tools.refinery.logic.dnf.Query;
 import tools.refinery.logic.dnf.RelationalQuery;
 import tools.refinery.logic.literal.*;
 import tools.refinery.logic.term.NodeVariable;
@@ -11,14 +12,15 @@ import tools.refinery.store.dse.transition.Rule;
 import tools.refinery.store.model.ModelStoreBuilder;
 import tools.refinery.store.reasoning.ReasoningAdapter;
 import tools.refinery.store.reasoning.actions.PartialActionLiterals;
+import tools.refinery.store.reasoning.literal.Modality;
+import tools.refinery.store.reasoning.literal.PartialCheckLiteral;
 import tools.refinery.store.reasoning.representation.PartialRelation;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import static tools.refinery.store.reasoning.literal.PartialLiterals.may;
-import static tools.refinery.store.reasoning.literal.PartialLiterals.must;
+import static tools.refinery.store.reasoning.literal.PartialLiterals.*;
 
 public class ErrorPredicateTranslatorWithUnitPropagation extends PredicateTranslator {
 
@@ -71,25 +73,24 @@ public class ErrorPredicateTranslatorWithUnitPropagation extends PredicateTransl
 						for (int i = 0; i < clause.literals().size(); i++) {
 							if (i != literalIndex) {
 								var lit = clause.literals().get(i);
-								if(lit instanceof CallLiteral calLit) {
-									precondition.add(must(calLit));
-									for (var arg :  calLit.getArguments()) {
-										 // Add node(arg) constraint
+								switch (lit) {
+								case CallLiteral calLit -> {
+									precondition.add(calLit);
+									for (var arg : calLit.getArguments()) {
+										// Add node(arg) constraint
 										if (clause.positiveVariables().contains(arg)) {
-											var nodeConstraint = new CallLiteral(CallPolarity.POSITIVE,
-													nodePartialRelation, List.of(arg));
-											precondition.add(must(nodeConstraint));
+											precondition.add(nodePartialRelation.call(arg));
 										}
 									}
-								} else if (lit instanceof ConstantLiteral constantLiteral) {
-									precondition.add(constantLiteral);
-								} else {
-									throw new UnsupportedOperationException();
+								}
+								case ConstantLiteral constantLiteral -> precondition.add(constantLiteral);
+								case PartialCheckLiteral partialCheckLiteral -> precondition.add(partialCheckLiteral);
+								default -> throw new UnsupportedOperationException();
 								}
 							}
 						}
-						precondition.add(may(callLiteral));
-						precondition.add(Literals.not(must(callLiteral)));
+						precondition.add(addModality(callLiteral, Modality.MAY));
+						precondition.add(Literals.not(addModality(callLiteral, Modality.MUST)));
 
 						// Action = ! literalToPropagate
 						final TruthValue toMerge;
@@ -101,16 +102,21 @@ public class ErrorPredicateTranslatorWithUnitPropagation extends PredicateTransl
 							throw new UnsupportedOperationException("I do not know what to do");
 						}
 
-						var rule = Rule.of(propagationName, builder -> {
-							for (var parameter : parameters) {
-								builder.parameter(parameter);
-							}
-							builder.clause(precondition);
-							builder.action(
-									PartialActionLiterals.merge(partialRelationTarget, toMerge, parameters)
-							);
-						});
+						var preconditionQuery = Query.of(propagationName + "#precondition", builder -> builder
+								.parameters(parameters)
+								.clause(precondition));
+
+						var rule = Rule.of(propagationName, builder -> builder
+								.parameters(parameters)
+								.clause(must(preconditionQuery.call(CallPolarity.POSITIVE, parameters)))
+								.action(PartialActionLiterals.merge(partialRelationTarget, toMerge, parameters)));
 						propagationBuilder.rule(rule);
+
+						var concretizationRule = Rule.of(propagationName + "#concretize", builder -> builder
+								.parameters(parameters)
+								.clause(candidateMust(preconditionQuery.call(CallPolarity.POSITIVE, parameters)))
+								.action(PartialActionLiterals.merge(partialRelationTarget, toMerge, parameters)));
+						propagationBuilder.concretizationRule(concretizationRule);
 					}
 				}
 			}

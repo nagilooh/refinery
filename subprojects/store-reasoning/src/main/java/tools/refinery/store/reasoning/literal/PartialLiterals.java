@@ -32,12 +32,20 @@ public final class PartialLiterals {
 	}
 
 	public static CallLiteral addModality(CallLiteral literal, Modality modality, Concreteness concreteness) {
+		return addModality(literal, modality, concreteness.toSpecification());
+	}
+
+	public static CallLiteral addModality(CallLiteral literal, Modality modality) {
+		return addModality(literal, modality, ConcretenessSpecification.UNSPECIFIED);
+	}
+
+	public static CallLiteral addModality(CallLiteral literal, Modality modality, ConcretenessSpecification concreteness) {
 		var target = literal.getTarget();
 		if (target instanceof ModalConstraint) {
 			throw new InvalidQueryException("Literal %s already has modality".formatted(literal));
 		}
 		var polarity = literal.getPolarity();
-		var modalTarget = ModalConstraint.of(modality.commute(polarity), concreteness, target);
+		var modalTarget = ModalConstraint.of(modality.commute(polarity).toSpecification(), concreteness, target);
 		return new CallLiteral(polarity, modalTarget, literal.getArguments());
 	}
 
