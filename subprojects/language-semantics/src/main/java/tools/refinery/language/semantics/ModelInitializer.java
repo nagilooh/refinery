@@ -803,8 +803,6 @@ public class ModelInitializer {
 			translator = new ErrorPredicateTranslatorWithUnitPropagation(partialRelation, query, parameterTypes,
 					supersets, mutable, defaultValue, nodePartialRelation);
 		} else {
-//			translator = new PredicateTranslator(partialRelation, query, parameterTypes, supersets, mutable,
-//					defaultValue);
 			translator = new PredicateTranslator(partialRelation, query, parameterTypes, supersets, true,
 					defaultValue);
 		}

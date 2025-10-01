@@ -3,17 +3,13 @@ package tools.refinery.store.reasoning.translator.predicate;
 import org.jetbrains.annotations.NotNull;
 import tools.refinery.logic.dnf.DnfClause;
 import tools.refinery.logic.dnf.RelationalQuery;
-import tools.refinery.logic.literal.CallLiteral;
-import tools.refinery.logic.literal.CallPolarity;
-import tools.refinery.logic.literal.Literal;
-import tools.refinery.logic.literal.Literals;
+import tools.refinery.logic.literal.*;
 import tools.refinery.logic.term.NodeVariable;
 import tools.refinery.logic.term.truthvalue.TruthValue;
 import tools.refinery.store.dse.propagation.PropagationBuilder;
 import tools.refinery.store.dse.transition.Rule;
 import tools.refinery.store.model.ModelStoreBuilder;
 import tools.refinery.store.reasoning.ReasoningAdapter;
-import tools.refinery.store.reasoning.ReasoningBuilder;
 import tools.refinery.store.reasoning.actions.PartialActionLiterals;
 import tools.refinery.store.reasoning.representation.PartialRelation;
 
@@ -85,6 +81,8 @@ public class ErrorPredicateTranslatorWithUnitPropagation extends PredicateTransl
 											precondition.add(must(nodeConstraint));
 										}
 									}
+								} else if (lit instanceof ConstantLiteral constantLiteral) {
+									precondition.add(constantLiteral);
 								} else {
 									throw new UnsupportedOperationException();
 								}
