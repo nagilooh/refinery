@@ -59,10 +59,14 @@ public class ErrorPredicateTranslatorWithUnitPropagation extends PredicateTransl
 						String propagationName = "#propagateError#" + query.name() +
 								"#c" + clauseIndex + "l" + literalIndex;
 
-						List<NodeVariable> parameters = new ArrayList<>();
+						List<NodeVariable> ruleParameters = new ArrayList<>();
+						List<NodeVariable> actionParameters = new ArrayList<>();
 						for (var argument : callLiteral.getArguments()) {
 							if (argument instanceof NodeVariable nodeVariable) {
-								parameters.add(nodeVariable);
+								actionParameters.add(nodeVariable);
+								if (!ruleParameters.contains(nodeVariable)) {
+									ruleParameters.add(nodeVariable);
+								}
 							} else {
 								throw new IllegalArgumentException("This argument is illegal");
 							}
@@ -103,19 +107,19 @@ public class ErrorPredicateTranslatorWithUnitPropagation extends PredicateTransl
 						}
 
 						var preconditionQuery = Query.of(propagationName + "#precondition", builder -> builder
-								.parameters(parameters)
+								.parameters(ruleParameters)
 								.clause(precondition));
 
 						var rule = Rule.of(propagationName, builder -> builder
-								.parameters(parameters)
-								.clause(must(preconditionQuery.call(CallPolarity.POSITIVE, parameters)))
-								.action(PartialActionLiterals.merge(partialRelationTarget, toMerge, parameters)));
+								.parameters(ruleParameters)
+								.clause(must(preconditionQuery.call(CallPolarity.POSITIVE, ruleParameters)))
+								.action(PartialActionLiterals.merge(partialRelationTarget, toMerge, actionParameters)));
 						propagationBuilder.rule(rule);
 
 						var concretizationRule = Rule.of(propagationName + "#concretize", builder -> builder
-								.parameters(parameters)
-								.clause(candidateMust(preconditionQuery.call(CallPolarity.POSITIVE, parameters)))
-								.action(PartialActionLiterals.merge(partialRelationTarget, toMerge, parameters)));
+								.parameters(ruleParameters)
+								.clause(candidateMust(preconditionQuery.call(CallPolarity.POSITIVE, ruleParameters)))
+								.action(PartialActionLiterals.merge(partialRelationTarget, toMerge, actionParameters)));
 						propagationBuilder.concretizationRule(concretizationRule);
 					}
 				}
