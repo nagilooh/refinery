@@ -85,7 +85,7 @@ public class ModelGeneratorImpl extends ConcreteModelFacade implements ModelGene
 			throw new IllegalStateException("Model generation was previously cancelled");
 		}
 		solutionStore = null;
-//		randomSeed++;
+		randomSeed++;
 		var bestFirst = new BestFirstStoreManager(getModelStore(), maxNumberOfSolutions);
 		try {
 			generationTimes.add(bestFirst.startExploration(initialVersion, randomSeed));

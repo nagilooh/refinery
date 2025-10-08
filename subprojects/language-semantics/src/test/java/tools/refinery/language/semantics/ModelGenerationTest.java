@@ -327,12 +327,91 @@ class ModelGenerationTest {
 		}
 	}
 
+	@Test
+	void spaceshipTest() {
+		var parsedProblem = parseHelper.parse("""
+				abstract class Vehicle {
+					Vehicle supports
+					Mission assignedTo
+				}
+
+				class StarShip extends Vehicle.
+				class ShuttleCraft extends Vehicle.
+
+				class Mission.
+
+
+				class Probe extends Vehicle.
+
+				pred supportsHelper(a, b) <->
+				    supports(a, b).
+
+
+				error selfLoop(Vehicle v) <->
+				    supports(v, v).
+
+				supports(s1, s2).
+				supports(s2, s3).
+				supports(s3, s4).
+
+				scope node = 10..20.
+				""");
+		assertThat(parsedProblem.getResourceErrors(), empty());
+		var problem = parsedProblem.problem();
+
+		var storeBuilder = ModelStore.builder()
+				.with(QueryInterpreterAdapter.builder())
+//				.with(ModelVisualizerAdapter.builder()
+//						.withOutputPath("test_output")
+//						.withFormat(FileFormat.DOT)
+//						.withFormat(FileFormat.SVG)
+//						.saveStates()
+//						.saveDesignSpace())
+				.with(PropagationAdapter.builder())
+				.with(StateCoderAdapter.builder())
+				.with(DesignSpaceExplorationAdapter.builder())
+				.with(ReasoningAdapter.builder());
+
+		var modelSeed = modelInitializer.createModel(problem, storeBuilder);
+
+		var store = storeBuilder.build();
+
+		Version initialVersion;
+		try (var initialModel = store.getAdapter(ReasoningStoreAdapter.class).createInitialModel(modelSeed)) {
+			initialVersion = initialModel.commit();
+		}
+
+		var bestFirst = new BestFirstStoreManager(store, 1);
+		bestFirst.startExploration(initialVersion);
+		var resultStore = bestFirst.getSolutionStore();
+		System.out.println("states size: " + resultStore.getSolutions().size());
+
+		try (var model = store.createModelForState(resultStore.getSolutions().getFirst().version())) {
+			var interpretation = model.getAdapter(ReasoningAdapter.class)
+					.getPartialInterpretation(Concreteness.CANDIDATE, ReasoningAdapter.EXISTS_SYMBOL);
+			var cursor = interpretation.getAll();
+			int max = -1;
+			var types = new LinkedHashMap<PartialRelation, Integer>();
+			var typeInterpretation = model.getInterpretation(TypeHierarchyTranslator.TYPE_SYMBOL);
+			while (cursor.move()) {
+				max = Math.max(max, cursor.getKey().get(0));
+				var type = typeInterpretation.get(cursor.getKey());
+				if (type != null) {
+					types.compute(type.candidateType(), (ignoredKey, oldValue) -> oldValue == null ? 1 : oldValue + 1);
+				}
+			}
+			System.out.println("Model size: " + (max + 1));
+			System.out.println(types);
+//			initialModel.getAdapter(ModelVisualizerAdapter.class).visualize(bestFirst.getVisualizationStore());
+		}
+	}
+
 	public static void main(String[] args) {
 		ProblemStandaloneSetup.doSetup();
 		var injector = new ProblemStandaloneSetup().createInjectorAndDoEMFRegistration();
 		var test = injector.getInstance(ModelGenerationTest.class);
 		try {
-			test.statechartTest();
+			test.spaceshipTest();
 		} catch (Throwable e) {
 			e.printStackTrace();
 		}
