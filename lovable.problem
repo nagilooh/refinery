@@ -1,0 +1,28 @@
+abstract class Loveable {
+    Loveable[] friend
+}
+
+class Person extends Loveable {
+}
+class Dog extends Loveable.
+
+
+error asymmetricFriend(a,b) <->
+    Person(a), Person(b), friend(a,b), !friend(b,a).
+
+
+friend(x,y).
+friend(x,z).
+Person(y).
+!friend(y,x).
+
+scope node = 10..15.
+
+
+
+
+
+
+
+
+propagation rule noSelf(a) ==> !friend(a,a).

@@ -1,0 +1,21 @@
+abstract class Loveable {
+    Loveable[] friend
+}
+
+class Person extends Loveable {
+}
+class Dog extends Loveable.
+
+error asymmetricFriend(a,b) <->
+    Person(a), Person(b), friend(a,b), !friend(b,a).
+
+% TEST: cannot be Person, so must be Dog
+
+friend(x,y).
+friend(x,z).
+Person(y).
+!friend(y,x).
+
+% EXPECT:
+
+Dog(x).

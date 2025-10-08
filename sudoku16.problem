@@ -1,0 +1,530 @@
+% Copyright (c) 2020 Frank McSherry
+% Copyright (c) 2025 The Refinery Authors <https://refinery.tools/>
+%
+% SPDX-License-Identifier: MIT AND EPL-2.0
+%
+% The sudoku example in this file was adapted from Frank McSherry's
+% differential-dataflow tutorial, which is available at
+% https://www.youtube.com/watch?v=DR5V5bNpclg and
+% https://github.com/frankmcsherry/WIP/tree/master/sudoku
+
+class Row {
+    Field[16] field opposite row
+}
+
+class Column {
+    Field[16] field opposite column
+}
+
+class Block {
+    Field[16] field opposite block
+}
+
+class Field {
+    Row[1] row opposite field
+    Column[1] column opposite field
+    Block[1] block opposite field
+    Number[1] number
+}
+
+class Number.
+
+% error multipleInRow(r, n) <->
+%     row(f1, r),
+%     row(f2, r),
+%     f1 != f2,
+%     number(f1, n),
+%     number(f2, n).
+
+% propagation rule singleInRow(f, n) <->
+%     may number(f, n),
+%     row(f, r),
+%     !multipleInRow::computed(r, n)
+% ==>
+%     number(f, n).
+
+% propagation rule noMoreInRow(f, n) <->
+%     row(f, r),
+%     number(f2, n),
+%     row(f2, r),
+%     f != f2
+% ==>
+%     !number(f, n).
+
+% error multipleInColumn(c, n) <->
+%     column(f1, c),
+%     column(f2, c),
+%     f1 != f2,
+%     number(f1, n),
+%     number(f2, n).
+
+% propagation rule singleInColumn(f, n) <->
+%     may number(f, n),
+%     column(n, c),
+%     !multipleInColumn::computed(c, n)
+% ==>
+%     number(f, n).
+
+% propagation rule noMoreInColumn(f, n) <->
+%     column(f, c),
+%     number(f2, n),
+%     column(f2, c),
+%     f != f2
+% ==>
+%     !number(f, n).
+
+% error multipleInBlock(b, n) <->
+%     block(f1, b),
+%     block(f2, b),
+%     f1 != f2,
+%     number(f1, n),
+%     number(f2, n).
+
+% propagation rule singleInBlock(f, n) <->
+%     may number(f, n),
+%     block(f, b),
+%     !multipleInBlock::computed(b, n)
+% ==>
+%     number(f, n).
+
+% propagation rule noMoreInBlock(f, n) <->
+%     block(f, b),
+%     number(f2, n),
+%     block(f2, b),
+%     f != f2
+% ==>
+%     !number(f, n).
+
+Number(n1).
+Number(n2).
+Number(n3).
+Number(n4).
+Number(n5).
+Number(n6).
+Number(n7).
+Number(n8).
+Number(n9).
+Number(nA).
+Number(nB).
+Number(nC).
+Number(nD).
+Number(nE).
+Number(nF).
+Number(nG).
+
+row(f1_1,  r1). column(f1_1,  c1).  block(f1_1,  b1_1).
+row(f1_2,  r1). column(f1_2,  c2).  block(f1_2,  b1_1).
+row(f1_3,  r1). column(f1_3,  c3).  block(f1_3,  b1_1).
+row(f1_4,  r1). column(f1_4,  c4).  block(f1_4,  b1_1).
+row(f1_5,  r1). column(f1_5,  c5).  block(f1_5,  b1_2).
+row(f1_6,  r1). column(f1_6,  c6).  block(f1_6,  b1_2).
+row(f1_7,  r1). column(f1_7,  c7).  block(f1_7,  b1_2).
+row(f1_8,  r1). column(f1_8,  c8).  block(f1_8,  b1_2).
+row(f1_9,  r1). column(f1_9,  c9).  block(f1_9,  b1_3).
+row(f1_10, r1). column(f1_10, c10). block(f1_10, b1_3).
+row(f1_11, r1). column(f1_11, c11). block(f1_11, b1_3).
+row(f1_12, r1). column(f1_12, c12). block(f1_12, b1_3).
+row(f1_13, r1). column(f1_13, c13). block(f1_13, b1_4).
+row(f1_14, r1). column(f1_14, c14). block(f1_14, b1_4).
+row(f1_15, r1). column(f1_15, c15). block(f1_15, b1_4).
+row(f1_16, r1). column(f1_16, c16). block(f1_16, b1_4).
+
+row(f2_1,  r2). column(f2_1,  c1).  block(f2_1,  b1_1).
+row(f2_2,  r2). column(f2_2,  c2).  block(f2_2,  b1_1).
+row(f2_3,  r2). column(f2_3,  c3).  block(f2_3,  b1_1).
+row(f2_4,  r2). column(f2_4,  c4).  block(f2_4,  b1_1).
+row(f2_5,  r2). column(f2_5,  c5).  block(f2_5,  b1_2).
+row(f2_6,  r2). column(f2_6,  c6).  block(f2_6,  b1_2).
+row(f2_7,  r2). column(f2_7,  c7).  block(f2_7,  b1_2).
+row(f2_8,  r2). column(f2_8,  c8).  block(f2_8,  b1_2).
+row(f2_9,  r2). column(f2_9,  c9).  block(f2_9,  b1_3).
+row(f2_10, r2). column(f2_10, c10). block(f2_10, b1_3).
+row(f2_11, r2). column(f2_11, c11). block(f2_11, b1_3).
+row(f2_12, r2). column(f2_12, c12). block(f2_12, b1_3).
+row(f2_13, r2). column(f2_13, c13). block(f2_13, b1_4).
+row(f2_14, r2). column(f2_14, c14). block(f2_14, b1_4).
+row(f2_15, r2). column(f2_15, c15). block(f2_15, b1_4).
+row(f2_16, r2). column(f2_16, c16). block(f2_16, b1_4).
+
+row(f3_1,  r3). column(f3_1,  c1).  block(f3_1,  b1_1).
+row(f3_2,  r3). column(f3_2,  c2).  block(f3_2,  b1_1).
+row(f3_3,  r3). column(f3_3,  c3).  block(f3_3,  b1_1).
+row(f3_4,  r3). column(f3_4,  c4).  block(f3_4,  b1_1).
+row(f3_5,  r3). column(f3_5,  c5).  block(f3_5,  b1_2).
+row(f3_6,  r3). column(f3_6,  c6).  block(f3_6,  b1_2).
+row(f3_7,  r3). column(f3_7,  c7).  block(f3_7,  b1_2).
+row(f3_8,  r3). column(f3_8,  c8).  block(f3_8,  b1_2).
+row(f3_9,  r3). column(f3_9,  c9).  block(f3_9,  b1_3).
+row(f3_10, r3). column(f3_10, c10). block(f3_10, b1_3).
+row(f3_11, r3). column(f3_11, c11). block(f3_11, b1_3).
+row(f3_12, r3). column(f3_12, c12). block(f3_12, b1_3).
+row(f3_13, r3). column(f3_13, c13). block(f3_13, b1_4).
+row(f3_14, r3). column(f3_14, c14). block(f3_14, b1_4).
+row(f3_15, r3). column(f3_15, c15). block(f3_15, b1_4).
+row(f3_16, r3). column(f3_16, c16). block(f3_16, b1_4).
+
+row(f4_1,  r4). column(f4_1,  c1).  block(f4_1,  b1_1).
+row(f4_2,  r4). column(f4_2,  c2).  block(f4_2,  b1_1).
+row(f4_3,  r4). column(f4_3,  c3).  block(f4_3,  b1_1).
+row(f4_4,  r4). column(f4_4,  c4).  block(f4_4,  b1_1).
+row(f4_5,  r4). column(f4_5,  c5).  block(f4_5,  b1_2).
+row(f4_6,  r4). column(f4_6,  c6).  block(f4_6,  b1_2).
+row(f4_7,  r4). column(f4_7,  c7).  block(f4_7,  b1_2).
+row(f4_8,  r4). column(f4_8,  c8).  block(f4_8,  b1_2).
+row(f4_9,  r4). column(f4_9,  c9).  block(f4_9,  b1_3).
+row(f4_10, r4). column(f4_10, c10). block(f4_10, b1_3).
+row(f4_11, r4). column(f4_11, c11). block(f4_11, b1_3).
+row(f4_12, r4). column(f4_12, c12). block(f4_12, b1_3).
+row(f4_13, r4). column(f4_13, c13). block(f4_13, b1_4).
+row(f4_14, r4). column(f4_14, c14). block(f4_14, b1_4).
+row(f4_15, r4). column(f4_15, c15). block(f4_15, b1_4).
+row(f4_16, r4). column(f4_16, c16). block(f4_16, b1_4).
+
+
+
+row(f5_1,  r5). column(f5_1,  c1).  block(f5_1,  b2_1).
+row(f5_2,  r5). column(f5_2,  c2).  block(f5_2,  b2_1).
+row(f5_3,  r5). column(f5_3,  c3).  block(f5_3,  b2_1).
+row(f5_4,  r5). column(f5_4,  c4).  block(f5_4,  b2_1).
+row(f5_5,  r5). column(f5_5,  c5).  block(f5_5,  b2_2).
+row(f5_6,  r5). column(f5_6,  c6).  block(f5_6,  b2_2).
+row(f5_7,  r5). column(f5_7,  c7).  block(f5_7,  b2_2).
+row(f5_8,  r5). column(f5_8,  c8).  block(f5_8,  b2_2).
+row(f5_9,  r5). column(f5_9,  c9).  block(f5_9,  b2_3).
+row(f5_10, r5). column(f5_10, c10). block(f5_10, b2_3).
+row(f5_11, r5). column(f5_11, c11). block(f5_11, b2_3).
+row(f5_12, r5). column(f5_12, c12). block(f5_12, b2_3).
+row(f5_13, r5). column(f5_13, c13). block(f5_13, b2_4).
+row(f5_14, r5). column(f5_14, c14). block(f5_14, b2_4).
+row(f5_15, r5). column(f5_15, c15). block(f5_15, b2_4).
+row(f5_16, r5). column(f5_16, c16). block(f5_16, b2_4).
+
+row(f6_1,  r6). column(f6_1,  c1).  block(f6_1,  b2_1).
+row(f6_2,  r6). column(f6_2,  c2).  block(f6_2,  b2_1).
+row(f6_3,  r6). column(f6_3,  c3).  block(f6_3,  b2_1).
+row(f6_4,  r6). column(f6_4,  c4).  block(f6_4,  b2_1).
+row(f6_5,  r6). column(f6_5,  c5).  block(f6_5,  b2_2).
+row(f6_6,  r6). column(f6_6,  c6).  block(f6_6,  b2_2).
+row(f6_7,  r6). column(f6_7,  c7).  block(f6_7,  b2_2).
+row(f6_8,  r6). column(f6_8,  c8).  block(f6_8,  b2_2).
+row(f6_9,  r6). column(f6_9,  c9).  block(f6_9,  b2_3).
+row(f6_10, r6). column(f6_10, c10). block(f6_10, b2_3).
+row(f6_11, r6). column(f6_11, c11). block(f6_11, b2_3).
+row(f6_12, r6). column(f6_12, c12). block(f6_12, b2_3).
+row(f6_13, r6). column(f6_13, c13). block(f6_13, b2_4).
+row(f6_14, r6). column(f6_14, c14). block(f6_14, b2_4).
+row(f6_15, r6). column(f6_15, c15). block(f6_15, b2_4).
+row(f6_16, r6). column(f6_16, c16). block(f6_16, b2_4).
+
+row(f7_1,  r7). column(f7_1,  c1).  block(f7_1,  b2_1).
+row(f7_2,  r7). column(f7_2,  c2).  block(f7_2,  b2_1).
+row(f7_3,  r7). column(f7_3,  c3).  block(f7_3,  b2_1).
+row(f7_4,  r7). column(f7_4,  c4).  block(f7_4,  b2_1).
+row(f7_5,  r7). column(f7_5,  c5).  block(f7_5,  b2_2).
+row(f7_6,  r7). column(f7_6,  c6).  block(f7_6,  b2_2).
+row(f7_7,  r7). column(f7_7,  c7).  block(f7_7,  b2_2).
+row(f7_8,  r7). column(f7_8,  c8).  block(f7_8,  b2_2).
+row(f7_9,  r7). column(f7_9,  c9).  block(f7_9,  b2_3).
+row(f7_10, r7). column(f7_10, c10). block(f7_10, b2_3).
+row(f7_11, r7). column(f7_11, c11). block(f7_11, b2_3).
+row(f7_12, r7). column(f7_12, c12). block(f7_12, b2_3).
+row(f7_13, r7). column(f7_13, c13). block(f7_13, b2_4).
+row(f7_14, r7). column(f7_14, c14). block(f7_14, b2_4).
+row(f7_15, r7). column(f7_15, c15). block(f7_15, b2_4).
+row(f7_16, r7). column(f7_16, c16). block(f7_16, b2_4).
+
+row(f8_1,  r8). column(f8_1,  c1).  block(f8_1,  b2_1).
+row(f8_2,  r8). column(f8_2,  c2).  block(f8_2,  b2_1).
+row(f8_3,  r8). column(f8_3,  c3).  block(f8_3,  b2_1).
+row(f8_4,  r8). column(f8_4,  c4).  block(f8_4,  b2_1).
+row(f8_5,  r8). column(f8_5,  c5).  block(f8_5,  b2_2).
+row(f8_6,  r8). column(f8_6,  c6).  block(f8_6,  b2_2).
+row(f8_7,  r8). column(f8_7,  c7).  block(f8_7,  b2_2).
+row(f8_8,  r8). column(f8_8,  c8).  block(f8_8,  b2_2).
+row(f8_9,  r8). column(f8_9,  c9).  block(f8_9,  b2_3).
+row(f8_10, r8). column(f8_10, c10). block(f8_10, b2_3).
+row(f8_11, r8). column(f8_11, c11). block(f8_11, b2_3).
+row(f8_12, r8). column(f8_12, c12). block(f8_12, b2_3).
+row(f8_13, r8). column(f8_13, c13). block(f8_13, b2_4).
+row(f8_14, r8). column(f8_14, c14). block(f8_14, b2_4).
+row(f8_15, r8). column(f8_15, c15). block(f8_15, b2_4).
+row(f8_16, r8). column(f8_16, c16). block(f8_16, b2_4).
+
+
+
+row(f9_1,  r9). column(f9_1,  c1).  block(f9_1,  b3_1).
+row(f9_2,  r9). column(f9_2,  c2).  block(f9_2,  b3_1).
+row(f9_3,  r9). column(f9_3,  c3).  block(f9_3,  b3_1).
+row(f9_4,  r9). column(f9_4,  c4).  block(f9_4,  b3_1).
+row(f9_5,  r9). column(f9_5,  c5).  block(f9_5,  b3_2).
+row(f9_6,  r9). column(f9_6,  c6).  block(f9_6,  b3_2).
+row(f9_7,  r9). column(f9_7,  c7).  block(f9_7,  b3_2).
+row(f9_8,  r9). column(f9_8,  c8).  block(f9_8,  b3_2).
+row(f9_9,  r9). column(f9_9,  c9).  block(f9_9,  b3_3).
+row(f9_10, r9). column(f9_10, c10). block(f9_10, b3_3).
+row(f9_11, r9). column(f9_11, c11). block(f9_11, b3_3).
+row(f9_12, r9). column(f9_12, c12). block(f9_12, b3_3).
+row(f9_13, r9). column(f9_13, c13). block(f9_13, b3_4).
+row(f9_14, r9). column(f9_14, c14). block(f9_14, b3_4).
+row(f9_15, r9). column(f9_15, c15). block(f9_15, b3_4).
+row(f9_16, r9). column(f9_16, c16). block(f9_16, b3_4).
+
+row(f10_1,  r10). column(f10_1,  c1).  block(f10_1,  b3_1).
+row(f10_2,  r10). column(f10_2,  c2).  block(f10_2,  b3_1).
+row(f10_3,  r10). column(f10_3,  c3).  block(f10_3,  b3_1).
+row(f10_4,  r10). column(f10_4,  c4).  block(f10_4,  b3_1).
+row(f10_5,  r10). column(f10_5,  c5).  block(f10_5,  b3_2).
+row(f10_6,  r10). column(f10_6,  c6).  block(f10_6,  b3_2).
+row(f10_7,  r10). column(f10_7,  c7).  block(f10_7,  b3_2).
+row(f10_8,  r10). column(f10_8,  c8).  block(f10_8,  b3_2).
+row(f10_9,  r10). column(f10_9,  c9).  block(f10_9,  b3_3).
+row(f10_10, r10). column(f10_10, c10). block(f10_10, b3_3).
+row(f10_11, r10). column(f10_11, c11). block(f10_11, b3_3).
+row(f10_12, r10). column(f10_12, c12). block(f10_12, b3_3).
+row(f10_13, r10). column(f10_13, c13). block(f10_13, b3_4).
+row(f10_14, r10). column(f10_14, c14). block(f10_14, b3_4).
+row(f10_15, r10). column(f10_15, c15). block(f10_15, b3_4).
+row(f10_16, r10). column(f10_16, c16). block(f10_16, b3_4).
+
+row(f11_1,  r11). column(f11_1,  c1).  block(f11_1,  b3_1).
+row(f11_2,  r11). column(f11_2,  c2).  block(f11_2,  b3_1).
+row(f11_3,  r11). column(f11_3,  c3).  block(f11_3,  b3_1).
+row(f11_4,  r11). column(f11_4,  c4).  block(f11_4,  b3_1).
+row(f11_5,  r11). column(f11_5,  c5).  block(f11_5,  b3_2).
+row(f11_6,  r11). column(f11_6,  c6).  block(f11_6,  b3_2).
+row(f11_7,  r11). column(f11_7,  c7).  block(f11_7,  b3_2).
+row(f11_8,  r11). column(f11_8,  c8).  block(f11_8,  b3_2).
+row(f11_9,  r11). column(f11_9,  c9).  block(f11_9,  b3_3).
+row(f11_10, r11). column(f11_10, c10). block(f11_10, b3_3).
+row(f11_11, r11). column(f11_11, c11). block(f11_11, b3_3).
+row(f11_12, r11). column(f11_12, c12). block(f11_12, b3_3).
+row(f11_13, r11). column(f11_13, c13). block(f11_13, b3_4).
+row(f11_14, r11). column(f11_14, c14). block(f11_14, b3_4).
+row(f11_15, r11). column(f11_15, c15). block(f11_15, b3_4).
+row(f11_16, r11). column(f11_16, c16). block(f11_16, b3_4).
+
+row(f12_1,  r12). column(f12_1,  c1).  block(f12_1,  b3_1).
+row(f12_2,  r12). column(f12_2,  c2).  block(f12_2,  b3_1).
+row(f12_3,  r12). column(f12_3,  c3).  block(f12_3,  b3_1).
+row(f12_4,  r12). column(f12_4,  c4).  block(f12_4,  b3_1).
+row(f12_5,  r12). column(f12_5,  c5).  block(f12_5,  b3_2).
+row(f12_6,  r12). column(f12_6,  c6).  block(f12_6,  b3_2).
+row(f12_7,  r12). column(f12_7,  c7).  block(f12_7,  b3_2).
+row(f12_8,  r12). column(f12_8,  c8).  block(f12_8,  b3_2).
+row(f12_9,  r12). column(f12_9,  c9).  block(f12_9,  b3_3).
+row(f12_10, r12). column(f12_10, c10). block(f12_10, b3_3).
+row(f12_11, r12). column(f12_11, c11). block(f12_11, b3_3).
+row(f12_12, r12). column(f12_12, c12). block(f12_12, b3_3).
+row(f12_13, r12). column(f12_13, c13). block(f12_13, b3_4).
+row(f12_14, r12). column(f12_14, c14). block(f12_14, b3_4).
+row(f12_15, r12). column(f12_15, c15). block(f12_15, b3_4).
+row(f12_16, r12). column(f12_16, c16). block(f12_16, b3_4).
+
+
+
+row(f13_1,  r13). column(f13_1,  c1).  block(f13_1,  b4_1).
+row(f13_2,  r13). column(f13_2,  c2).  block(f13_2,  b4_1).
+row(f13_3,  r13). column(f13_3,  c3).  block(f13_3,  b4_1).
+row(f13_4,  r13). column(f13_4,  c4).  block(f13_4,  b4_1).
+row(f13_5,  r13). column(f13_5,  c5).  block(f13_5,  b4_2).
+row(f13_6,  r13). column(f13_6,  c6).  block(f13_6,  b4_2).
+row(f13_7,  r13). column(f13_7,  c7).  block(f13_7,  b4_2).
+row(f13_8,  r13). column(f13_8,  c8).  block(f13_8,  b4_2).
+row(f13_9,  r13). column(f13_9,  c9).  block(f13_9,  b4_3).
+row(f13_10, r13). column(f13_10, c10). block(f13_10, b4_3).
+row(f13_11, r13). column(f13_11, c11). block(f13_11, b4_3).
+row(f13_12, r13). column(f13_12, c12). block(f13_12, b4_3).
+row(f13_13, r13). column(f13_13, c13). block(f13_13, b4_4).
+row(f13_14, r13). column(f13_14, c14). block(f13_14, b4_4).
+row(f13_15, r13). column(f13_15, c15). block(f13_15, b4_4).
+row(f13_16, r13). column(f13_16, c16). block(f13_16, b4_4).
+
+row(f14_1,  r14). column(f14_1,  c1).  block(f14_1,  b4_1).
+row(f14_2,  r14). column(f14_2,  c2).  block(f14_2,  b4_1).
+row(f14_3,  r14). column(f14_3,  c3).  block(f14_3,  b4_1).
+row(f14_4,  r14). column(f14_4,  c4).  block(f14_4,  b4_1).
+row(f14_5,  r14). column(f14_5,  c5).  block(f14_5,  b4_2).
+row(f14_6,  r14). column(f14_6,  c6).  block(f14_6,  b4_2).
+row(f14_7,  r14). column(f14_7,  c7).  block(f14_7,  b4_2).
+row(f14_8,  r14). column(f14_8,  c8).  block(f14_8,  b4_2).
+row(f14_9,  r14). column(f14_9,  c9).  block(f14_9,  b4_3).
+row(f14_10, r14). column(f14_10, c10). block(f14_10, b4_3).
+row(f14_11, r14). column(f14_11, c11). block(f14_11, b4_3).
+row(f14_12, r14). column(f14_12, c12). block(f14_12, b4_3).
+row(f14_13, r14). column(f14_13, c13). block(f14_13, b4_4).
+row(f14_14, r14). column(f14_14, c14). block(f14_14, b4_4).
+row(f14_15, r14). column(f14_15, c15). block(f14_15, b4_4).
+row(f14_16, r14). column(f14_16, c16). block(f14_16, b4_4).
+
+row(f15_1,  r15). column(f15_1,  c1).  block(f15_1,  b4_1).
+row(f15_2,  r15). column(f15_2,  c2).  block(f15_2,  b4_1).
+row(f15_3,  r15). column(f15_3,  c3).  block(f15_3,  b4_1).
+row(f15_4,  r15). column(f15_4,  c4).  block(f15_4,  b4_1).
+row(f15_5,  r15). column(f15_5,  c5).  block(f15_5,  b4_2).
+row(f15_6,  r15). column(f15_6,  c6).  block(f15_6,  b4_2).
+row(f15_7,  r15). column(f15_7,  c7).  block(f15_7,  b4_2).
+row(f15_8,  r15). column(f15_8,  c8).  block(f15_8,  b4_2).
+row(f15_9,  r15). column(f15_9,  c9).  block(f15_9,  b4_3).
+row(f15_10, r15). column(f15_10, c10). block(f15_10, b4_3).
+row(f15_11, r15). column(f15_11, c11). block(f15_11, b4_3).
+row(f15_12, r15). column(f15_12, c12). block(f15_12, b4_3).
+row(f15_13, r15). column(f15_13, c13). block(f15_13, b4_4).
+row(f15_14, r15). column(f15_14, c14). block(f15_14, b4_4).
+row(f15_15, r15). column(f15_15, c15). block(f15_15, b4_4).
+row(f15_16, r15). column(f15_16, c16). block(f15_16, b4_4).
+
+row(f16_1,  r16). column(f16_1,  c1).  block(f16_1,  b4_1).
+row(f16_2,  r16). column(f16_2,  c2).  block(f16_2,  b4_1).
+row(f16_3,  r16). column(f16_3,  c3).  block(f16_3,  b4_1).
+row(f16_4,  r16). column(f16_4,  c4).  block(f16_4,  b4_1).
+row(f16_5,  r16). column(f16_5,  c5).  block(f16_5,  b4_2).
+row(f16_6,  r16). column(f16_6,  c6).  block(f16_6,  b4_2).
+row(f16_7,  r16). column(f16_7,  c7).  block(f16_7,  b4_2).
+row(f16_8,  r16). column(f16_8,  c8).  block(f16_8,  b4_2).
+row(f16_9,  r16). column(f16_9,  c9).  block(f16_9,  b4_3).
+row(f16_10, r16). column(f16_10, c10). block(f16_10, b4_3).
+row(f16_11, r16). column(f16_11, c11). block(f16_11, b4_3).
+row(f16_12, r16). column(f16_12, c12). block(f16_12, b4_3).
+row(f16_13, r16). column(f16_13, c13). block(f16_13, b4_4).
+row(f16_14, r16). column(f16_14, c14). block(f16_14, b4_4).
+row(f16_15, r16). column(f16_15, c15). block(f16_15, b4_4).
+row(f16_16, r16). column(f16_16, c16). block(f16_16, b4_4).
+
+scope Field += 0, Number += 0.
+
+
+% ..61|.94G|.B72|.D.8
+% C...|2E..|9...|BG..
+% 3...|.5..|.1.A|....
+% ..9.|F...|8.E.|1.6.
+% ----+----+----+----
+% 8.1.|.2.3|5F9.|G..E
+% 54F.|.A..|.76B|..C2
+% B...|8..E|....|...D
+% 79..|..DB|2.G.|..4.
+% ----+----+----+----
+% .C2.|7.68|..3.|...G
+% D5A.|....|.28.|C61.
+% 48..|.F.C|.G.E|3.2.
+% E..3|..2.|6CB.|..FA
+% ----+----+----+----
+% .B..|9...|..5.|42.3
+% .3.5|..C.|.E.7|AF.6
+% ..8.|A1..|.3.6|5.D9
+% ...G|.D.4|F.28|.7..
+
+number(f1_3, n6).
+number(f1_4, n1).
+number(f1_6, n9).
+number(f1_7, n4).
+number(f1_8, nG).
+number(f1_10, nB).
+number(f1_11, n7).
+number(f1_12, n2).
+number(f1_14, nD).
+number(f1_16, n8).
+number(f2_1, nC).
+number(f2_5, n2).
+number(f2_6, nE).
+number(f2_9, n9).
+number(f2_13, nB).
+number(f2_14, nG).
+number(f3_1, n3).
+number(f3_6, n5).
+number(f3_10, n1).
+number(f3_12, nA).
+number(f4_3, n9).
+number(f4_5, nF).
+number(f4_9, n8).
+number(f4_11, nE).
+number(f4_13, n1).
+number(f4_15, n6).
+number(f5_1, n8).
+number(f5_3, n1).
+number(f5_6, n2).
+number(f5_8, n3).
+number(f5_9, n5).
+number(f5_10, nF).
+number(f5_11, n9).
+number(f5_13, nG).
+number(f5_16, nE).
+number(f6_1, n5).
+number(f6_2, n4).
+number(f6_3, nF).
+number(f6_6, nA).
+number(f6_10, n7).
+number(f6_11, n6).
+number(f6_12, nB).
+number(f6_15, nC).
+number(f6_16, n2).
+number(f7_1, nB).
+number(f7_5, n8).
+number(f7_8, nE).
+number(f7_16, nD).
+number(f8_1, n7).
+number(f8_2, n9).
+number(f8_7, nD).
+number(f8_8, nB).
+number(f8_9, n2).
+number(f8_11, nG).
+number(f8_15, n4).
+number(f9_2, nC).
+number(f9_3, n2).
+number(f9_5, n7).
+number(f9_7, n6).
+number(f9_8, n8).
+number(f9_11, n3).
+number(f9_16, nG).
+number(f10_1, nD).
+number(f10_2, n5).
+number(f10_3, nA).
+number(f10_10, n2).
+number(f10_11, n8).
+number(f10_13, nC).
+number(f10_14, n6).
+number(f10_15, n1).
+number(f11_1, n4).
+number(f11_2, n8).
+number(f11_6, nF).
+number(f11_8, nC).
+number(f11_10, nG).
+number(f11_12, nE).
+number(f11_13, n3).
+number(f11_15, n2).
+number(f12_1, nE).
+number(f12_4, n3).
+number(f12_7, n2).
+number(f12_9, n6).
+number(f12_10, nC).
+number(f12_11, nB).
+number(f12_15, nF).
+number(f12_16, nA).
+number(f13_2, nB).
+number(f13_5, n9).
+number(f13_11, n5).
+number(f13_13, n4).
+number(f13_14, n2).
+number(f13_16, n3).
+number(f14_2, n3).
+number(f14_4, n5).
+number(f14_7, nC).
+number(f14_10, nE).
+number(f14_12, n7).
+number(f14_13, nA).
+number(f14_14, nF).
+number(f14_16, n6).
+number(f15_3, n8).
+number(f15_5, nA).
+number(f15_6, n1).
+number(f15_10, n3).
+number(f15_12, n6).
+number(f15_13, n5).
+number(f15_15, nD).
+number(f15_16, n9).
+number(f16_4, nG).
+number(f16_6, nD).
+number(f16_8, n4).
+number(f16_9, nF).
+number(f16_11, n2).
+number(f16_12, n8).
+number(f16_14, n7).

@@ -1,0 +1,1413 @@
+% Copyright (c) 2020 Frank McSherry
+% Copyright (c) 2025 The Refinery Authors <https://refinery.tools/>
+%
+% SPDX-License-Identifier: MIT AND EPL-2.0
+%
+% The sudoku example in this file was adapted from Frank McSherry's
+% differential-dataflow tutorial, which is available at
+% https://www.youtube.com/watch?v=DR5V5bNpclg and
+% https://github.com/frankmcsherry/WIP/tree/master/sudoku
+
+class Row {
+    Field[16] field opposite row
+}
+
+class Column {
+    Field[16] field opposite column
+}
+
+class Block {
+    Field[16] field opposite block
+}
+
+class Field {
+    Row[1] row opposite field
+    Column[1] column opposite field
+    Block[1] block opposite field
+    Number[1] number
+}
+
+class Number.
+
+declare n1, n2, n3, n4, n5, n6, n7, n8, n9, nA, nB, nC, nD, nE, nF, nG, f1_1,
+	r1, c1, b1_1, f1_2, c2, f1_3, c3, f1_4, c4, f1_5, c5, b1_2, f1_6, c6,
+	f1_7, c7, f1_8, c8, f1_9, c9, b1_3, f1_10, c10, f1_11, c11, f1_12, c12,
+	f1_13, c13, b1_4, f1_14, c14, f1_15, c15, f1_16, c16, f2_1, r2, f2_2,
+	f2_3, f2_4, f2_5, f2_6, f2_7, f2_8, f2_9, f2_10, f2_11, f2_12, f2_13,
+	f2_14, f2_15, f2_16, f3_1, r3, f3_2, f3_3, f3_4, f3_5, f3_6, f3_7, f3_8,
+	f3_9, f3_10, f3_11, f3_12, f3_13, f3_14, f3_15, f3_16, f4_1, r4, f4_2,
+	f4_3, f4_4, f4_5, f4_6, f4_7, f4_8, f4_9, f4_10, f4_11, f4_12, f4_13,
+	f4_14, f4_15, f4_16, f5_1, r5, b2_1, f5_2, f5_3, f5_4, f5_5, b2_2, f5_6,
+	f5_7, f5_8, f5_9, b2_3, f5_10, f5_11, f5_12, f5_13, b2_4, f5_14, f5_15,
+	f5_16, f6_1, r6, f6_2, f6_3, f6_4, f6_5, f6_6, f6_7, f6_8, f6_9, f6_10,
+	f6_11, f6_12, f6_13, f6_14, f6_15, f6_16, f7_1, r7, f7_2, f7_3, f7_4,
+	f7_5, f7_6, f7_7, f7_8, f7_9, f7_10, f7_11, f7_12, f7_13, f7_14, f7_15,
+	f7_16, f8_1, r8, f8_2, f8_3, f8_4, f8_5, f8_6, f8_7, f8_8, f8_9, f8_10,
+	f8_11, f8_12, f8_13, f8_14, f8_15, f8_16, f9_1, r9, b3_1, f9_2, f9_3,
+	f9_4, f9_5, b3_2, f9_6, f9_7, f9_8, f9_9, b3_3, f9_10, f9_11, f9_12,
+	f9_13, b3_4, f9_14, f9_15, f9_16, f10_1, r10, f10_2, f10_3, f10_4, f10_5,
+	f10_6, f10_7, f10_8, f10_9, f10_10, f10_11, f10_12, f10_13, f10_14,
+	f10_15, f10_16, f11_1, r11, f11_2, f11_3, f11_4, f11_5, f11_6, f11_7,
+	f11_8, f11_9, f11_10, f11_11, f11_12, f11_13, f11_14, f11_15, f11_16,
+	f12_1, r12, f12_2, f12_3, f12_4, f12_5, f12_6, f12_7, f12_8, f12_9,
+	f12_10, f12_11, f12_12, f12_13, f12_14, f12_15, f12_16, f13_1, r13, b4_1,
+	f13_2, f13_3, f13_4, f13_5, b4_2, f13_6, f13_7, f13_8, f13_9, b4_3,
+	f13_10, f13_11, f13_12, f13_13, b4_4, f13_14, f13_15, f13_16, f14_1, r14,
+	f14_2, f14_3, f14_4, f14_5, f14_6, f14_7, f14_8, f14_9, f14_10, f14_11,
+	f14_12, f14_13, f14_14, f14_15, f14_16, f15_1, r15, f15_2, f15_3, f15_4,
+	f15_5, f15_6, f15_7, f15_8, f15_9, f15_10, f15_11, f15_12, f15_13, f15_14,
+	f15_15, f15_16, f16_1, r16, f16_2, f16_3, f16_4, f16_5, f16_6, f16_7,
+	f16_8, f16_9, f16_10, f16_11, f16_12, f16_13, f16_14, f16_15, f16_16.
+!exists(Row::new).
+!exists(Column::new).
+!exists(Block::new).
+!exists(Field::new).
+!exists(Number::new).
+Number(n1).
+Number(n2).
+Number(n3).
+Number(n4).
+Number(n5).
+Number(n6).
+Number(n7).
+Number(n8).
+Number(n9).
+Number(nA).
+Number(nB).
+Number(nC).
+Number(nD).
+Number(nE).
+Number(nF).
+Number(nG).
+Field(f1_1).
+Row(r1).
+Column(c1).
+Block(b1_1).
+Field(f1_2).
+Column(c2).
+Field(f1_3).
+Column(c3).
+Field(f1_4).
+Column(c4).
+Field(f1_5).
+Column(c5).
+Block(b1_2).
+Field(f1_6).
+Column(c6).
+Field(f1_7).
+Column(c7).
+Field(f1_8).
+Column(c8).
+Field(f1_9).
+Column(c9).
+Block(b1_3).
+Field(f1_10).
+Column(c10).
+Field(f1_11).
+Column(c11).
+Field(f1_12).
+Column(c12).
+Field(f1_13).
+Column(c13).
+Block(b1_4).
+Field(f1_14).
+Column(c14).
+Field(f1_15).
+Column(c15).
+Field(f1_16).
+Column(c16).
+Field(f2_1).
+Row(r2).
+Field(f2_2).
+Field(f2_3).
+Field(f2_4).
+Field(f2_5).
+Field(f2_6).
+Field(f2_7).
+Field(f2_8).
+Field(f2_9).
+Field(f2_10).
+Field(f2_11).
+Field(f2_12).
+Field(f2_13).
+Field(f2_14).
+Field(f2_15).
+Field(f2_16).
+Field(f3_1).
+Row(r3).
+Field(f3_2).
+Field(f3_3).
+Field(f3_4).
+Field(f3_5).
+Field(f3_6).
+Field(f3_7).
+Field(f3_8).
+Field(f3_9).
+Field(f3_10).
+Field(f3_11).
+Field(f3_12).
+Field(f3_13).
+Field(f3_14).
+Field(f3_15).
+Field(f3_16).
+Field(f4_1).
+Row(r4).
+Field(f4_2).
+Field(f4_3).
+Field(f4_4).
+Field(f4_5).
+Field(f4_6).
+Field(f4_7).
+Field(f4_8).
+Field(f4_9).
+Field(f4_10).
+Field(f4_11).
+Field(f4_12).
+Field(f4_13).
+Field(f4_14).
+Field(f4_15).
+Field(f4_16).
+Field(f5_1).
+Row(r5).
+Block(b2_1).
+Field(f5_2).
+Field(f5_3).
+Field(f5_4).
+Field(f5_5).
+Block(b2_2).
+Field(f5_6).
+Field(f5_7).
+Field(f5_8).
+Field(f5_9).
+Block(b2_3).
+Field(f5_10).
+Field(f5_11).
+Field(f5_12).
+Field(f5_13).
+Block(b2_4).
+Field(f5_14).
+Field(f5_15).
+Field(f5_16).
+Field(f6_1).
+Row(r6).
+Field(f6_2).
+Field(f6_3).
+Field(f6_4).
+Field(f6_5).
+Field(f6_6).
+Field(f6_7).
+Field(f6_8).
+Field(f6_9).
+Field(f6_10).
+Field(f6_11).
+Field(f6_12).
+Field(f6_13).
+Field(f6_14).
+Field(f6_15).
+Field(f6_16).
+Field(f7_1).
+Row(r7).
+Field(f7_2).
+Field(f7_3).
+Field(f7_4).
+Field(f7_5).
+Field(f7_6).
+Field(f7_7).
+Field(f7_8).
+Field(f7_9).
+Field(f7_10).
+Field(f7_11).
+Field(f7_12).
+Field(f7_13).
+Field(f7_14).
+Field(f7_15).
+Field(f7_16).
+Field(f8_1).
+Row(r8).
+Field(f8_2).
+Field(f8_3).
+Field(f8_4).
+Field(f8_5).
+Field(f8_6).
+Field(f8_7).
+Field(f8_8).
+Field(f8_9).
+Field(f8_10).
+Field(f8_11).
+Field(f8_12).
+Field(f8_13).
+Field(f8_14).
+Field(f8_15).
+Field(f8_16).
+Field(f9_1).
+Row(r9).
+Block(b3_1).
+Field(f9_2).
+Field(f9_3).
+Field(f9_4).
+Field(f9_5).
+Block(b3_2).
+Field(f9_6).
+Field(f9_7).
+Field(f9_8).
+Field(f9_9).
+Block(b3_3).
+Field(f9_10).
+Field(f9_11).
+Field(f9_12).
+Field(f9_13).
+Block(b3_4).
+Field(f9_14).
+Field(f9_15).
+Field(f9_16).
+Field(f10_1).
+Row(r10).
+Field(f10_2).
+Field(f10_3).
+Field(f10_4).
+Field(f10_5).
+Field(f10_6).
+Field(f10_7).
+Field(f10_8).
+Field(f10_9).
+Field(f10_10).
+Field(f10_11).
+Field(f10_12).
+Field(f10_13).
+Field(f10_14).
+Field(f10_15).
+Field(f10_16).
+Field(f11_1).
+Row(r11).
+Field(f11_2).
+Field(f11_3).
+Field(f11_4).
+Field(f11_5).
+Field(f11_6).
+Field(f11_7).
+Field(f11_8).
+Field(f11_9).
+Field(f11_10).
+Field(f11_11).
+Field(f11_12).
+Field(f11_13).
+Field(f11_14).
+Field(f11_15).
+Field(f11_16).
+Field(f12_1).
+Row(r12).
+Field(f12_2).
+Field(f12_3).
+Field(f12_4).
+Field(f12_5).
+Field(f12_6).
+Field(f12_7).
+Field(f12_8).
+Field(f12_9).
+Field(f12_10).
+Field(f12_11).
+Field(f12_12).
+Field(f12_13).
+Field(f12_14).
+Field(f12_15).
+Field(f12_16).
+Field(f13_1).
+Row(r13).
+Block(b4_1).
+Field(f13_2).
+Field(f13_3).
+Field(f13_4).
+Field(f13_5).
+Block(b4_2).
+Field(f13_6).
+Field(f13_7).
+Field(f13_8).
+Field(f13_9).
+Block(b4_3).
+Field(f13_10).
+Field(f13_11).
+Field(f13_12).
+Field(f13_13).
+Block(b4_4).
+Field(f13_14).
+Field(f13_15).
+Field(f13_16).
+Field(f14_1).
+Row(r14).
+Field(f14_2).
+Field(f14_3).
+Field(f14_4).
+Field(f14_5).
+Field(f14_6).
+Field(f14_7).
+Field(f14_8).
+Field(f14_9).
+Field(f14_10).
+Field(f14_11).
+Field(f14_12).
+Field(f14_13).
+Field(f14_14).
+Field(f14_15).
+Field(f14_16).
+Field(f15_1).
+Row(r15).
+Field(f15_2).
+Field(f15_3).
+Field(f15_4).
+Field(f15_5).
+Field(f15_6).
+Field(f15_7).
+Field(f15_8).
+Field(f15_9).
+Field(f15_10).
+Field(f15_11).
+Field(f15_12).
+Field(f15_13).
+Field(f15_14).
+Field(f15_15).
+Field(f15_16).
+Field(f16_1).
+Row(r16).
+Field(f16_2).
+Field(f16_3).
+Field(f16_4).
+Field(f16_5).
+Field(f16_6).
+Field(f16_7).
+Field(f16_8).
+Field(f16_9).
+Field(f16_10).
+Field(f16_11).
+Field(f16_12).
+Field(f16_13).
+Field(f16_14).
+Field(f16_15).
+Field(f16_16).
+default !Row::field(*, *).
+Row::field(r1, f1_1).
+Row::field(r1, f1_2).
+Row::field(r1, f1_3).
+Row::field(r1, f1_4).
+Row::field(r1, f1_5).
+Row::field(r1, f1_6).
+Row::field(r1, f1_7).
+Row::field(r1, f1_8).
+Row::field(r1, f1_9).
+Row::field(r1, f1_10).
+Row::field(r1, f1_11).
+Row::field(r1, f1_12).
+Row::field(r1, f1_13).
+Row::field(r1, f1_14).
+Row::field(r1, f1_15).
+Row::field(r1, f1_16).
+Row::field(r2, f2_1).
+Row::field(r2, f2_2).
+Row::field(r2, f2_3).
+Row::field(r2, f2_4).
+Row::field(r2, f2_5).
+Row::field(r2, f2_6).
+Row::field(r2, f2_7).
+Row::field(r2, f2_8).
+Row::field(r2, f2_9).
+Row::field(r2, f2_10).
+Row::field(r2, f2_11).
+Row::field(r2, f2_12).
+Row::field(r2, f2_13).
+Row::field(r2, f2_14).
+Row::field(r2, f2_15).
+Row::field(r2, f2_16).
+Row::field(r3, f3_1).
+Row::field(r3, f3_2).
+Row::field(r3, f3_3).
+Row::field(r3, f3_4).
+Row::field(r3, f3_5).
+Row::field(r3, f3_6).
+Row::field(r3, f3_7).
+Row::field(r3, f3_8).
+Row::field(r3, f3_9).
+Row::field(r3, f3_10).
+Row::field(r3, f3_11).
+Row::field(r3, f3_12).
+Row::field(r3, f3_13).
+Row::field(r3, f3_14).
+Row::field(r3, f3_15).
+Row::field(r3, f3_16).
+Row::field(r4, f4_1).
+Row::field(r4, f4_2).
+Row::field(r4, f4_3).
+Row::field(r4, f4_4).
+Row::field(r4, f4_5).
+Row::field(r4, f4_6).
+Row::field(r4, f4_7).
+Row::field(r4, f4_8).
+Row::field(r4, f4_9).
+Row::field(r4, f4_10).
+Row::field(r4, f4_11).
+Row::field(r4, f4_12).
+Row::field(r4, f4_13).
+Row::field(r4, f4_14).
+Row::field(r4, f4_15).
+Row::field(r4, f4_16).
+Row::field(r5, f5_1).
+Row::field(r5, f5_2).
+Row::field(r5, f5_3).
+Row::field(r5, f5_4).
+Row::field(r5, f5_5).
+Row::field(r5, f5_6).
+Row::field(r5, f5_7).
+Row::field(r5, f5_8).
+Row::field(r5, f5_9).
+Row::field(r5, f5_10).
+Row::field(r5, f5_11).
+Row::field(r5, f5_12).
+Row::field(r5, f5_13).
+Row::field(r5, f5_14).
+Row::field(r5, f5_15).
+Row::field(r5, f5_16).
+Row::field(r6, f6_1).
+Row::field(r6, f6_2).
+Row::field(r6, f6_3).
+Row::field(r6, f6_4).
+Row::field(r6, f6_5).
+Row::field(r6, f6_6).
+Row::field(r6, f6_7).
+Row::field(r6, f6_8).
+Row::field(r6, f6_9).
+Row::field(r6, f6_10).
+Row::field(r6, f6_11).
+Row::field(r6, f6_12).
+Row::field(r6, f6_13).
+Row::field(r6, f6_14).
+Row::field(r6, f6_15).
+Row::field(r6, f6_16).
+Row::field(r7, f7_1).
+Row::field(r7, f7_2).
+Row::field(r7, f7_3).
+Row::field(r7, f7_4).
+Row::field(r7, f7_5).
+Row::field(r7, f7_6).
+Row::field(r7, f7_7).
+Row::field(r7, f7_8).
+Row::field(r7, f7_9).
+Row::field(r7, f7_10).
+Row::field(r7, f7_11).
+Row::field(r7, f7_12).
+Row::field(r7, f7_13).
+Row::field(r7, f7_14).
+Row::field(r7, f7_15).
+Row::field(r7, f7_16).
+Row::field(r8, f8_1).
+Row::field(r8, f8_2).
+Row::field(r8, f8_3).
+Row::field(r8, f8_4).
+Row::field(r8, f8_5).
+Row::field(r8, f8_6).
+Row::field(r8, f8_7).
+Row::field(r8, f8_8).
+Row::field(r8, f8_9).
+Row::field(r8, f8_10).
+Row::field(r8, f8_11).
+Row::field(r8, f8_12).
+Row::field(r8, f8_13).
+Row::field(r8, f8_14).
+Row::field(r8, f8_15).
+Row::field(r8, f8_16).
+Row::field(r9, f9_1).
+Row::field(r9, f9_2).
+Row::field(r9, f9_3).
+Row::field(r9, f9_4).
+Row::field(r9, f9_5).
+Row::field(r9, f9_6).
+Row::field(r9, f9_7).
+Row::field(r9, f9_8).
+Row::field(r9, f9_9).
+Row::field(r9, f9_10).
+Row::field(r9, f9_11).
+Row::field(r9, f9_12).
+Row::field(r9, f9_13).
+Row::field(r9, f9_14).
+Row::field(r9, f9_15).
+Row::field(r9, f9_16).
+Row::field(r10, f10_1).
+Row::field(r10, f10_2).
+Row::field(r10, f10_3).
+Row::field(r10, f10_4).
+Row::field(r10, f10_5).
+Row::field(r10, f10_6).
+Row::field(r10, f10_7).
+Row::field(r10, f10_8).
+Row::field(r10, f10_9).
+Row::field(r10, f10_10).
+Row::field(r10, f10_11).
+Row::field(r10, f10_12).
+Row::field(r10, f10_13).
+Row::field(r10, f10_14).
+Row::field(r10, f10_15).
+Row::field(r10, f10_16).
+Row::field(r11, f11_1).
+Row::field(r11, f11_2).
+Row::field(r11, f11_3).
+Row::field(r11, f11_4).
+Row::field(r11, f11_5).
+Row::field(r11, f11_6).
+Row::field(r11, f11_7).
+Row::field(r11, f11_8).
+Row::field(r11, f11_9).
+Row::field(r11, f11_10).
+Row::field(r11, f11_11).
+Row::field(r11, f11_12).
+Row::field(r11, f11_13).
+Row::field(r11, f11_14).
+Row::field(r11, f11_15).
+Row::field(r11, f11_16).
+Row::field(r12, f12_1).
+Row::field(r12, f12_2).
+Row::field(r12, f12_3).
+Row::field(r12, f12_4).
+Row::field(r12, f12_5).
+Row::field(r12, f12_6).
+Row::field(r12, f12_7).
+Row::field(r12, f12_8).
+Row::field(r12, f12_9).
+Row::field(r12, f12_10).
+Row::field(r12, f12_11).
+Row::field(r12, f12_12).
+Row::field(r12, f12_13).
+Row::field(r12, f12_14).
+Row::field(r12, f12_15).
+Row::field(r12, f12_16).
+Row::field(r13, f13_1).
+Row::field(r13, f13_2).
+Row::field(r13, f13_3).
+Row::field(r13, f13_4).
+Row::field(r13, f13_5).
+Row::field(r13, f13_6).
+Row::field(r13, f13_7).
+Row::field(r13, f13_8).
+Row::field(r13, f13_9).
+Row::field(r13, f13_10).
+Row::field(r13, f13_11).
+Row::field(r13, f13_12).
+Row::field(r13, f13_13).
+Row::field(r13, f13_14).
+Row::field(r13, f13_15).
+Row::field(r13, f13_16).
+Row::field(r14, f14_1).
+Row::field(r14, f14_2).
+Row::field(r14, f14_3).
+Row::field(r14, f14_4).
+Row::field(r14, f14_5).
+Row::field(r14, f14_6).
+Row::field(r14, f14_7).
+Row::field(r14, f14_8).
+Row::field(r14, f14_9).
+Row::field(r14, f14_10).
+Row::field(r14, f14_11).
+Row::field(r14, f14_12).
+Row::field(r14, f14_13).
+Row::field(r14, f14_14).
+Row::field(r14, f14_15).
+Row::field(r14, f14_16).
+Row::field(r15, f15_1).
+Row::field(r15, f15_2).
+Row::field(r15, f15_3).
+Row::field(r15, f15_4).
+Row::field(r15, f15_5).
+Row::field(r15, f15_6).
+Row::field(r15, f15_7).
+Row::field(r15, f15_8).
+Row::field(r15, f15_9).
+Row::field(r15, f15_10).
+Row::field(r15, f15_11).
+Row::field(r15, f15_12).
+Row::field(r15, f15_13).
+Row::field(r15, f15_14).
+Row::field(r15, f15_15).
+Row::field(r15, f15_16).
+Row::field(r16, f16_1).
+Row::field(r16, f16_2).
+Row::field(r16, f16_3).
+Row::field(r16, f16_4).
+Row::field(r16, f16_5).
+Row::field(r16, f16_6).
+Row::field(r16, f16_7).
+Row::field(r16, f16_8).
+Row::field(r16, f16_9).
+Row::field(r16, f16_10).
+Row::field(r16, f16_11).
+Row::field(r16, f16_12).
+Row::field(r16, f16_13).
+Row::field(r16, f16_14).
+Row::field(r16, f16_15).
+Row::field(r16, f16_16).
+default !Column::field(*, *).
+Column::field(c1, f1_1).
+Column::field(c1, f2_1).
+Column::field(c1, f3_1).
+Column::field(c1, f4_1).
+Column::field(c1, f5_1).
+Column::field(c1, f6_1).
+Column::field(c1, f7_1).
+Column::field(c1, f8_1).
+Column::field(c1, f9_1).
+Column::field(c1, f10_1).
+Column::field(c1, f11_1).
+Column::field(c1, f12_1).
+Column::field(c1, f13_1).
+Column::field(c1, f14_1).
+Column::field(c1, f15_1).
+Column::field(c1, f16_1).
+Column::field(c2, f1_2).
+Column::field(c2, f2_2).
+Column::field(c2, f3_2).
+Column::field(c2, f4_2).
+Column::field(c2, f5_2).
+Column::field(c2, f6_2).
+Column::field(c2, f7_2).
+Column::field(c2, f8_2).
+Column::field(c2, f9_2).
+Column::field(c2, f10_2).
+Column::field(c2, f11_2).
+Column::field(c2, f12_2).
+Column::field(c2, f13_2).
+Column::field(c2, f14_2).
+Column::field(c2, f15_2).
+Column::field(c2, f16_2).
+Column::field(c3, f1_3).
+Column::field(c3, f2_3).
+Column::field(c3, f3_3).
+Column::field(c3, f4_3).
+Column::field(c3, f5_3).
+Column::field(c3, f6_3).
+Column::field(c3, f7_3).
+Column::field(c3, f8_3).
+Column::field(c3, f9_3).
+Column::field(c3, f10_3).
+Column::field(c3, f11_3).
+Column::field(c3, f12_3).
+Column::field(c3, f13_3).
+Column::field(c3, f14_3).
+Column::field(c3, f15_3).
+Column::field(c3, f16_3).
+Column::field(c4, f1_4).
+Column::field(c4, f2_4).
+Column::field(c4, f3_4).
+Column::field(c4, f4_4).
+Column::field(c4, f5_4).
+Column::field(c4, f6_4).
+Column::field(c4, f7_4).
+Column::field(c4, f8_4).
+Column::field(c4, f9_4).
+Column::field(c4, f10_4).
+Column::field(c4, f11_4).
+Column::field(c4, f12_4).
+Column::field(c4, f13_4).
+Column::field(c4, f14_4).
+Column::field(c4, f15_4).
+Column::field(c4, f16_4).
+Column::field(c5, f1_5).
+Column::field(c5, f2_5).
+Column::field(c5, f3_5).
+Column::field(c5, f4_5).
+Column::field(c5, f5_5).
+Column::field(c5, f6_5).
+Column::field(c5, f7_5).
+Column::field(c5, f8_5).
+Column::field(c5, f9_5).
+Column::field(c5, f10_5).
+Column::field(c5, f11_5).
+Column::field(c5, f12_5).
+Column::field(c5, f13_5).
+Column::field(c5, f14_5).
+Column::field(c5, f15_5).
+Column::field(c5, f16_5).
+Column::field(c6, f1_6).
+Column::field(c6, f2_6).
+Column::field(c6, f3_6).
+Column::field(c6, f4_6).
+Column::field(c6, f5_6).
+Column::field(c6, f6_6).
+Column::field(c6, f7_6).
+Column::field(c6, f8_6).
+Column::field(c6, f9_6).
+Column::field(c6, f10_6).
+Column::field(c6, f11_6).
+Column::field(c6, f12_6).
+Column::field(c6, f13_6).
+Column::field(c6, f14_6).
+Column::field(c6, f15_6).
+Column::field(c6, f16_6).
+Column::field(c7, f1_7).
+Column::field(c7, f2_7).
+Column::field(c7, f3_7).
+Column::field(c7, f4_7).
+Column::field(c7, f5_7).
+Column::field(c7, f6_7).
+Column::field(c7, f7_7).
+Column::field(c7, f8_7).
+Column::field(c7, f9_7).
+Column::field(c7, f10_7).
+Column::field(c7, f11_7).
+Column::field(c7, f12_7).
+Column::field(c7, f13_7).
+Column::field(c7, f14_7).
+Column::field(c7, f15_7).
+Column::field(c7, f16_7).
+Column::field(c8, f1_8).
+Column::field(c8, f2_8).
+Column::field(c8, f3_8).
+Column::field(c8, f4_8).
+Column::field(c8, f5_8).
+Column::field(c8, f6_8).
+Column::field(c8, f7_8).
+Column::field(c8, f8_8).
+Column::field(c8, f9_8).
+Column::field(c8, f10_8).
+Column::field(c8, f11_8).
+Column::field(c8, f12_8).
+Column::field(c8, f13_8).
+Column::field(c8, f14_8).
+Column::field(c8, f15_8).
+Column::field(c8, f16_8).
+Column::field(c9, f1_9).
+Column::field(c9, f2_9).
+Column::field(c9, f3_9).
+Column::field(c9, f4_9).
+Column::field(c9, f5_9).
+Column::field(c9, f6_9).
+Column::field(c9, f7_9).
+Column::field(c9, f8_9).
+Column::field(c9, f9_9).
+Column::field(c9, f10_9).
+Column::field(c9, f11_9).
+Column::field(c9, f12_9).
+Column::field(c9, f13_9).
+Column::field(c9, f14_9).
+Column::field(c9, f15_9).
+Column::field(c9, f16_9).
+Column::field(c10, f1_10).
+Column::field(c10, f2_10).
+Column::field(c10, f3_10).
+Column::field(c10, f4_10).
+Column::field(c10, f5_10).
+Column::field(c10, f6_10).
+Column::field(c10, f7_10).
+Column::field(c10, f8_10).
+Column::field(c10, f9_10).
+Column::field(c10, f10_10).
+Column::field(c10, f11_10).
+Column::field(c10, f12_10).
+Column::field(c10, f13_10).
+Column::field(c10, f14_10).
+Column::field(c10, f15_10).
+Column::field(c10, f16_10).
+Column::field(c11, f1_11).
+Column::field(c11, f2_11).
+Column::field(c11, f3_11).
+Column::field(c11, f4_11).
+Column::field(c11, f5_11).
+Column::field(c11, f6_11).
+Column::field(c11, f7_11).
+Column::field(c11, f8_11).
+Column::field(c11, f9_11).
+Column::field(c11, f10_11).
+Column::field(c11, f11_11).
+Column::field(c11, f12_11).
+Column::field(c11, f13_11).
+Column::field(c11, f14_11).
+Column::field(c11, f15_11).
+Column::field(c11, f16_11).
+Column::field(c12, f1_12).
+Column::field(c12, f2_12).
+Column::field(c12, f3_12).
+Column::field(c12, f4_12).
+Column::field(c12, f5_12).
+Column::field(c12, f6_12).
+Column::field(c12, f7_12).
+Column::field(c12, f8_12).
+Column::field(c12, f9_12).
+Column::field(c12, f10_12).
+Column::field(c12, f11_12).
+Column::field(c12, f12_12).
+Column::field(c12, f13_12).
+Column::field(c12, f14_12).
+Column::field(c12, f15_12).
+Column::field(c12, f16_12).
+Column::field(c13, f1_13).
+Column::field(c13, f2_13).
+Column::field(c13, f3_13).
+Column::field(c13, f4_13).
+Column::field(c13, f5_13).
+Column::field(c13, f6_13).
+Column::field(c13, f7_13).
+Column::field(c13, f8_13).
+Column::field(c13, f9_13).
+Column::field(c13, f10_13).
+Column::field(c13, f11_13).
+Column::field(c13, f12_13).
+Column::field(c13, f13_13).
+Column::field(c13, f14_13).
+Column::field(c13, f15_13).
+Column::field(c13, f16_13).
+Column::field(c14, f1_14).
+Column::field(c14, f2_14).
+Column::field(c14, f3_14).
+Column::field(c14, f4_14).
+Column::field(c14, f5_14).
+Column::field(c14, f6_14).
+Column::field(c14, f7_14).
+Column::field(c14, f8_14).
+Column::field(c14, f9_14).
+Column::field(c14, f10_14).
+Column::field(c14, f11_14).
+Column::field(c14, f12_14).
+Column::field(c14, f13_14).
+Column::field(c14, f14_14).
+Column::field(c14, f15_14).
+Column::field(c14, f16_14).
+Column::field(c15, f1_15).
+Column::field(c15, f2_15).
+Column::field(c15, f3_15).
+Column::field(c15, f4_15).
+Column::field(c15, f5_15).
+Column::field(c15, f6_15).
+Column::field(c15, f7_15).
+Column::field(c15, f8_15).
+Column::field(c15, f9_15).
+Column::field(c15, f10_15).
+Column::field(c15, f11_15).
+Column::field(c15, f12_15).
+Column::field(c15, f13_15).
+Column::field(c15, f14_15).
+Column::field(c15, f15_15).
+Column::field(c15, f16_15).
+Column::field(c16, f1_16).
+Column::field(c16, f2_16).
+Column::field(c16, f3_16).
+Column::field(c16, f4_16).
+Column::field(c16, f5_16).
+Column::field(c16, f6_16).
+Column::field(c16, f7_16).
+Column::field(c16, f8_16).
+Column::field(c16, f9_16).
+Column::field(c16, f10_16).
+Column::field(c16, f11_16).
+Column::field(c16, f12_16).
+Column::field(c16, f13_16).
+Column::field(c16, f14_16).
+Column::field(c16, f15_16).
+Column::field(c16, f16_16).
+default !Block::field(*, *).
+Block::field(b1_1, f1_1).
+Block::field(b1_1, f1_2).
+Block::field(b1_1, f1_3).
+Block::field(b1_1, f1_4).
+Block::field(b1_1, f2_1).
+Block::field(b1_1, f2_2).
+Block::field(b1_1, f2_3).
+Block::field(b1_1, f2_4).
+Block::field(b1_1, f3_1).
+Block::field(b1_1, f3_2).
+Block::field(b1_1, f3_3).
+Block::field(b1_1, f3_4).
+Block::field(b1_1, f4_1).
+Block::field(b1_1, f4_2).
+Block::field(b1_1, f4_3).
+Block::field(b1_1, f4_4).
+Block::field(b1_2, f1_5).
+Block::field(b1_2, f1_6).
+Block::field(b1_2, f1_7).
+Block::field(b1_2, f1_8).
+Block::field(b1_2, f2_5).
+Block::field(b1_2, f2_6).
+Block::field(b1_2, f2_7).
+Block::field(b1_2, f2_8).
+Block::field(b1_2, f3_5).
+Block::field(b1_2, f3_6).
+Block::field(b1_2, f3_7).
+Block::field(b1_2, f3_8).
+Block::field(b1_2, f4_5).
+Block::field(b1_2, f4_6).
+Block::field(b1_2, f4_7).
+Block::field(b1_2, f4_8).
+Block::field(b1_3, f1_9).
+Block::field(b1_3, f1_10).
+Block::field(b1_3, f1_11).
+Block::field(b1_3, f1_12).
+Block::field(b1_3, f2_9).
+Block::field(b1_3, f2_10).
+Block::field(b1_3, f2_11).
+Block::field(b1_3, f2_12).
+Block::field(b1_3, f3_9).
+Block::field(b1_3, f3_10).
+Block::field(b1_3, f3_11).
+Block::field(b1_3, f3_12).
+Block::field(b1_3, f4_9).
+Block::field(b1_3, f4_10).
+Block::field(b1_3, f4_11).
+Block::field(b1_3, f4_12).
+Block::field(b1_4, f1_13).
+Block::field(b1_4, f1_14).
+Block::field(b1_4, f1_15).
+Block::field(b1_4, f1_16).
+Block::field(b1_4, f2_13).
+Block::field(b1_4, f2_14).
+Block::field(b1_4, f2_15).
+Block::field(b1_4, f2_16).
+Block::field(b1_4, f3_13).
+Block::field(b1_4, f3_14).
+Block::field(b1_4, f3_15).
+Block::field(b1_4, f3_16).
+Block::field(b1_4, f4_13).
+Block::field(b1_4, f4_14).
+Block::field(b1_4, f4_15).
+Block::field(b1_4, f4_16).
+Block::field(b2_1, f5_1).
+Block::field(b2_1, f5_2).
+Block::field(b2_1, f5_3).
+Block::field(b2_1, f5_4).
+Block::field(b2_1, f6_1).
+Block::field(b2_1, f6_2).
+Block::field(b2_1, f6_3).
+Block::field(b2_1, f6_4).
+Block::field(b2_1, f7_1).
+Block::field(b2_1, f7_2).
+Block::field(b2_1, f7_3).
+Block::field(b2_1, f7_4).
+Block::field(b2_1, f8_1).
+Block::field(b2_1, f8_2).
+Block::field(b2_1, f8_3).
+Block::field(b2_1, f8_4).
+Block::field(b2_2, f5_5).
+Block::field(b2_2, f5_6).
+Block::field(b2_2, f5_7).
+Block::field(b2_2, f5_8).
+Block::field(b2_2, f6_5).
+Block::field(b2_2, f6_6).
+Block::field(b2_2, f6_7).
+Block::field(b2_2, f6_8).
+Block::field(b2_2, f7_5).
+Block::field(b2_2, f7_6).
+Block::field(b2_2, f7_7).
+Block::field(b2_2, f7_8).
+Block::field(b2_2, f8_5).
+Block::field(b2_2, f8_6).
+Block::field(b2_2, f8_7).
+Block::field(b2_2, f8_8).
+Block::field(b2_3, f5_9).
+Block::field(b2_3, f5_10).
+Block::field(b2_3, f5_11).
+Block::field(b2_3, f5_12).
+Block::field(b2_3, f6_9).
+Block::field(b2_3, f6_10).
+Block::field(b2_3, f6_11).
+Block::field(b2_3, f6_12).
+Block::field(b2_3, f7_9).
+Block::field(b2_3, f7_10).
+Block::field(b2_3, f7_11).
+Block::field(b2_3, f7_12).
+Block::field(b2_3, f8_9).
+Block::field(b2_3, f8_10).
+Block::field(b2_3, f8_11).
+Block::field(b2_3, f8_12).
+Block::field(b2_4, f5_13).
+Block::field(b2_4, f5_14).
+Block::field(b2_4, f5_15).
+Block::field(b2_4, f5_16).
+Block::field(b2_4, f6_13).
+Block::field(b2_4, f6_14).
+Block::field(b2_4, f6_15).
+Block::field(b2_4, f6_16).
+Block::field(b2_4, f7_13).
+Block::field(b2_4, f7_14).
+Block::field(b2_4, f7_15).
+Block::field(b2_4, f7_16).
+Block::field(b2_4, f8_13).
+Block::field(b2_4, f8_14).
+Block::field(b2_4, f8_15).
+Block::field(b2_4, f8_16).
+Block::field(b3_1, f9_1).
+Block::field(b3_1, f9_2).
+Block::field(b3_1, f9_3).
+Block::field(b3_1, f9_4).
+Block::field(b3_1, f10_1).
+Block::field(b3_1, f10_2).
+Block::field(b3_1, f10_3).
+Block::field(b3_1, f10_4).
+Block::field(b3_1, f11_1).
+Block::field(b3_1, f11_2).
+Block::field(b3_1, f11_3).
+Block::field(b3_1, f11_4).
+Block::field(b3_1, f12_1).
+Block::field(b3_1, f12_2).
+Block::field(b3_1, f12_3).
+Block::field(b3_1, f12_4).
+Block::field(b3_2, f9_5).
+Block::field(b3_2, f9_6).
+Block::field(b3_2, f9_7).
+Block::field(b3_2, f9_8).
+Block::field(b3_2, f10_5).
+Block::field(b3_2, f10_6).
+Block::field(b3_2, f10_7).
+Block::field(b3_2, f10_8).
+Block::field(b3_2, f11_5).
+Block::field(b3_2, f11_6).
+Block::field(b3_2, f11_7).
+Block::field(b3_2, f11_8).
+Block::field(b3_2, f12_5).
+Block::field(b3_2, f12_6).
+Block::field(b3_2, f12_7).
+Block::field(b3_2, f12_8).
+Block::field(b3_3, f9_9).
+Block::field(b3_3, f9_10).
+Block::field(b3_3, f9_11).
+Block::field(b3_3, f9_12).
+Block::field(b3_3, f10_9).
+Block::field(b3_3, f10_10).
+Block::field(b3_3, f10_11).
+Block::field(b3_3, f10_12).
+Block::field(b3_3, f11_9).
+Block::field(b3_3, f11_10).
+Block::field(b3_3, f11_11).
+Block::field(b3_3, f11_12).
+Block::field(b3_3, f12_9).
+Block::field(b3_3, f12_10).
+Block::field(b3_3, f12_11).
+Block::field(b3_3, f12_12).
+Block::field(b3_4, f9_13).
+Block::field(b3_4, f9_14).
+Block::field(b3_4, f9_15).
+Block::field(b3_4, f9_16).
+Block::field(b3_4, f10_13).
+Block::field(b3_4, f10_14).
+Block::field(b3_4, f10_15).
+Block::field(b3_4, f10_16).
+Block::field(b3_4, f11_13).
+Block::field(b3_4, f11_14).
+Block::field(b3_4, f11_15).
+Block::field(b3_4, f11_16).
+Block::field(b3_4, f12_13).
+Block::field(b3_4, f12_14).
+Block::field(b3_4, f12_15).
+Block::field(b3_4, f12_16).
+Block::field(b4_1, f13_1).
+Block::field(b4_1, f13_2).
+Block::field(b4_1, f13_3).
+Block::field(b4_1, f13_4).
+Block::field(b4_1, f14_1).
+Block::field(b4_1, f14_2).
+Block::field(b4_1, f14_3).
+Block::field(b4_1, f14_4).
+Block::field(b4_1, f15_1).
+Block::field(b4_1, f15_2).
+Block::field(b4_1, f15_3).
+Block::field(b4_1, f15_4).
+Block::field(b4_1, f16_1).
+Block::field(b4_1, f16_2).
+Block::field(b4_1, f16_3).
+Block::field(b4_1, f16_4).
+Block::field(b4_2, f13_5).
+Block::field(b4_2, f13_6).
+Block::field(b4_2, f13_7).
+Block::field(b4_2, f13_8).
+Block::field(b4_2, f14_5).
+Block::field(b4_2, f14_6).
+Block::field(b4_2, f14_7).
+Block::field(b4_2, f14_8).
+Block::field(b4_2, f15_5).
+Block::field(b4_2, f15_6).
+Block::field(b4_2, f15_7).
+Block::field(b4_2, f15_8).
+Block::field(b4_2, f16_5).
+Block::field(b4_2, f16_6).
+Block::field(b4_2, f16_7).
+Block::field(b4_2, f16_8).
+Block::field(b4_3, f13_9).
+Block::field(b4_3, f13_10).
+Block::field(b4_3, f13_11).
+Block::field(b4_3, f13_12).
+Block::field(b4_3, f14_9).
+Block::field(b4_3, f14_10).
+Block::field(b4_3, f14_11).
+Block::field(b4_3, f14_12).
+Block::field(b4_3, f15_9).
+Block::field(b4_3, f15_10).
+Block::field(b4_3, f15_11).
+Block::field(b4_3, f15_12).
+Block::field(b4_3, f16_9).
+Block::field(b4_3, f16_10).
+Block::field(b4_3, f16_11).
+Block::field(b4_3, f16_12).
+Block::field(b4_4, f13_13).
+Block::field(b4_4, f13_14).
+Block::field(b4_4, f13_15).
+Block::field(b4_4, f13_16).
+Block::field(b4_4, f14_13).
+Block::field(b4_4, f14_14).
+Block::field(b4_4, f14_15).
+Block::field(b4_4, f14_16).
+Block::field(b4_4, f15_13).
+Block::field(b4_4, f15_14).
+Block::field(b4_4, f15_15).
+Block::field(b4_4, f15_16).
+Block::field(b4_4, f16_13).
+Block::field(b4_4, f16_14).
+Block::field(b4_4, f16_15).
+Block::field(b4_4, f16_16).
+default !number(*, *).
+number(f1_1, n7).
+number(f1_2, n8).
+number(f1_3, n6).
+number(f1_4, n1).
+number(f1_5, nB).
+number(f1_6, n9).
+number(f1_7, n4).
+number(f1_8, nG).
+number(f1_9, nB).
+number(f1_10, nB).
+number(f1_11, n7).
+number(f1_12, n2).
+number(f1_13, n9).
+number(f1_14, nD).
+number(f1_15, nA).
+number(f1_16, n8).
+number(f2_1, nC).
+number(f2_2, n1).
+number(f2_3, nG).
+number(f2_4, n5).
+number(f2_5, n2).
+number(f2_6, nE).
+number(f2_7, n7).
+number(f2_8, nD).
+number(f2_9, n9).
+number(f2_10, nB).
+number(f2_11, nA).
+number(f2_12, n8).
+number(f2_13, nB).
+number(f2_14, nG).
+number(f2_15, nB).
+number(f2_16, nA).
+number(f3_1, n3).
+number(f3_2, nG).
+number(f3_3, nF).
+number(f3_4, n2).
+number(f3_5, nD).
+number(f3_6, n5).
+number(f3_7, n7).
+number(f3_8, nG).
+number(f3_9, nA).
+number(f3_10, n1).
+number(f3_11, nE).
+number(f3_12, nA).
+number(f3_13, n8).
+number(f3_14, n1).
+number(f3_15, nF).
+number(f3_16, nB).
+number(f4_1, n3).
+number(f4_2, n5).
+number(f4_3, n9).
+number(f4_4, nE).
+number(f4_5, nF).
+number(f4_6, n4).
+number(f4_7, n5).
+number(f4_8, nB).
+number(f4_9, n8).
+number(f4_10, nF).
+number(f4_11, nE).
+number(f4_12, n5).
+number(f4_13, n1).
+number(f4_14, nC).
+number(f4_15, n6).
+number(f4_16, n1).
+number(f5_1, n8).
+number(f5_2, n8).
+number(f5_3, n1).
+number(f5_4, nF).
+number(f5_5, n4).
+number(f5_6, n2).
+number(f5_7, nE).
+number(f5_8, n3).
+number(f5_9, n5).
+number(f5_10, nF).
+number(f5_11, n9).
+number(f5_12, nD).
+number(f5_13, nG).
+number(f5_14, n7).
+number(f5_15, n2).
+number(f5_16, nE).
+number(f6_1, n5).
+number(f6_2, n4).
+number(f6_3, nF).
+number(f6_4, nF).
+number(f6_5, n2).
+number(f6_6, nA).
+number(f6_7, nE).
+number(f6_8, nD).
+number(f6_9, nC).
+number(f6_10, n7).
+number(f6_11, n6).
+number(f6_12, nB).
+number(f6_13, nC).
+number(f6_14, nG).
+number(f6_15, nC).
+number(f6_16, n2).
+number(f7_1, nB).
+number(f7_2, n6).
+number(f7_3, n9).
+number(f7_4, n1).
+number(f7_5, n8).
+number(f7_6, n1).
+number(f7_7, n7).
+number(f7_8, nE).
+number(f7_9, n3).
+number(f7_10, nA).
+number(f7_11, n7).
+number(f7_12, nC).
+number(f7_13, n2).
+number(f7_14, n5).
+number(f7_15, n5).
+number(f7_16, nD).
+number(f8_1, n7).
+number(f8_2, n9).
+number(f8_3, n1).
+number(f8_4, n6).
+number(f8_5, n6).
+number(f8_6, n6).
+number(f8_7, nD).
+number(f8_8, nB).
+number(f8_9, n2).
+number(f8_10, n6).
+number(f8_11, nG).
+number(f8_12, n1).
+number(f8_13, nD).
+number(f8_14, n5).
+number(f8_15, n4).
+number(f8_16, n1).
+number(f9_1, nD).
+number(f9_2, nC).
+number(f9_3, n2).
+number(f9_4, n8).
+number(f9_5, n7).
+number(f9_6, n4).
+number(f9_7, n6).
+number(f9_8, n8).
+number(f9_9, n4).
+number(f9_10, nF).
+number(f9_11, n3).
+number(f9_12, nA).
+number(f9_13, nC).
+number(f9_14, nF).
+number(f9_15, nC).
+number(f9_16, nG).
+number(f10_1, nD).
+number(f10_2, n5).
+number(f10_3, nA).
+number(f10_4, n4).
+number(f10_5, n4).
+number(f10_6, n7).
+number(f10_7, nF).
+number(f10_8, n6).
+number(f10_9, n5).
+number(f10_10, n2).
+number(f10_11, n8).
+number(f10_12, nC).
+number(f10_13, nC).
+number(f10_14, n6).
+number(f10_15, n1).
+number(f10_16, n9).
+number(f11_1, n4).
+number(f11_2, n8).
+number(f11_3, nC).
+number(f11_4, n9).
+number(f11_5, nB).
+number(f11_6, nF).
+number(f11_7, nC).
+number(f11_8, nC).
+number(f11_9, nC).
+number(f11_10, nG).
+number(f11_11, n5).
+number(f11_12, nE).
+number(f11_13, n3).
+number(f11_14, n1).
+number(f11_15, n2).
+number(f11_16, nC).
+number(f12_1, nE).
+number(f12_2, nB).
+number(f12_3, n4).
+number(f12_4, n3).
+number(f12_5, n9).
+number(f12_6, nD).
+number(f12_7, n2).
+number(f12_8, n6).
+number(f12_9, n6).
+number(f12_10, nC).
+number(f12_11, nB).
+number(f12_12, nG).
+number(f12_13, nF).
+number(f12_14, nB).
+number(f12_15, nF).
+number(f12_16, nA).
+number(f13_1, nA).
+number(f13_2, nB).
+number(f13_3, nE).
+number(f13_4, nF).
+number(f13_5, n9).
+number(f13_6, n3).
+number(f13_7, nG).
+number(f13_8, n1).
+number(f13_9, n8).
+number(f13_10, n2).
+number(f13_11, n5).
+number(f13_12, n8).
+number(f13_13, n4).
+number(f13_14, n2).
+number(f13_15, nE).
+number(f13_16, n3).
+number(f14_1, n6).
+number(f14_2, n3).
+number(f14_3, nC).
+number(f14_4, n5).
+number(f14_5, n1).
+number(f14_6, n9).
+number(f14_7, nC).
+number(f14_8, nG).
+number(f14_9, n3).
+number(f14_10, nE).
+number(f14_11, nF).
+number(f14_12, n7).
+number(f14_13, nA).
+number(f14_14, nF).
+number(f14_15, nA).
+number(f14_16, n6).
+number(f15_1, n2).
+number(f15_2, n4).
+number(f15_3, n8).
+number(f15_4, n9).
+number(f15_5, nA).
+number(f15_6, n1).
+number(f15_7, n5).
+number(f15_8, nD).
+number(f15_9, nD).
+number(f15_10, n3).
+number(f15_11, nF).
+number(f15_12, n6).
+number(f15_13, n5).
+number(f15_14, n1).
+number(f15_15, nD).
+number(f15_16, n9).
+number(f16_1, nF).
+number(f16_2, n9).
+number(f16_3, n1).
+number(f16_4, nG).
+number(f16_5, n7).
+number(f16_6, nD).
+number(f16_7, n9).
+number(f16_8, n4).
+number(f16_9, nF).
+number(f16_10, n3).
+number(f16_11, n2).
+number(f16_12, n8).
+number(f16_13, n9).
+number(f16_14, n7).
+number(f16_15, nB).
+number(f16_16, nD).

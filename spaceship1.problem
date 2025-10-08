@@ -1,0 +1,61 @@
+class StarShip {
+    Mission[] carriesOut
+}
+
+class CrewMember {
+    StarShip[1] assignedTo
+    Team[1] partOf opposite member
+}
+
+class Team {
+    Mission deployedOn opposite involves
+    CrewMember[1..*] member opposite partOf
+}
+
+class Mission {
+    Team[1..*] involves opposite deployedOn
+    StarShip[1..*] carriedOutBy
+}
+
+
+
+error noAssignment(c) <->
+    CrewMember(c),
+    !assignedTo(c, _).
+
+error emptyTeam(t) <->
+    Team(t),
+    !member(t, _).
+
+error missionWithoutTeam(m) <->
+    Mission(m),
+    !involves(m, _).
+
+error missionWithoutStarShip(m) <->
+    Mission(m),
+    !carriedOutBy(m, _).
+
+error memberAndTeamOnDifferentShips(c, t) <->
+    CrewMember(c),
+    Team(t),
+    member(t, c),
+    deployedOn(t, s1),
+    assignedTo(c, s2),
+    s1 != s2.
+
+error asymmetricTeamMember(c, t) <->
+    CrewMember(c),
+    Team(t),
+    partOf(c, t),
+    !member(t, c)
+;
+    CrewMember(c),
+    Team(t),
+    member(t, c),
+    !partOf(c, t).
+
+error emptyStarShip(s) <->
+    StarShip(s),
+    !assignedTo(_, s).
+
+scope node = 10..100.

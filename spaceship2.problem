@@ -1,0 +1,42 @@
+abstract class Vehicle {
+    Vehicle supports
+    Mission[1] assignedTo
+}
+
+class StarShip extends Vehicle.
+class ShuttleCraft extends Vehicle.
+
+class Mission.
+
+error invalidSupport(a, b) <->
+    StarShip(a),
+    ShuttleCraft(b),
+    supports(a, b).
+
+error supportsLoop(a) <->
+    supports+(a, a).
+error supportedVehicleNotOnMission(a) <->
+    supports(_, a),
+    !assignedTo(a, _).
+
+error supportNotOnSupportedMission(a) <->
+    supports(a, b),
+    assignedTo(b, m),
+    !assignedTo(a, m).
+
+error supportedNotOnSupportMission(a) <->
+    supports(a, b),
+    assignedTo(a, m),
+    !assignedTo(b, m).
+
+pred starshipOnMission(s, m) <->
+    StarShip(s),
+    Mission(m),
+    assignedTo(s, m).
+
+error missionWithoutStarship(m) <->
+    Mission(m),
+    !starshipOnMission(_, m).
+
+
+scope node = 10..100.
