@@ -799,7 +799,8 @@ public class ModelInitializer {
 		var parameterTypes = getParameterTypes(predicateDefinition, null);
 		var supersets = getSupersets(predicateDefinition);
 		final PredicateTranslator translator;
-		if(predicateDefinition.getKind() == PredicateKind.ERROR) {
+		var shouldGenerateUP = true;
+		if (predicateDefinition.getKind() == PredicateKind.ERROR && shouldGenerateUP) {
 			translator = new ErrorPredicateTranslatorWithUnitPropagation(partialRelation, query, parameterTypes,
 					supersets, mutable, defaultValue, nodePartialRelation);
 		} else {
