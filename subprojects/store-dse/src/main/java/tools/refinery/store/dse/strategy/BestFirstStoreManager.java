@@ -22,6 +22,8 @@ import tools.refinery.visualization.ModelVisualizerAdapter;
 import tools.refinery.visualization.statespace.VisualizationStore;
 import tools.refinery.visualization.statespace.internal.VisualizationStoreImpl;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Consumer;
 
 public class BestFirstStoreManager {
@@ -32,6 +34,7 @@ public class BestFirstStoreManager {
 	SolutionStore solutionStore;
 	EquivalenceClassStore equivalenceClassStore;
 	VisualizationStore visualizationStore;
+	private static final HashMap<String, Integer> maxMatchCounts = new HashMap<>();
 
 	public BestFirstStoreManager(ModelStore modelStore, int maxNumberOfSolutions) {
 		this.modelStore = modelStore;
@@ -88,5 +91,14 @@ public class BestFirstStoreManager {
 			var end = System.currentTimeMillis();
 			return (end - start);
 		}
+	}
+
+	public static Map<String, Integer> getMaxMatchCounts() {
+		return maxMatchCounts;
+	}
+
+	public static void updateMaxMatchCounts(String name, int count) {
+		BestFirstStoreManager.maxMatchCounts.put(name, Math.max(count,
+				BestFirstStoreManager.maxMatchCounts.getOrDefault(name, 0)));
 	}
 }

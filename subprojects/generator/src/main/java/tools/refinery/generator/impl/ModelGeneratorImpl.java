@@ -16,6 +16,7 @@ import tools.refinery.store.dse.transition.statespace.SolutionStore;
 import tools.refinery.store.map.Version;
 import tools.refinery.store.reasoning.interpretation.PartialInterpretation;
 import tools.refinery.store.reasoning.representation.PartialSymbol;
+import tools.refinery.visualization.ModelVisualizerAdapter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -99,6 +100,7 @@ public class ModelGeneratorImpl extends ConcreteModelFacade implements ModelGene
 		}
 		getModel().restore(solutions.getFirst().version());
 		solutionStore = bestFirst.getSolutionStore();
+		getModel().getAdapter(ModelVisualizerAdapter.class).visualize(bestFirst.getVisualizationStore());
 		return GeneratorResult.SUCCESS;
 	}
 

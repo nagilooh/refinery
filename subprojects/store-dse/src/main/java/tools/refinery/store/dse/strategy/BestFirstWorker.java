@@ -6,6 +6,7 @@
 package tools.refinery.store.dse.strategy;
 
 import org.jetbrains.annotations.Nullable;
+import tools.refinery.logic.dnf.AnyQuery;
 import tools.refinery.store.dse.propagation.PropagationAdapter;
 import tools.refinery.store.dse.transition.DesignSpaceExplorationAdapter;
 import tools.refinery.store.dse.transition.ObjectiveValue;
@@ -14,9 +15,12 @@ import tools.refinery.store.dse.transition.statespace.internal.ActivationStoreWo
 import tools.refinery.store.map.Version;
 import tools.refinery.store.model.Model;
 import tools.refinery.store.query.ModelQueryAdapter;
+import tools.refinery.store.query.interpreter.QueryInterpreterAdapter;
+import tools.refinery.store.query.interpreter.internal.QueryInterpreterAdapterImpl;
 import tools.refinery.store.statecoding.StateCoderAdapter;
 import tools.refinery.visualization.statespace.VisualizationStore;
 
+import java.util.HashMap;
 import java.util.Random;
 
 public class BestFirstWorker {
@@ -177,6 +181,14 @@ public class BestFirstWorker {
 
 		if (!visitResult.successfulVisit()) {
 			return new RandomVisitResult(null, visitResult.mayHaveMore());
+		}
+
+		queryAdapter.flushChanges();
+		var resultSets = ((QueryInterpreterAdapterImpl) queryAdapter).getResultSets();
+		for (var entry : resultSets.entrySet()) {
+			var name = entry.getKey().name();
+			var count = entry.getValue().size();
+			BestFirstStoreManager.updateMaxMatchCounts(name, count);
 		}
 
 		if (propagationAdapter != null) {

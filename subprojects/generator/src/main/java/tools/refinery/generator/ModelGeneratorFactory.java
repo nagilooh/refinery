@@ -20,6 +20,8 @@ import tools.refinery.store.reasoning.translator.TranslationException;
 import tools.refinery.store.statecoding.StateCodeCalculatorFactory;
 import tools.refinery.store.statecoding.StateCoderAdapter;
 import tools.refinery.store.statecoding.neighborhood.NeighborhoodCalculator;
+import tools.refinery.visualization.ModelVisualizerAdapter;
+import tools.refinery.visualization.internal.FileFormat;
 
 import java.util.Collection;
 import java.util.Set;
@@ -70,6 +72,12 @@ public final class ModelGeneratorFactory extends ModelFacadeFactory<ModelGenerat
 		var storeBuilder = ModelStore.builder()
 				.cancellationToken(cancellationToken)
 				.with(QueryInterpreterAdapter.builder())
+				.with(ModelVisualizerAdapter.builder()
+						.withOutputPath("test_output")
+						.withFormat(FileFormat.DOT)
+						.withFormat(FileFormat.SVG)
+						.saveDesignSpace()
+						.saveStates())
 				.with(PropagationAdapter.builder())
 				.with(StateCoderAdapter.builder()
 						.stateCodeCalculatorFactory(getStateCodeCalculatorFactory()))

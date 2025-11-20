@@ -10,6 +10,9 @@ import org.slf4j.LoggerFactory;
 import tools.refinery.store.map.Version;
 import tools.refinery.store.model.Interpretation;
 import tools.refinery.store.model.Model;
+import tools.refinery.store.query.ModelQueryAdapter;
+import tools.refinery.store.query.ModelQueryStoreAdapter;
+import tools.refinery.store.query.interpreter.internal.QueryInterpreterAdapterImpl;
 import tools.refinery.store.representation.AnySymbol;
 import tools.refinery.logic.term.truthvalue.TruthValue;
 import tools.refinery.store.tuple.Tuple;
@@ -87,6 +90,7 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 	private String createDotForCurrentModelState() {
 
 		var unaryTupleToInterpretationsMap = new HashMap<Tuple, LinkedHashSet<Interpretation<?>>>();
+		var matchCount = new HashMap<String, Integer>();
 
 		var sb = new StringBuilder();
 
@@ -126,11 +130,53 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 				}
 			}
 		}
+//		var queries = model.getAdapter(QueryInterpreterAdapterImpl.class).getResultSets();
+//		for (var entry : queries.entrySet()) {
+//			var query = entry.getKey();
+//			var resultSet = entry.getValue();
+//			matchCount.put(query.name(), resultSet.size());
+//		}
+//		sb.append((drawMatchCount(matchCount)));
 		for (var entry : unaryTupleToInterpretationsMap.entrySet()) {
 			sb.append(drawElement(entry));
 		}
 		sb.append("}");
 		return sb.toString();
+	}
+
+	private StringBuilder drawMatchCount(HashMap<String, Integer> matchCount) {
+		var sb = new StringBuilder();
+		var tableStyle =  " CELLSPACING=\"0\" BORDER=\"2\" CELLBORDER=\"0\" CELLPADDING=\"4\" STYLE=\"ROUNDED\"";
+		var backgroundColor = "#ffffff";
+
+
+		var matchCountName = "matchCount";
+		sb.append(matchCountName);
+		sb.append(" [\n");
+		sb.append("\tfillcolor=\"").append(backgroundColor).append("\"\n");
+		sb.append("\tlabel=");
+
+		sb.append("<<TABLE").append(tableStyle).append(">\n\t\t<TR><TD COLSPAN=\"3\" BORDER=\"2\" SIDES=\"B\">")
+				.append(matchCountName).append("</TD></TR>\n");
+
+		for (var entry : matchCount.entrySet()) {
+			var name = entry.getKey();
+			var count = entry.getValue();
+			var color = "black";
+			if (count > 0 && name.contains("#propagateError")) {
+				color = "red";
+			}
+			sb.append("\t\t<TR><TD><FONT COLOR=\"").append(color).append("\">");
+			sb.append(name);
+			sb.append("</FONT></TD><TD><FONT COLOR=\"").append(color).append("\">");
+			sb.append("=</FONT></TD><TD><FONT COLOR=\"").append(color).append("\">");
+			sb.append(count);
+			sb.append("</FONT></TD></TR>\n");
+		}
+		sb.append("\t\t</TABLE>>\n");
+		sb.append("]\n");
+
+		return sb;
 	}
 
 	private StringBuilder drawElement(Map.Entry<Tuple, LinkedHashSet<Interpretation<?>>> entry) {

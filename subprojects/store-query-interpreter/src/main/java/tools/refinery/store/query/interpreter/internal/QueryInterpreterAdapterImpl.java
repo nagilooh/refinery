@@ -21,6 +21,7 @@ public class QueryInterpreterAdapterImpl implements QueryInterpreterAdapter, Mod
 	private final Model model;
 	private final QueryInterpreterStoreAdapterImpl storeAdapter;
 	private final AdvancedInterpreterEngine queryEngine;
+
 	private final Map<AnyQuery, AnyResultSet> resultSets;
 	private boolean pendingChanges;
 
@@ -58,6 +59,10 @@ public class QueryInterpreterAdapterImpl implements QueryInterpreterAdapter, Mod
 		@SuppressWarnings("unchecked")
 		var typedResultSet = (ResultSet<T>) resultSet;
 		return typedResultSet;
+	}
+
+	public Map<AnyQuery, AnyResultSet> getResultSets() {
+		return resultSets;
 	}
 
 	@Override
