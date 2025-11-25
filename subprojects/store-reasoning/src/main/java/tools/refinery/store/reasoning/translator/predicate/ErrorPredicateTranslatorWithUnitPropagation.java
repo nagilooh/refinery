@@ -137,14 +137,12 @@ public class ErrorPredicateTranslatorWithUnitPropagation extends PredicateTransl
 						}
 						case AbstractDomainLessEqTerm abstractDomainLessEqTerm -> {
 							termType = TermType.LESS_EQ;
-							continue;
 						}
 						case AbstractDomainGreaterTerm abstractDomainGreaterTerm -> {
 							termType = TermType.GREATER;
 						}
 						case AbstractDomainGreaterEqTerm abstractDomainGreaterEqTerm -> {
 							termType = TermType.GREATER_EQ;
-							continue;
 						}
 						case AbstractDomainEqTerm  abstractDomainEqTerm -> {
 							termType = TermType.EQ;
@@ -170,6 +168,13 @@ public class ErrorPredicateTranslatorWithUnitPropagation extends PredicateTransl
 							swapped = true;
 						} else {
 							continue;
+						}
+						if (termType == TermType.LESS_EQ) {
+							constantTerm =
+									new ConstantTerm<>(IntInterval.class, constantTerm.getValue().add(IntInterval.ONE));
+						} else if (termType == TermType.GREATER_EQ) {
+							constantTerm = new ConstantTerm<>(IntInterval.class,
+									constantTerm.getValue().sub(IntInterval.ONE));
 						}
 						var target = partialCountTerm.getTarget();
 						if (target instanceof PartialRelation partialRelationTarget) {
@@ -222,19 +227,19 @@ public class ErrorPredicateTranslatorWithUnitPropagation extends PredicateTransl
 
 							Constraint countedConstraint;
 							final TruthValue toMerge;
-							if (termType == TermType.LESS && !swapped) {
+							if ((termType == TermType.LESS || termType == TermType.LESS_EQ) && !swapped) {
 								countedConstraint = ModalConstraint.of(Modality.MAY, Concreteness.PARTIAL,
 										partialRelationTarget);
 								toMerge = TruthValue.TRUE;
-							} else if (termType == TermType.LESS) {
+							} else if (termType == TermType.LESS || termType == TermType.LESS_EQ) {
 								countedConstraint = ModalConstraint.of(Modality.MUST, Concreteness.PARTIAL,
 										partialRelationTarget);
 								toMerge = TruthValue.FALSE;
-							} else if (termType == TermType.GREATER && !swapped) {
+							} else if ((termType == TermType.GREATER || termType == TermType.GREATER_EQ) && !swapped) {
 								countedConstraint = ModalConstraint.of(Modality.MUST, Concreteness.PARTIAL,
 										partialRelationTarget);
 								toMerge = TruthValue.FALSE;
-							} else if (termType == TermType.GREATER) {
+							} else if (termType == TermType.GREATER || termType == TermType.GREATER_EQ) {
 								countedConstraint = ModalConstraint.of(Modality.MAY, Concreteness.PARTIAL,
 										partialRelationTarget);
 								toMerge = TruthValue.TRUE;
