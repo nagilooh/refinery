@@ -1,10 +1,11 @@
 /*
- * SPDX-FileCopyrightText: 2024 The Refinery Authors <https://refinery.tools/>
+ * SPDX-FileCopyrightText: 2024-2025 The Refinery Authors <https://refinery.tools/>
  *
  * SPDX-License-Identifier: EPL-2.0
  */
 package tools.refinery.logic.term;
 
+import tools.refinery.logic.AbstractCall;
 import tools.refinery.logic.Constraint;
 import tools.refinery.logic.equality.LiteralEqualityHelper;
 import tools.refinery.logic.equality.LiteralHashCodeHelper;
@@ -19,7 +20,7 @@ import java.util.Set;
 
 // {@link Object#equals(Object)} is implemented by {@link AbstractTerm}.
 @SuppressWarnings("squid:S2160")
-public abstract class AbstractCallTerm<T> extends AbstractTerm<T> {
+public abstract class AbstractCallTerm<T> extends AbstractTerm<T> implements AbstractCall {
 	private final CallSite callSite;
 
 	protected AbstractCallTerm(Class<T> type, Constraint target, List<Variable> arguments) {
@@ -27,15 +28,18 @@ public abstract class AbstractCallTerm<T> extends AbstractTerm<T> {
 		callSite = new CallSite(target, arguments);
 	}
 
+	@Override
 	public Constraint getTarget() {
 		return callSite.getTarget();
 	}
 
+	@Override
 	public List<Variable> getArguments() {
 		return callSite.getArguments();
 	}
 
-	protected Set<Variable> getArgumentsOfDirection(ParameterDirection direction) {
+	@Override
+	public Set<Variable> getArgumentsOfDirection(ParameterDirection direction) {
 		return callSite.getArgumentsOfDirection(direction);
 	}
 
