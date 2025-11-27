@@ -12,4 +12,14 @@ public enum TermType {
 	GREATER_EQ,
 	EQ,
 	NOT_EQ;
+
+	public TermType swap() {
+		return switch (this) {
+			case LESS -> GREATER;
+			case GREATER -> LESS;
+			case LESS_EQ -> GREATER_EQ;
+			case GREATER_EQ -> LESS_EQ;
+			default -> this;
+		};
+	}
 }

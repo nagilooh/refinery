@@ -160,7 +160,6 @@ public class ErrorPredicateTranslatorWithUnitPropagation extends PredicateTransl
 			var right = abstractDomainBinaryTerm.getRight();
 			PartialCountTerm partialCountTerm;
 			ConstantTerm<IntInterval> constantTerm;
-			var swapped = false;
 			switch (left) {
 			case PartialCountTerm pc when right instanceof ConstantTerm<?> ct && ct.getValue() instanceof IntInterval -> {
 				partialCountTerm = pc;
@@ -169,7 +168,7 @@ public class ErrorPredicateTranslatorWithUnitPropagation extends PredicateTransl
 			case ConstantTerm<?> ct when ct.getValue() instanceof IntInterval && right instanceof PartialCountTerm pc -> {
 				partialCountTerm = pc;
 				constantTerm = (ConstantTerm<IntInterval>) ct;
-				swapped = true;
+				termType = termType.swap();
 			}
 			default -> {
 				return null;
@@ -194,7 +193,7 @@ public class ErrorPredicateTranslatorWithUnitPropagation extends PredicateTransl
 
 				Constraint countedConstraint;
 				TruthValue toMerge;
-				var countModality = calcualteModality(termType, swapped);
+				var countModality = calcualteModality(termType);
 				if (countModality == null) {
 					return null;
 				}
@@ -223,12 +222,10 @@ public class ErrorPredicateTranslatorWithUnitPropagation extends PredicateTransl
 		return null;
 	}
 
-	private Modality calcualteModality(TermType termType, boolean swapped) {
-		if (((termType == TermType.LESS || termType == TermType.LESS_EQ) && !swapped) ||
-				((termType == TermType.GREATER || termType == TermType.GREATER_EQ) && swapped)) {
+	private Modality calcualteModality(TermType termType) {
+		if (termType == TermType.LESS || termType == TermType.LESS_EQ) {
 			return Modality.MAY;
-		} else if ((termType == TermType.LESS || termType == TermType.LESS_EQ) ||
-				(termType == TermType.GREATER || termType == TermType.GREATER_EQ)) {
+		} else if (termType == TermType.GREATER || termType == TermType.GREATER_EQ) {
 			return Modality.MUST;
 		} else {
 			return null;
