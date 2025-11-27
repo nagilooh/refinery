@@ -109,6 +109,7 @@ public class ModelGeneratorImpl extends ConcreteModelFacade implements ModelGene
 			try {
 				return tryGenerate();
 			} catch (GeneratorTimeoutException e) {
+				generationTimes.add(-1L);
 				return GeneratorResult.TIMEOUT;
 			} finally {
 				timeoutFuture.cancel(true);

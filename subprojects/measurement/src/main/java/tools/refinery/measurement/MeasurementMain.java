@@ -1,9 +1,11 @@
 package tools.refinery.measurement;
 
+import tools.refinery.generator.GeneratorResult;
 import tools.refinery.generator.standalone.StandaloneRefinery;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class MeasurementMain {
 	public static void main(String[] args) throws IOException {
@@ -14,7 +16,7 @@ public class MeasurementMain {
 			generator.setMaxNumberOfSolutions(1);
 			for (int i = 0; i < 30; i++) {
 				System.out.println(i);
-				generator.generate();
+				generator.tryGenerateWithTimeout(10, TimeUnit.SECONDS);
 				System.out.println(generator.getSolutionCount());
 				System.out.println(generator.getGenerationTimes());
 			}
