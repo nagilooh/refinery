@@ -28,13 +28,13 @@ public class ModelGeneratorImpl extends ConcreteModelFacade implements ModelGene
 	private long randomSeed = 1;
 	private int maxNumberOfSolutions = 1;
 	private SolutionStore solutionStore;
-	private List<Long> generationTimes;
+	private final List<Long> generationTimes;
 
 	public ModelGeneratorImpl(Args args, CancellableCancellationToken cancellationToken) {
 		super(args);
 		this.cancellationToken = cancellationToken;
 		initialVersion = getModel().commit();
-		generationTimes = new ArrayList<Long>();
+		generationTimes = new ArrayList<>();
 	}
 
 	@Override

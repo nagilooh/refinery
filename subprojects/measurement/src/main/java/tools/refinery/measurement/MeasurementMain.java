@@ -12,14 +12,17 @@ public class MeasurementMain {
 		var loader = StandaloneRefinery.getProblemLoader();
 		var problem = loader.loadFile("fase-trainbenchmark.problem");
 //		problem = loader.loadScopeConstraints(problem, List.of(), List.of("node = 50..80"));
-		try (var generator = StandaloneRefinery.getGeneratorFactory().createGenerator(problem)) {
-			generator.setMaxNumberOfSolutions(1);
-			for (int i = 0; i < 30; i++) {
-				System.out.println(i);
-				generator.tryGenerateWithTimeout(10, TimeUnit.SECONDS);
-				System.out.println(generator.getSolutionCount());
-				System.out.println(generator.getGenerationTimes());
-			}
+		var start = System.currentTimeMillis();
+		var generator = StandaloneRefinery.getGeneratorFactory().createGenerator(problem);
+		var end = System.currentTimeMillis();
+		System.out.println("Initialization time: " + (end - start));
+		generator.setMaxNumberOfSolutions(1);
+		for (int i = 0; i < 30; i++) {
+			System.out.println(i);
+			generator.tryGenerateWithTimeout(10, TimeUnit.SECONDS);
+			System.out.println(generator.getSolutionCount());
+			System.out.println(generator.getGenerationTimes());
 		}
+		generator.close();
 	}
 }
