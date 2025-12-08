@@ -111,6 +111,8 @@ public class ModelInitializer {
 
 	private boolean keepShadowPredicates = true;
 
+	private boolean shouldGenerateUP = true;
+
 	private Problem problem;
 
 	private final Set<Problem> importedProblems = new HashSet<>();
@@ -799,7 +801,6 @@ public class ModelInitializer {
 		var parameterTypes = getParameterTypes(predicateDefinition, null);
 		var supersets = getSupersets(predicateDefinition);
 		final PredicateTranslator translator;
-		var shouldGenerateUP = true;
 		if (predicateDefinition.getKind() == PredicateKind.ERROR && shouldGenerateUP) {
 			translator = new ErrorPredicateTranslatorWithUnitPropagation(partialRelation, query, parameterTypes,
 					supersets, mutable, defaultValue, nodePartialRelation);
@@ -1004,6 +1005,10 @@ public class ModelInitializer {
 
 	public void setKeepNonExistingObjects(boolean keepNonExistingObjects) {
 		this.keepNonExistingObjects = keepNonExistingObjects;
+	}
+
+	public void setShouldGenerateUP(boolean shouldGenerateUP) {
+		this.shouldGenerateUP = shouldGenerateUP;
 	}
 
 	public boolean isKeepShadowPredicates() {

@@ -58,8 +58,9 @@ public final class ModelGeneratorFactory extends ModelFacadeFactory<ModelGenerat
 		return this;
 	}
 
-	public ModelGenerator tryCreateGenerator(Problem problem) {
+	public ModelGenerator tryCreateGenerator(Problem problem, boolean generateUP) {
 		var initializer = createModelInitializer();
+		initializer.setShouldGenerateUP(generateUP);
 		try {
 			initializer.readProblem(problem);
 		} catch (TracedException e) {
@@ -87,7 +88,11 @@ public final class ModelGeneratorFactory extends ModelFacadeFactory<ModelGenerat
 	}
 
 	public ModelGenerator createGenerator(Problem problem) {
-		var generator = tryCreateGenerator(problem);
+		return createGenerator(problem, false);
+	}
+
+	public ModelGenerator createGenerator(Problem problem,  boolean generateUP) {
+		var generator = tryCreateGenerator(problem, generateUP);
 		generator.throwIfInitializationFailed();
 		return generator;
 	}

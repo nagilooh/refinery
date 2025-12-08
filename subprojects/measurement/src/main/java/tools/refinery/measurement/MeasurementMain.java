@@ -13,7 +13,8 @@ public class MeasurementMain {
 		var problem = loader.loadFile("fase-trainbenchmark.problem");
 //		problem = loader.loadScopeConstraints(problem, List.of(), List.of("node = 50..80"));
 		var start = System.currentTimeMillis();
-		var generator = StandaloneRefinery.getGeneratorFactory().createGenerator(problem);
+		var shouldGenerateUP = true;
+		var generator = StandaloneRefinery.getGeneratorFactory().createGenerator(problem, shouldGenerateUP);
 		var end = System.currentTimeMillis();
 		System.out.println("Initialization time: " + (end - start));
 		generator.setMaxNumberOfSolutions(1);
