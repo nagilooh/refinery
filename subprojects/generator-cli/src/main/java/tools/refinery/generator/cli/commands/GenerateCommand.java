@@ -92,7 +92,6 @@ public class GenerateCommand implements Command {
 					var pathWithIndex = CliUtils.getFileNameWithIndex(outputPath, i + 1);
 					serializer.saveModel(generator, pathWithIndex, false);
 				}
-//				generator.loadSolution();
 			}
 		}
 		return RefineryCli.EXIT_SUCCESS;

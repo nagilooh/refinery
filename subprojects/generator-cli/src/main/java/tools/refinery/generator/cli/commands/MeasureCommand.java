@@ -15,17 +15,23 @@ import tools.refinery.generator.cli.utils.CliProblemSerializer;
 import tools.refinery.generator.cli.utils.CliUtils;
 import tools.refinery.generator.standalone.StandaloneRefinery;
 
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Parameters(commandDescription = "Measure the generation of a model from a partial model")
 public class MeasureCommand implements Command {
 	private final CliProblemLoader loader;
 	private final ModelGeneratorFactory generatorFactory;
+	private final CliProblemSerializer serializer;
 
 	private String inputPath;
+	private String outputPath;
+	private String csvPath;
 	private List<String> scopes = new ArrayList<>();
 	private List<String> overrideScopes = new ArrayList<>();
 	private int count = 1;
@@ -37,11 +43,22 @@ public class MeasureCommand implements Command {
                           CliProblemSerializer serializer) {
 		this.loader = loader;
 		this.generatorFactory = generatorFactory;
+		this.serializer = serializer;
 	}
 
 	@Parameter(description = "input path", required = true)
 	public void setInputPath(String inputPath) {
 		this.inputPath = inputPath;
+	}
+
+	@Parameter(names = {"-output", "-o"}, description = "Output path")
+	public void setOutputPath(String outputPath) {
+		this.outputPath = outputPath;
+	}
+
+	@Parameter(names = {"-csv", "-c"}, description = "Output path")
+	public void setCsvPath(String csvPath) {
+		this.csvPath = csvPath;
 	}
 
 	@Parameter(names = {"-scope", "-s"}, description = "Extra scope constraints")
@@ -87,8 +104,29 @@ public class MeasureCommand implements Command {
 			System.out.println(generator.getSolutionCount());
 			System.out.println(generator.getGenerationTimes());
 		}
+		var times = generator.getGenerationTimes();
+		String[] line = generator.getGenerationTimes().stream().map(String::valueOf).toArray(String[]::new);
+		if (csvPath != null) {
+			printToCsv(line, csvPath);
+		}
+		if (outputPath != null) {
+			int solutionCount = generator.getSolutionCount();
+			for (int i = 0; i < solutionCount; i++) {
+				generator.loadSolution(i);
+				var pathWithIndex = CliUtils.getFileNameWithIndex(outputPath, i + 1);
+				serializer.saveModel(generator, pathWithIndex, false);
+			}
+		}
 		generator.close();
 		return RefineryCli.EXIT_SUCCESS;
+	}
+
+	private void printToCsv(String[] data, String csvPath) throws IOException {
+		File csvOutputFile = new File(csvPath);
+		try (FileWriter fw = new FileWriter(csvOutputFile, true)) {
+			fw.write(String.join(",", data));
+			fw.write("\n");
+		}
 	}
 }
 
