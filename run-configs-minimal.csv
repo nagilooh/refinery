@@ -1,0 +1,11 @@
+name,size,filename,timeout,generate-up,runs
+TB1,10,fase-trainbenchmark-10.problem,1,false,2
+TB1,10,fase-trainbenchmark-10.problem,1,true,2
+TB1,15,fase-trainbenchmark-15.problem,1,false,2
+TB1,15,fase-trainbenchmark-15.problem,1,true,2
+TB1,20,fase-trainbenchmark-20.problem,1,false,2
+TB1,20,fase-trainbenchmark-20.problem,1,true,2
+SC2,20,yakindu-20.problem,1,false,2
+SC2,20,yakindu-20.problem,1,true,2
+SC2,30,yakindu-30.problem,1,false,2
+SC2,30,yakindu-30.problem,1,true,2
