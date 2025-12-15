@@ -8,22 +8,24 @@ package tools.refinery.generator.cli.commands;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import com.google.inject.Inject;
+import tools.refinery.generator.GeneratorResult;
 import tools.refinery.generator.ModelGeneratorFactory;
 import tools.refinery.generator.cli.RefineryCli;
 import tools.refinery.generator.cli.utils.CliProblemLoader;
 import tools.refinery.generator.cli.utils.CliProblemSerializer;
 import tools.refinery.generator.cli.utils.CliUtils;
-import tools.refinery.generator.standalone.StandaloneRefinery;
 
 import java.io.*;
-import java.sql.Timestamp;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Parameters(commandDescription = "Measure the generation of a model from a partial model")
 public class MeasureCommand implements Command {
@@ -31,18 +33,15 @@ public class MeasureCommand implements Command {
 	private final ModelGeneratorFactory generatorFactory;
 	private final CliProblemSerializer serializer;
 
-	private String inputPath;
-	private String outputPath;
-	private String csvPath;
-	private List<String> scopes = new ArrayList<>();
-	private List<String> overrideScopes = new ArrayList<>();
-	private int count = 1;
-	private boolean generateUP = false;
-	private long timeout = 10L;
-	private Timestamp timestamp;
+	DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
 
-	private List<String> header = new ArrayList<>(Arrays.asList("timestamp", "measurement-type", "input", "output",
-			"generate-up", "timeout", "runtime"));
+	private String configPath;
+	private String inputFolder;
+	private String outputFolder;
+	private boolean saveModels = false;
+
+	private List<String> header = new ArrayList<>(Arrays.asList("timestamp", "measurement-type", "input", "generate-up",
+			"timeout", "parse-time", "init-time", "generation-time", "exploration-time"));
 
 	@Inject
 	public MeasureCommand(CliProblemLoader loader, ModelGeneratorFactory generatorFactory,
@@ -52,96 +51,141 @@ public class MeasureCommand implements Command {
 		this.serializer = serializer;
 	}
 
-	@Parameter(description = "input path", required = true)
-	public void setInputPath(String inputPath) {
-		this.inputPath = inputPath;
+	@Parameter(description = "config path", required = true)
+	public void setConfigPath(String configPath) {
+		this.configPath = configPath;
 	}
 
-	@Parameter(names = {"-output", "-o"}, description = "Output path")
-	public void setOutputPath(String outputPath) {
-		this.outputPath = outputPath;
+	@Parameter(names = {"-input", "-i"}, description = "Input folder", required = true)
+	public void setInputFolder(String inputFolder) {
+		this.inputFolder = inputFolder;
 	}
 
-	@Parameter(names = {"-csv", "-c"}, description = "Output path", required = true)
-	public void setCsvPath(String csvPath) {
-		this.csvPath = csvPath;
+	@Parameter(names = {"-output", "-o"}, description = "Output folder", required = true)
+	public void setOutputFolder(String outputFolder) {
+		this.outputFolder = outputFolder;
 	}
 
-	@Parameter(names = {"-scope", "-s"}, description = "Extra scope constraints")
-	public void setScopes(List<String> scopes) {
-		this.scopes = scopes;
-	}
-
-	@Parameter(names = {"-scope-override", "-S"}, description = "Override scope constraints")
-	public void setOverrideScopes(List<String> overrideScopes) {
-		this.overrideScopes = overrideScopes;
-	}
-
-	@Parameter(names = {"-solution-number", "-n"}, description = "Maximum number of solutions")
-	public void setCount(int count) {
-		if (count <= 0) {
-			throw new IllegalArgumentException("Count must be positive");
-		}
-		this.count = count;
-	}
-
-	@Parameter(names = {"-generate-up", "-u"}, description = "Generate unit propagation rules")
-	public void setGenerateUP(boolean generateUP) {
-		this.generateUP = generateUP;
-	}
-
-	@Parameter(names = {"-timeout", "-t"}, description = "Timeout (seconds) for each generation")
-	public void setTimeout(long timeout) {
-		this.timeout = timeout;
+	@Parameter(names = {"-save", "-s"}, description = "Save models")
+	public void setSaveModels(boolean saveModels) {
+		this.saveModels = saveModels;
 	}
 
 	@Override
 	public int run() throws IOException {
 		Date date = new  Date();
 		date.getTime();
-		timestamp = new Timestamp(date.getTime());
-		var warmupInitializationConfiguration = new RunConfiguration(MeasurementType.WARMUP_INITIALIZATION,
-				generateUP, inputPath, outputPath, timeout, count);
-		var warmupConfiguration = new RunConfiguration(MeasurementType.WARMUP, generateUP, inputPath, outputPath,
-				timeout, count);
-		var initConfiguration = new RunConfiguration(MeasurementType.INITIALIZATION, generateUP, inputPath,
-				outputPath, timeout, count);
-		var measurementConfiguration = new RunConfiguration(MeasurementType.MEASUREMENT, generateUP, inputPath,
-				outputPath, timeout, count);
+		String timestamp = LocalDateTime.now().format(formatter);
+
+
+
+		var configFile = new File(configPath);
+		InputStream inputStream = new FileInputStream(configFile);
+		InputStreamReader streamReader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
+		BufferedReader reader = new BufferedReader(streamReader);
+		var headerLine = reader.readLine(); // skip header
+
+		var runConfigs = new ArrayList<RunConfiguration>();
+
+		var maxCount = 0;
+		for (String line; (line = reader.readLine()) != null;) {
+			var columns = line.split(",");
+			var name = columns[0];
+			var size = Integer.parseInt(columns[1]);
+			var inputPath = inputFolder + "/" + columns[2];
+			var timeout = Long.parseLong(columns[3]);
+			var generateUP = Boolean.parseBoolean(columns[4]);
+			var count = Integer.parseInt(columns[5]);
+			maxCount = Math.max(maxCount, count);
+			runConfigs.add(new RunConfiguration(name, size,inputPath,timeout,generateUP,count));
+		}
+
+		var warmupResults = new ArrayList<MeasurementResult>();
+		var measurementResults = new ArrayList<MeasurementResult>();
+
+
+
+		String csvPathWarmup = outputFolder + "/measurement_warmup_" + timestamp + ".csv";
+		String csvPath = outputFolder + "/measurement_" + timestamp + ".csv";
+
+		Files.createDirectories(Paths.get(outputFolder));
+
+		if (csvPathWarmup != null && !(new File(csvPathWarmup).exists() && new File(csvPathWarmup).length() > 0)) {
+			printHeaderToCsv(header, csvPathWarmup);
+		}
 
 		if (csvPath != null && !(new File(csvPath).exists() && new File(csvPath).length() > 0)) {
 			printHeaderToCsv(header, csvPath);
 		}
 
-		var problem = loader.loadProblem(inputPath, scopes, overrideScopes);
-
-		var start = System.currentTimeMillis();
-		var generator = generatorFactory.createGenerator(problem, generateUP);
-		var end = System.currentTimeMillis();
-		printToCsv(initConfiguration, (end - start), csvPath);
-		System.out.println("Initialization time: " + (end - start));
-		generator.setMaxNumberOfSolutions(1);
-		for (int i = 0; i < count; i++) {
-			header.add("generation-" + (i + 1));
-			System.out.println(i);
-			generator.tryGenerateWithTimeout(timeout, TimeUnit.SECONDS);
-			System.out.println(generator.getSolutionCount());
-			System.out.println(generator.getGenerationTimes());
-		}
-
-		for (var time : generator.getGenerationTimes()) {
-			printToCsv(measurementConfiguration, time, csvPath);
-		}
-		if (outputPath != null) {
-			int solutionCount = generator.getSolutionCount();
-			for (int i = 0; i < solutionCount; i++) {
-				generator.loadSolution(i);
-				var pathWithIndex = CliUtils.getFileNameWithIndex(outputPath, i + 1);
-				serializer.saveModel(generator, pathWithIndex, false);
+		for (var config : runConfigs) {
+			var warmupStart = System.currentTimeMillis();
+			while (System.currentTimeMillis() - warmupStart < TimeUnit.SECONDS.toMillis(30)) {
+				var result = runMeasurement(config, config.count() + 1);
+				warmupResults.add(result);
+				printToCsv(result, MeasurementType.WARMUP, csvPathWarmup);
+			}
+			for (int i = 0; i < config.count(); i++) {
+				System.out.println("Running measurement: " + config.name() + "size" + config.size() + " iteration " + (i + 1));
+				String pathWithIndex = null;
+				if (outputFolder != null) {
+					pathWithIndex = CliUtils.getFileNameWithIndex(outputFolder + "/" + config.input(), i + 1);
+				}
+				var result = runMeasurement(config, i, pathWithIndex);
+				measurementResults.add(result);
+				printToCsv(result, MeasurementType.MEASUREMENT, csvPath);
 			}
 		}
-		generator.close();
+
 		return RefineryCli.EXIT_SUCCESS;
+	}
+
+	private MeasurementResult runMeasurement(RunConfiguration config, int randomSeed) throws IOException {
+		return runMeasurement(config, randomSeed, null);
+	}
+
+	private MeasurementResult runMeasurement(RunConfiguration config, int randomSeed, String outputPath) throws IOException {
+		var timestamp = LocalDateTime.now().format(formatter);
+		var parseStart = System.currentTimeMillis();
+		var problem = loader.loadProblem(config.input());
+		var parseEnd = System.currentTimeMillis();
+		System.out.println("Parsing time: " + (parseEnd - parseStart));
+
+		var initStart = System.currentTimeMillis();
+		var generator = generatorFactory.createGenerator(problem, config.generateUp());
+		generator.setRandomSeed(randomSeed);
+		var initEnd = System.currentTimeMillis();
+		System.out.println("Initialization time: " + (initEnd - initStart));
+
+		generator.setMaxNumberOfSolutions(1);
+		var generationStart = System.currentTimeMillis();
+		var generationResult = generator.tryGenerateWithTimeout(config.timeout(), TimeUnit.SECONDS);
+		var generationEnd = System.currentTimeMillis();
+		if (generationResult != GeneratorResult.TIMEOUT) {
+			generationEnd = generationStart + 1L;
+		}
+		System.out.println("Generation time: " + (generationEnd - generationStart));
+		System.out.println(generator.getSolutionCount());
+		System.out.println(generator.getGenerationTimes());
+		System.out.println(saveModels);
+		System.out.println(outputPath != null);
+		System.out.println(generator.isLastGenerationSuccessful());
+		if (saveModels && outputPath != null && generator.isLastGenerationSuccessful()) {
+			System.out.println("Saving model to " + outputPath);
+			serializer.saveModel(generator, outputPath, false);
+		}
+		try {
+			Thread.sleep(200);
+		} catch (InterruptedException e) {
+			throw new RuntimeException(e);
+		}
+		generator.close();
+		var generationTimes = generator.getGenerationTimes();
+		if (generationTimes.size() > 1) {
+			throw new IllegalStateException("Expected only one generation time");
+		}
+		return new MeasurementResult(timestamp, config, (parseEnd - parseStart), (initEnd - initStart),
+				(generationEnd - generationStart), generator.getGenerationTimes().get(0));
 	}
 
 	private void printHeaderToCsv(List<String> header, String csvPath) throws IOException {
@@ -152,13 +196,14 @@ public class MeasureCommand implements Command {
 		}
 	}
 
-
-	private void printToCsv(RunConfiguration config, long runtime, String csvPath) throws IOException {
+	private void printToCsv(MeasurementResult result, MeasurementType measurementType, String csvPath) throws IOException {
+		var config = result.config();
 		File csvOutputFile = new File(csvPath);
 		try (FileWriter fw = new FileWriter(csvOutputFile, true)) {
-			fw.write(String.join(",", timestamp.toString(), config.measurementType().name(), config.input(),
-					config.output(), String.valueOf(config.generateUp()), String.valueOf(config.timeout()),
-					String.valueOf(runtime)));
+			fw.write(String.join(",", result.timestamp(), measurementType.name(), config.input(),
+					String.valueOf(config.generateUp()), String.valueOf(config.timeout()),
+					String.valueOf(result.parsingTime()), String.valueOf(result.initializationTime()),
+					String.valueOf(result.generationTime()), String.valueOf(result.explorationTime())));
 			fw.write("\n");
 		}
 	}
