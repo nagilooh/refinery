@@ -43,7 +43,7 @@ import java.util.*;
 @ComposedChecks(validators = {ProblemAnnotationValidator.class})
 public class ProblemValidator extends AbstractProblemValidator {
 	private static final String ISSUE_PREFIX = "tools.refinery.language.validation.ProblemValidator.";
-	public static final String UNEXPECTED_MODULE_NAME_ISSUE = ISSUE_PREFIX + "UNEXPECTED_MODULE_NAME";
+	public static final String INVALID_NAME_ISSUE = ISSUE_PREFIX + "INVALID_NAME";
 	public static final String INVALID_IMPORT_ISSUE = ISSUE_PREFIX + "INVALID_IMPORT";
 	public static final String SINGLETON_VARIABLE_ISSUE = ISSUE_PREFIX + "SINGLETON_VARIABLE";
 	public static final String UNBOUND_VARIABLE_ISSUE = ISSUE_PREFIX + "QUANTIFIED_VARIABLE";
@@ -131,7 +131,7 @@ public class ProblemValidator extends AbstractProblemValidator {
 					moduleKindName, qualifiedNameConverter.toString(expectedName),
 					qualifiedNameConverter.toString(name));
 			error(message, problem, ProblemPackage.Literals.NAMED_ELEMENT__NAME, INSIGNIFICANT_INDEX,
-					UNEXPECTED_MODULE_NAME_ISSUE);
+					INVALID_NAME_ISSUE);
 		}
 	}
 
@@ -151,6 +151,22 @@ public class ProblemValidator extends AbstractProblemValidator {
 		if (message != null) {
 			error(message, importStatement, ProblemPackage.Literals.IMPORT_STATEMENT__IMPORTED_MODULE,
 					INSIGNIFICANT_INDEX, INVALID_IMPORT_ISSUE);
+		}
+	}
+
+	@Check
+	public void checkEmptyName(NamedElement namedElement) {
+		var name = namedElement.getName();
+		boolean isNull = name == null;
+		if (isNull && namedElement instanceof Problem) {
+			// We already check for module names in {@link #checkModuleName(Problem)}.
+			return;
+		}
+		boolean isEmpty = "".equals(name);
+		if (isNull || isEmpty) {
+			var message = "A name must be specified for the element.";
+            error(message, namedElement, ProblemPackage.Literals.NAMED_ELEMENT__NAME, INSIGNIFICANT_INDEX,
+                    INVALID_NAME_ISSUE);
 		}
 	}
 
@@ -289,19 +305,25 @@ public class ProblemValidator extends AbstractProblemValidator {
 		if (multiplicity == null) {
 			return;
 		}
+		if (ProblemUtil.isAttribute(referenceDeclaration)) {
+			var message = "Multiplicity declaration not allowed for attributes.";
+			acceptError(message, multiplicity, null, 0, INVALID_MULTIPLICITY_ISSUE);
+			return;
+		}
 		if (ProblemUtil.isContainerReference(referenceDeclaration) && (
 				!(multiplicity instanceof RangeMultiplicity rangeMultiplicity) ||
 						rangeMultiplicity.getLowerBound() != 0 ||
 						rangeMultiplicity.getUpperBound() != 1)) {
-			var message = "The only allowed multiplicity for container references is [0..1]";
+			var message = "The only allowed multiplicity for container references is [0..1].";
 			acceptError(message, multiplicity, null, 0, INVALID_MULTIPLICITY_ISSUE);
+			return;
 		}
 		if ((multiplicity instanceof ExactMultiplicity exactMultiplicity &&
 				exactMultiplicity.getExactValue() == 0) ||
 				(multiplicity instanceof RangeMultiplicity rangeMultiplicity &&
 						rangeMultiplicity.getLowerBound() == 0 &&
 						rangeMultiplicity.getUpperBound() == 0)) {
-			var message = "The multiplicity constraint does not allow any reference links";
+			var message = "The multiplicity constraint does not allow any reference links.";
 			acceptWarning(message, multiplicity, null, 0, ZERO_MULTIPLICITY_ISSUE);
 		}
 	}
