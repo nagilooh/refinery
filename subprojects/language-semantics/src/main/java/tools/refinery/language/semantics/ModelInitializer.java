@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2021-2024 The Refinery Authors <https://refinery.tools/>
+ * SPDX-FileCopyrightText: 2021-2025 The Refinery Authors <https://refinery.tools/>
  *
  * SPDX-License-Identifier: EPL-2.0
  */
@@ -416,7 +416,7 @@ public class ModelInitializer {
 	private <A extends AbstractValue<A, C>, C> void createFunctionInfo(AbstractDomain<A, C> domain,
 																	   Relation relation) {
 		int arity = signatureProvider.getArity(relation);
-		var partialFunction = new PartialFunction<>(relation.getName(), arity, domain);
+		var partialFunction = new PartialFunction<>(getName(relation), arity, domain);
 		var info = new FunctionInfo<>(partialFunction, domain);
 		problemTrace.putRelation(relation, partialFunction);
 		functionInfoMap.put(relation, info);
@@ -805,7 +805,7 @@ public class ModelInitializer {
 			translator = new ErrorPredicateTranslatorWithUnitPropagation(partialRelation, query, parameterTypes,
 					supersets, mutable, defaultValue, nodePartialRelation);
 		} else {
-			translator = new PredicateTranslator(partialRelation, query, parameterTypes, supersets, true,
+			translator = new PredicateTranslator(partialRelation, query, parameterTypes, supersets, mutable,
 					defaultValue);
 		}
 

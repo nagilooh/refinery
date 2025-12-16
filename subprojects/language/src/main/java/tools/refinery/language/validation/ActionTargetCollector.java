@@ -11,6 +11,7 @@ import org.eclipse.xtext.EcoreUtil2;
 import org.eclipse.xtext.util.IResourceScopeCache;
 import org.eclipse.xtext.util.Tuples;
 import tools.refinery.language.model.problem.*;
+import tools.refinery.language.model.problem.impl.AtomImpl;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -54,6 +55,9 @@ public class ActionTargetCollector {
 		for (var statement : problem.getStatements()) {
 			if (statement instanceof RuleDefinition ruleDefinition) {
 				collectTargets(ruleDefinition, targets);
+			} else if (statement instanceof PredicateDefinition predicateDefinition &&
+					predicateDefinition.getKind() == PredicateKind.ERROR) {
+				collectTargets(predicateDefinition, targets);
 			}
 		}
 		return Collections.unmodifiableSet(targets);
@@ -66,6 +70,26 @@ public class ActionTargetCollector {
 					var target = assertionAction.getRelation();
 					if (target != null) {
 						targets.add(target);
+					}
+				}
+			}
+		}
+	}
+
+	private static void collectTargets(PredicateDefinition predicateDefinition, HashSet<Relation> targets) {
+		for (var body : predicateDefinition.getBodies()) {
+			for (var literal : body.getLiterals()) {
+				if (literal instanceof NegationExpr negationExpr) {
+					literal = negationExpr.getBody();
+				}
+				if (literal instanceof Atom atom) {
+					targets.add(atom.getRelation());
+				} else if (literal instanceof ComparisonExpr comparisonExpr) {
+					if (comparisonExpr.getLeft() instanceof Atom atom) {
+						targets.add(atom.getRelation());
+					}
+					if (comparisonExpr.getRight() instanceof Atom atom) {
+						targets.add(atom.getRelation());
 					}
 				}
 			}

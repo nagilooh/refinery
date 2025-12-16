@@ -1,10 +1,11 @@
 /*
- * SPDX-FileCopyrightText: 2021-2023 The Refinery Authors <https://refinery.tools/>
+ * SPDX-FileCopyrightText: 2021-2025 The Refinery Authors <https://refinery.tools/>
  *
  * SPDX-License-Identifier: EPL-2.0
  */
 package tools.refinery.logic.literal;
 
+import tools.refinery.logic.AbstractCall;
 import tools.refinery.logic.Constraint;
 import tools.refinery.logic.equality.LiteralEqualityHelper;
 import tools.refinery.logic.equality.LiteralHashCodeHelper;
@@ -17,22 +18,25 @@ import java.util.*;
 
 // {@link Object#equals(Object)} is implemented by {@link AbstractLiteral}.
 @SuppressWarnings("squid:S2160")
-public abstract class AbstractCallLiteral extends AbstractLiteral {
+public abstract class AbstractCallLiteral extends AbstractLiteral implements AbstractCall {
 	private final CallSite callSite;
 
 	protected AbstractCallLiteral(Constraint target, List<Variable> arguments) {
 		callSite = new CallSite(target, arguments);
 	}
 
+	@Override
 	public Constraint getTarget() {
 		return callSite.getTarget();
 	}
 
+	@Override
 	public List<Variable> getArguments() {
 		return callSite.getArguments();
 	}
 
-	protected Set<Variable> getArgumentsOfDirection(ParameterDirection direction) {
+	@Override
+	public Set<Variable> getArgumentsOfDirection(ParameterDirection direction) {
 		return callSite.getArgumentsOfDirection(direction);
 	}
 

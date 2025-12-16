@@ -1,3 +1,7 @@
+% Copyright (c) 2025 The Refinery Authors <https://refinery.tools/>
+%
+% SPDX-License-Identifier: EPL-2.0
+
 abstract class Vehicle {
     Vehicle supports
     Mission assignedTo
