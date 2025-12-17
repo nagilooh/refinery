@@ -1,0 +1,191 @@
+class RailwayContainer {
+    contains Route[] routes
+    contains Region[] regions
+}
+class Region {
+    contains Sensor[] sensors
+    contains TrackElement elements
+}
+class Semaphore {
+    Signal signal
+}
+class Route {
+    contains SwitchPosition[] follows opposite route
+    Sensor[2..*] requires
+    Semaphore entry
+    Semaphore exit
+    boolean active
+}
+class SwitchPosition {
+    container Route route opposite follows
+    Switch[1] target opposite positions
+    Position position
+}
+abstract class TrackElement {
+    Sensor[] monitoredBy opposite monitors
+    TrackElement[] connectsTo
+}
+class Sensor {
+    TrackElement[] monitors opposite monitoredBy
+}
+class Segment extends TrackElement {
+    contains Semaphore[] semaphores
+    int length
+}
+class Switch extends TrackElement {
+    SwitchPosition[] positions opposite target
+    Position currentPosition
+    TrackElement straight
+    TrackElement diverging
+}
+enum Position {
+    FAILURE,
+    STRAIGHT,
+    DIVERGING
+}
+enum Signal {
+    FAILURE,
+    STOP,
+    GO
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+error sameStraightDiverging(switch, target) <->
+    straight(switch,target),
+    diverging(switch,target).
+
+error noDiverging(switch) <->
+    Switch(switch),
+    !diverging(switch,_).
+
+error noStraight(switch) <->
+    Switch(switch),
+    !straight(switch,_).
+
+error tooManyConncetions(segment) <->
+    Segment(segment),
+    count{connectsTo(segment, _)} > 2.
+
+
+// Track elements must not connect to themselves
+error selfLoop(e) <->
+    TrackElement(e),
+    connectsTo(e, e)
+;
+    Switch(e),
+    straight(e, e)
+;
+    Switch(e),
+    diverging(e, e).
+
+
+// Switches must connect to at least two distinct TrackElements
+error underconnectedSwitch(sw) <->
+    Switch(sw),
+    !switchWithTwoConnections(sw, _, _).
+
+pred switchWithTwoConnections(sw, te1, te2) <->
+    Switch(sw),
+    connectsTo(sw, te1),
+    connectsTo(sw, te2),
+    te1 != te2.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+// Every Sensor must monitor at least one TrackElement
+error sensorWithoutElement(sensor) <->
+    Sensor(sensor),
+    !monitors(sensor, _).
+
+// A Sensor should not monitor more than one Switch
+error sensorMonitorsMultipleSwitches(sensor, sw1, sw2) <->
+    Sensor(sensor),
+    monitors(sensor, sw1),
+    monitors(sensor, sw2),
+    Switch(sw1),
+    Switch(sw2),
+    sw1 != sw2.
+
+// A Region should not contain two Sensors monitoring the same TrackElement
+error duplicateMonitors(region, sensor1, sensor2, te) <->
+    Region(region),
+    sensors(region, sensor1),
+    sensors(region, sensor2),
+    sensor1 != sensor2,
+    monitors(sensor1, te),
+    monitors(sensor2, te).
+
+error emptyRegion(region) <->
+    Region(region),
+    !elements(region, _).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Attribute contraint
+error posLength(segment) <->
+    Segment(segment),
+    length(segment) <= 0.
+
+% good example for type constraint
+% _ might make it more difficult to explain than optimal
+error switchMonitored(sw) <-> 
+    Switch(sw),
+    !monitoredBy(sw, _).
+
+% propagation rule monitoredIsSwitch(sw) <->
+%     !monitoredBy(sw, _)
+% ==>
+%     !Switch(sw).
+
+error routeSensor(route, sensor, swP, sw) <->
+    monitoredBy(sw, sensor),
+    target(swP, sw),
+    follows(route, swP),
+    !requires(route, sensor).
+
+error switchSet(semaphore, route, swP, sw) <->
+    active(route),
+    entry(route, semaphore),
+    follows(route, swP),
+    target(swP, sw),
+
+    signal(semaphore, GO),
+    position(swP, swpPosition),
+    currentPosition(sw, swCurrentPosition),
+    swCurrentPosition != swpPosition.
+
+% pred connected(segment1, segment2) <->
+%     Segment(segment1),
+%     Segment(segment2),
+%     connectsTo(segment1, segment2).
+
+% error connectedSegments(sensor) <->
+%     Sensor(sensor),
+%     monitoredBy(segment1, sensor),
+%     connectsTo+(segment1, segment2),
+%     count(segment2) > 5.
+
+error connectedSegments(sensor, segment1, segment2, segment3, segment4, segment5, segment6) <->
+    connectsTo(segment1, segment2),
+    connectsTo(segment2, segment3),
+    connectsTo(segment3, segment4),
+    connectsTo(segment4, segment5),
+    connectsTo(segment5, segment6),
+    monitoredBy(segment1, sensor),
+    monitoredBy(segment2, sensor),
+    monitoredBy(segment3, sensor),
+    monitoredBy(segment4, sensor),
+    monitoredBy(segment5, sensor),
+    monitoredBy(segment6, sensor).
+
+error semaphoreNeighbor(route1, route2) <->
+    exit(route1, semaphore),
+    requires(route1, sensor1),
+    monitoredBy(te1, sensor1),
+    connectsTo(te1, te2),
+    monitoredBy(te2, sensor2),
+    requires(route2, sensor2),
+    !entry(route2, semaphore),
+    route1 != route2.
+
