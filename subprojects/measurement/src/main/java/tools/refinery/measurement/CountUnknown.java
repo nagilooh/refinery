@@ -15,8 +15,9 @@ import java.util.Arrays;
 import java.util.List;
 
 public class CountUnknown {
-	static List<String> ignored = Arrays.asList("entryInRegion," +
-					"noEntryInRegion",
+	static List<String> ignored = Arrays.asList(
+			"entryInRegion," +
+			"noEntryInRegion",
 			"multipleEntryInRegion",
 			"incomingToEntry",
 			"noOutgoingTransitionFromEntry",
@@ -54,7 +55,7 @@ public class CountUnknown {
 			"computed");
 
 	public static void main(String[] args) throws IOException {
-		Path dir = Paths.get("test_output");
+		Path dir = Paths.get("output-measurement-uncertainty/generated-models");
 
 		if (!Files.isDirectory(dir)) {
 			System.err.println("Directory not found: " + dir);
@@ -65,7 +66,8 @@ public class CountUnknown {
 			for (Path path : stream) {
 				System.out.println("Processing file: " + path.getFileName());
 				Problem parsedProblem = StandaloneRefinery.getProblemLoader().loadFile(path.toString());
-				ModelSemantics semantics = StandaloneRefinery.getSemanticsFactory().tryCreateSemantics(parsedProblem);
+				ModelSemantics semantics = StandaloneRefinery.getSemanticsFactory().tryCreateSemantics(parsedProblem,
+						false);
 				var trace = semantics.getProblemTrace();
 
 				int unknownCount = 0;

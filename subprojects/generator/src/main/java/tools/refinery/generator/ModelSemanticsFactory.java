@@ -42,13 +42,18 @@ public final class ModelSemanticsFactory extends ModelFacadeFactory<ModelSemanti
 	}
 
 	public ModelSemantics createSemantics(Problem problem) {
-		var semantics = tryCreateSemantics(problem);
+		return createSemantics(problem, false);
+	}
+
+	public ModelSemantics createSemantics(Problem problem, boolean generateUP) {
+		var semantics = tryCreateSemantics(problem, generateUP);
 		semantics.throwIfInitializationFailed();
 		return semantics;
 	}
 
-	public ModelSemantics tryCreateSemantics(Problem problem) {
+	public ModelSemantics tryCreateSemantics(Problem problem, boolean generateUP) {
 		var initializer = createModelInitializer();
+		initializer.setShouldGenerateUP(generateUP);
 		try {
 			initializer.readProblem(problem);
 		} catch (TracedException e) {

@@ -125,20 +125,38 @@ public class MeasureCommand implements Command {
 //				System.out.println("Skipping measurement due to previous timeout: " + config.name() + " size " + config.size());
 //				continue;
 //			}
-			var warmupStart = System.currentTimeMillis();
-			while (System.currentTimeMillis() - warmupStart < TimeUnit.SECONDS.toMillis(5)) {
-				var result = runMeasurement(config, config.count() + 1);
-				warmupResults.add(result);
-				printToCsv(result, MeasurementType.WARMUP, csvPathWarmup);
-			}
-			for (int i = 0; i < config.count(); i++) {
+//			var warmupStart = System.currentTimeMillis();
+//			while (System.currentTimeMillis() - warmupStart < TimeUnit.SECONDS.toMillis(5)) {
+//				var result = runMeasurement(config, config.count() + 1);
+//				warmupResults.add(result);
+//				printToCsv(result, MeasurementType.WARMUP, csvPathWarmup);
+//			}
+//			for (int i = 0; i < config.count(); i++) {
+//				System.out.println("Running measurement: " + config.name() + " size " + config.size() + " iteration " + (i + 1));
+//				String pathWithIndex = null;
+//				if (outputFolder != null) {
+//					pathWithIndex = CliUtils.getFileNameWithIndex(config.output(), i + 1);
+//				}
+//				var result = runMeasurement(config, i, pathWithIndex);
+//				measurementResults.add(result);
+////				if (result.generatorResult() == GeneratorResult.TIMEOUT) {
+////					timedOut.put(config.name() + "_" + config.generateUp(), config.size());
+////				}
+//				printToCsv(result, MeasurementType.MEASUREMENT, csvPath);
+//			}
+			var i = 0;
+			var seed = 0;
+			while (i < config.count()) {
 				System.out.println("Running measurement: " + config.name() + " size " + config.size() + " iteration " + (i + 1));
 				String pathWithIndex = null;
 				if (outputFolder != null) {
 					pathWithIndex = CliUtils.getFileNameWithIndex(config.output(), i + 1);
 				}
-				var result = runMeasurement(config, i, pathWithIndex);
+				var result = runMeasurement(config, seed++, pathWithIndex);
 				measurementResults.add(result);
+				if (result.generatorResult() != GeneratorResult.TIMEOUT) {
+					i++;
+				}
 //				if (result.generatorResult() == GeneratorResult.TIMEOUT) {
 //					timedOut.put(config.name() + "_" + config.generateUp(), config.size());
 //				}
@@ -173,11 +191,6 @@ public class MeasureCommand implements Command {
 		var generationResult = generator.tryGenerateWithTimeout(config.timeout(), TimeUnit.SECONDS);
 		var generationEnd = System.currentTimeMillis();
 		var generationTime = (generationEnd - generationStart);
-		if (generationResult == GeneratorResult.TIMEOUT) {
-			generationTime = -1;
-		} else if (generationResult == GeneratorResult.UNSATISFIABLE) {
-			generationTime = -2;
-		}
 		System.out.println("Generation time: " + generationTime);
 		if (saveModels && outputPath != null && generator.isLastGenerationSuccessful()) {
 			System.out.println("Saving model to " + outputPath);
