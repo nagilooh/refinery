@@ -21,6 +21,8 @@ def generate_scope_line(filename: str, first_node: int) -> str:
         return generate_tb2_scope_line(first_node)
     elif filename == "simplified-railway.problem":
         return generate_tb3_scope_line(first_node)
+    elif filename == "simplified-statechart.problem":
+        return generate_sc1_scope_line(first_node)
     elif filename == "yakindu.problem":
         return generate_sc2_scope_line(first_node)
 
@@ -72,12 +74,23 @@ def generate_tb3_scope_line(first_node: int) -> str:
     )
 
 
+def generate_sc1_scope_line(first_node: int) -> str:
+    """
+    Generate the scope line according to the rules.
+    """
+    second_node = math.ceil(first_node * 1.2)     # 20% larger
+
+    return (
+        f"scope node = {first_node}..{second_node}."
+    )
+
+
 def generate_sc2_scope_line(first_node: int) -> str:
     """
     Generate the scope line according to the rules.
     """
     second_node = math.ceil(first_node * 1.2)     # 20% larger
-    region = math.ceil(first_node * 0.1)  # 10% of first value
+    region = math.ceil(first_node * 0.1)  # 5% of first value
     choice = math.ceil(first_node * 0.05)  # 5% of first value
 
     return (
@@ -89,7 +102,8 @@ def generate_sc2_scope_line(first_node: int) -> str:
 
 
 for file_path in INPUT_DIR.iterdir():
-    if file_path.name not in ["fase-trainbenchmark.problem", "fase-trainbenchmark-simple.problem", "simplified-railway.problem", "yakindu.problem"]:
+    if file_path.name not in ["fase-trainbenchmark.problem", "fase-trainbenchmark-simple.problem", 
+                              "simplified-railway.problem", "yakindu.problem", "simplified-statechart.problem"]:
         continue
     if not file_path.is_file():
         continue

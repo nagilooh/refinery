@@ -39,41 +39,43 @@ class Statechart extends CompositeElement.
 
 %% Entry
 
-pred entryInRegion(Region r, Entry e) <->
+pred entryInRegion(r, Entry e) <->
     vertices(r, e).
 
 error noEntryInRegion(Region r) <->
     !entryInRegion(r, _).
 
-error multipleEntryInRegion(Region r) <->
-    entryInRegion(r, e1),
-    entryInRegion(r, e2),
+error multipleEntryInRegion(r) <->
+    Entry(e1),
+    Entry(e2),
+    vertices(r, e1),
+    vertices(r, e2),
     e1 != e2.
 
-error incomingToEntry(Transition t, Entry e) <->
+error incomingToEntry(t, Entry e) <->
     target(t, e).
 
 error noOutgoingTransitionFromEntry(Entry e) <->
     !source(_, e).
 
-error multipleTransitionFromEntry(Entry e, Transition t1, Transition t2) <->
+error multipleTransitionFromEntry(Entry e, t1, t2) <->
     outgoingTransition(e, t1),
     outgoingTransition(e, t2),
     t1 != t2.
 
 %% Exit
 
-error outgoingFromExit(Transition t, Exit e) <->
+error outgoingFromExit(t, Exit e) <->
     source(t, e).
 
 %% Final
 
-error outgoingFromFinal(Transition t, FinalState e) <->
+error outgoingFromFinal(t, FinalState e) <->
     source(t, e).
 
 %% State vs Region
 
-pred stateInRegion(Region r, State s) <->
+pred stateInRegion(r, State s) <->
     vertices(r, s).
 
 error noStateInRegion(Region r) <->

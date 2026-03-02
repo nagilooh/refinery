@@ -4,7 +4,7 @@ from pathlib import Path
 
 # ---------------- Configuration ----------------
 INPUT_DIR = Path("gen")          # folder with .problem files
-OUTPUT_CSV = Path("measurement.csv")
+OUTPUT_CSV = Path("measurement-uncertainty.csv")
 
 TIMEOUT = 30
 RUNS = 30
@@ -14,6 +14,7 @@ NAME_MAP = {
     "fase-trainbenchmark": "TB1",
     "fase-trainbenchmark-simple": "TB2",
     "simplified-railway": "TB3",
+    "simplified-statechart": "SC1",
     "yakindu": "SC2",
 }
 # ------------------------------------------------
