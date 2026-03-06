@@ -150,4 +150,4 @@ error switchMonitored(sw) <->
 %     length(segment) <= 0.
 
 
-scope Sensor = 1..*
+scope Sensor = 1..*.

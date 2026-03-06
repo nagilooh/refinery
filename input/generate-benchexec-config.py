@@ -5,13 +5,13 @@ from pathlib import Path
 
 # ---------------- Configuration ----------------
 INPUT_DIR = Path('benchmark-set/generate')          # folder with .problem files
-OUTPUT_XML = Path('benchmark-set/benchmark-refinery-test2.xml')
+OUTPUT_XML = Path('benchmark-set/refinery-up-generation.xml')
 
-TIMEOUT = 30
-RUNS = 5
+TIMEOUT = 60
+RUNS = 30
 WARMUPTIME = 5
 
-NUM_GENERATED = 5           # number of new files to generate per input file
+NUM_GENERATED = 10           # number of new files to generate per input file
 START_NODE = 10             # starting value for the first node number
 NODE_STEP = 10              # increment for each generated file
 
@@ -30,24 +30,25 @@ NODE_STEP = 10              # increment for each generated file
 root = ET.Element('benchmark', attrib={
     'tool': 'refinery', 
     'displayName': 'refinery', 
-    'timelimit': f'{str(math.ceil(TIMEOUT * RUNS / 60 + 2))} min', 
-    'memlimit': '8 GB',
-    'cpuCores': '1'})
+    'timelimit': f'{str(math.ceil(TIMEOUT * RUNS / 60 + WARMUPTIME + 2))} min', 
+    'memlimit': '15 GB',
+    'cpuCores': '2'})
 
 ET.SubElement(root, 'option').text = 'measure'
 ET.SubElement(root, 'option', attrib={'name': '-timeout'}).text = f'{TIMEOUT}'
 ET.SubElement(root, 'option', attrib={'name': '-runs'}).text = f'{RUNS}'
 ET.SubElement(root, 'option', attrib={'name': '-warmuptime'}).text = f'{WARMUPTIME}'
-ET.SubElement(root, 'option', attrib={'name': '-output'}).text = 'output/${benchmark_date}-${rundefinition_name}-${inputfile_name}'
+ET.SubElement(root, 'option', attrib={'name': '-output'}).text = '.'
 
-for generate_up in ('false', 'true'):
+for generate_up in (False, True):
     for i in range(NUM_GENERATED):
         size_lower = START_NODE + i * NODE_STEP
         size_upper = math.ceil(size_lower * 1.2)
 
         rundefinition = ET.SubElement(root, 'rundefinition', attrib={'name': f'size_{size_lower}-genup_{generate_up}'})
         ET.SubElement(rundefinition, 'option', attrib={'name': '-scope'}).text = f'node={size_lower}..{size_upper}'
-        ET.SubElement(rundefinition, 'option', attrib={'name': '-generate-up'}).text = f'{generate_up}'
+        if generate_up:
+            ET.SubElement(rundefinition, 'option', attrib={'name': '-generate-up'})
 
 # for file_path in INPUT_DIR.iterdir():
 #     print(f'Processing {file_path}...')
