@@ -88,7 +88,7 @@ public final class ModelGeneratorFactory extends ModelFacadeFactory<ModelGenerat
 	}
 
 	public ModelGenerator createGenerator(Problem problem) {
-		return createGenerator(problem, false);
+		return createGenerator(problem, true);
 	}
 
 	public ModelGenerator createGenerator(Problem problem,  boolean generateUP) {

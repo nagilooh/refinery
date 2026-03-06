@@ -42,7 +42,7 @@ public final class ModelSemanticsFactory extends ModelFacadeFactory<ModelSemanti
 	}
 
 	public ModelSemantics createSemantics(Problem problem) {
-		return createSemantics(problem, false);
+		return createSemantics(problem, true);
 	}
 
 	public ModelSemantics createSemantics(Problem problem, boolean generateUP) {
@@ -52,7 +52,7 @@ public final class ModelSemanticsFactory extends ModelFacadeFactory<ModelSemanti
 	}
 
 	public ModelSemantics tryCreateSemantics(Problem problem) {
-		return tryCreateSemantics(problem, false);
+		return tryCreateSemantics(problem, true);
 	}
 
 	public ModelSemantics tryCreateSemantics(Problem problem, boolean generateUP) {

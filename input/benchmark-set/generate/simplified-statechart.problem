@@ -1,0 +1,60 @@
+import builtin::view.
+
+
+class State {
+    //string name
+}
+atom idle,seeding.
+State(idle).
+State(seeding).
+
+class Transition {
+    Label[1] label 
+    State[1] source
+    State[1] target
+}
+
+enum Label {
+    CANCEL, START, SHARE, RESTART, COMPLETED, PEERSDONE
+}
+
+@show
+error pred HC1(t1, t2) <->
+    % Transition(t1),
+    % Transition(t2),
+    label(t1,l),
+    label(t2,l),
+    t1 != t2,
+    source(t1, s),
+    source(t2, s).
+
+@show
+error pred HC2(s) <->
+    State(s),
+    !source(_, s).
+
+pred hasTransition(s1, s2) <->
+    source(t, s1),
+    target(t, s2).
+    
+@show
+error pred SC1(i, s) <->
+    % State(i),
+    % State(s),
+    i == idle,
+    s  == seeding,
+    !hasTransition(i, s).
+
+pred hasCancle(s) <->
+    source(t, s),
+    target(t, i),
+    label(t,CANCEL),
+    i == idle.    
+
+@show
+error pred SC2(s) <->
+    State(s),
+    !hasCancle(s).
+
+
+

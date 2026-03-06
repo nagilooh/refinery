@@ -32,13 +32,14 @@ def generate_tb1_scope_line(first_node: int) -> str:
     Generate the scope line according to the rules.
     """
     second_node = math.ceil(first_node * 1.2)     # 20% larger
-    segment_switch = math.ceil(first_node * 0.1)  # 10% of first value
+    # segment_switch = math.ceil(first_node * 0.1)  # 10% of first value
 
     return (
         f"scope node = {first_node}..{second_node}, "
         f"RailwayContainer = 1, "
-        f"Segment = {segment_switch}..*, "
-        f"Switch = {segment_switch}..*."
+        f"Switch = 1..*, "
+        f"Route = 1..*, "
+        f"SwitchPosition = 1..*."
     )
 
 
@@ -47,16 +48,13 @@ def generate_tb2_scope_line(first_node: int) -> str:
     Generate the scope line according to the rules.
     """
     second_node = math.ceil(first_node * 1.2)     # 20% larger
-    region = math.ceil(first_node * 0.05)  # 5% of first value
-    sensor = math.ceil(first_node * 0.05)  # 5% of first value
-    segment_switch = math.ceil(first_node * 0.1)  # 10% of first value
+    # region = math.ceil(first_node * 0.05)  # 5% of first value
+    # sensor = math.ceil(first_node * 0.05)  # 5% of first value
+    # segment_switch = math.ceil(first_node * 0.1)  # 10% of first value
 
     return (
         f"scope node = {first_node}..{second_node}, "
-        f"Region = {region}..*, "
-        f"Sensor = {sensor}..*, "
-        f"Segment = {segment_switch}..*, "
-        f"Switch = {segment_switch}..*."
+        f"Sensor = 1..*"
     )
 
 
@@ -65,12 +63,11 @@ def generate_tb3_scope_line(first_node: int) -> str:
     Generate the scope line according to the rules.
     """
     second_node = math.ceil(first_node * 1.2)     # 20% larger
-    segment_switch = math.ceil(first_node * 0.1)  # 10% of first value
+    # segment_switch = math.ceil(first_node * 0.1)  # 10% of first value
 
     return (
         f"scope node = {first_node}..{second_node}, "
-        f"Segment = {segment_switch}..*, "
-        f"Switch = {segment_switch}..*."
+        f"Switch = 1..*."
     )
 
 
@@ -90,13 +87,13 @@ def generate_sc2_scope_line(first_node: int) -> str:
     Generate the scope line according to the rules.
     """
     second_node = math.ceil(first_node * 1.2)     # 20% larger
-    region = math.ceil(first_node * 0.1)  # 5% of first value
-    choice = math.ceil(first_node * 0.05)  # 5% of first value
+    # region = math.ceil(first_node * 0.1)  # 5% of first value
+    # choice = math.ceil(first_node * 0.05)  # 5% of first value
 
     return (
         f"scope node = {first_node}..{second_node}, "
-        f"Region = {region}..*, "
-        f"Choice = {choice}..*, "
+        f"Region = 1..*, "
+        f"Choice = 1..*, "
         f"Statechart += 0."
     )
 

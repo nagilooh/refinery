@@ -12,9 +12,9 @@ class Semaphore {
 class Route {
     contains SwitchPosition[] follows opposite route
     Sensor[2..*] requires
-    Semaphore[1] entry
-    Semaphore[1] exit
-    Boolean[1] active
+    Semaphore entry
+    Semaphore exit
+    boolean active
 }
 class SwitchPosition {
     container Route route opposite follows
@@ -34,7 +34,9 @@ class Segment extends TrackElement {
 }
 class Switch extends TrackElement {
     SwitchPosition[] positions opposite target
-    Position[1] currentPosition
+    Position currentPosition
+    TrackElement straight
+    TrackElement diverging
 }
 enum Position {
     FAILURE,
@@ -47,19 +49,87 @@ enum Signal {
     GO
 }
 
-enum Boolean {
-    TRUE,
-    FALSE
-}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% Attribute constraint
+error sameStraightDiverging(switch, target) <->
+    straight(switch,target),
+    diverging(switch,target).
+
+error noDiverging(switch) <->
+    Switch(switch),
+    !diverging(switch,_).
+
+error noStraight(switch) <->
+    Switch(switch),
+    !straight(switch,_).
+
+error tooManyConncetions(segment) <->
+    Segment(segment),
+    count{connectsTo(segment, _)} > 2.
+
+
+// Track elements must not connect to themselves
+error selfLoop(e) <->
+    TrackElement(e),
+    connectsTo(e, e)
+;
+    Switch(e),
+    straight(e, e)
+;
+    Switch(e),
+    diverging(e, e).
+
+
+// Switches must connect to at least two distinct TrackElements
+error underconnectedSwitch(sw) <->
+    Switch(sw),
+    !switchWithTwoConnections(sw, _, _).
+
+pred switchWithTwoConnections(sw, te1, te2) <->
+    Switch(sw),
+    connectsTo(sw, te1),
+    connectsTo(sw, te2),
+    te1 != te2.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+// Every Sensor must monitor at least one TrackElement
+error sensorWithoutElement(sensor) <->
+    Sensor(sensor),
+    !monitors(sensor, _).
+
+// A Sensor should not monitor more than one Switch
+error sensorMonitorsMultipleSwitches(sensor, sw1, sw2) <->
+    Sensor(sensor),
+    monitors(sensor, sw1),
+    monitors(sensor, sw2),
+    Switch(sw1),
+    Switch(sw2),
+    sw1 != sw2.
+
+// A Region should not contain two Sensors monitoring the same TrackElement
+error duplicateMonitors(region, sensor1, sensor2, te) <->
+    Region(region),
+    sensors(region, sensor1),
+    sensors(region, sensor2),
+    sensor1 != sensor2,
+    monitors(sensor1, te),
+    monitors(sensor2, te).
+
+error emptyRegion(region) <->
+    Region(region),
+    !elements(region, _).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Attribute contraint
 error posLength(segment) <->
     Segment(segment),
     length(segment) <= 0.
 
 % good example for type constraint
 % _ might make it more difficult to explain than optimal
-error switchMonitored(sw) <->
+error switchMonitored(sw) <-> 
     Switch(sw),
     !monitoredBy(sw, _).
 
@@ -75,7 +145,7 @@ error routeSensor(route, sensor, swP, sw) <->
     !requires(route, sensor).
 
 error switchSet(semaphore, route, swP, sw) <->
-    active(route, TRUE),
+    active(route),
     entry(route, semaphore),
     follows(route, swP),
     target(swP, sw),
@@ -85,14 +155,16 @@ error switchSet(semaphore, route, swP, sw) <->
     currentPosition(sw, swCurrentPosition),
     swCurrentPosition != swpPosition.
 
-% pred connectedAndMonitored(segment1, segment2) <->
-%     connectsTo(segment1, segment2),
-%     monitoredBy(segment1, sensor),
-%     monitoredBy(segment2, sensor).
+% pred connected(segment1, segment2) <->
+%     Segment(segment1),
+%     Segment(segment2),
+%     connectsTo(segment1, segment2).
 
 % error connectedSegments(sensor) <->
+%     Sensor(sensor),
 %     monitoredBy(segment1, sensor),
-%     count { connectedAndMonitored+(segment1, _) } > 6.
+%     connectsTo+(segment1, segment2),
+%     count(segment2) > 5.
 
 error connectedSegments(sensor, segment1, segment2, segment3, segment4, segment5, segment6) <->
     connectsTo(segment1, segment2),
@@ -117,6 +189,4 @@ error semaphoreNeighbor(route1, route2) <->
     !entry(route2, semaphore),
     route1 != route2.
 
-
-
-scope node = 10..12, RailwayContainer = 1, Segment = 1..*, Switch = 1..*.
+scope RailwayContainer = 1, Switch = 1..*, Route = 1..*, SwitchPosition = 1..*.

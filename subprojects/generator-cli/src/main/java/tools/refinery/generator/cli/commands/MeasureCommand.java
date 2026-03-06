@@ -8,7 +8,6 @@ package tools.refinery.generator.cli.commands;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import com.google.inject.Inject;
-import tools.refinery.generator.GeneratorResult;
 import tools.refinery.generator.ModelGeneratorFactory;
 import tools.refinery.generator.cli.RefineryCli;
 import tools.refinery.generator.cli.utils.CliProblemLoader;
@@ -16,7 +15,6 @@ import tools.refinery.generator.cli.utils.CliProblemSerializer;
 import tools.refinery.generator.cli.utils.CliUtils;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
@@ -32,14 +30,21 @@ public class MeasureCommand implements Command {
 
 	DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
 
-	private String configPath;
-	private String inputFolder;
+
+	private String inputPath;
+	private List<String> scopes = new ArrayList<>();
+	private List<String> overrideScopes = new ArrayList<>();
+	private long timeout = 30;
+	private int runs = 1;
+	private int warmupTime = 5;
+	private boolean generateUp = false;
+
 	private String outputFolder;
 	private boolean saveModels = false;
 
-	private List<String> header = new ArrayList<>(Arrays.asList("timestamp", "measurement-type", "name", "input",
-			"generate-up",
-			"timeout", "parse-time", "init-time", "generation-time", "exploration-time", "generation-result"));
+	private List<String> header = new ArrayList<>(Arrays.asList("timestamp", "measurement-type", "input",
+			"scope", "generate-up", "timeout", "parse-time", "init-time", "generation-time", "exploration-time",
+			"generation-result"));
 
 	@Inject
 	public MeasureCommand(CliProblemLoader loader, ModelGeneratorFactory generatorFactory,
@@ -49,14 +54,39 @@ public class MeasureCommand implements Command {
 		this.serializer = serializer;
 	}
 
-	@Parameter(description = "config path", required = true)
-	public void setConfigPath(String configPath) {
-		this.configPath = configPath;
+	@Parameter(description = "input path", required = true)
+	public void setInputPath(String inputPath) {
+		this.inputPath = inputPath;
 	}
 
-	@Parameter(names = {"-input", "-i"}, description = "Input folder", required = true)
-	public void setInputFolder(String inputFolder) {
-		this.inputFolder = inputFolder;
+	@Parameter(names = {"-scope", "-s"}, description = "Extra scope constraints")
+	public void setScopes(List<String> scopes) {
+		this.scopes = scopes;
+	}
+
+	@Parameter(names = {"-scope-override", "-S"}, description = "Override scope constraints")
+	public void setOverrideScopes(List<String> overrideScopes) {
+		this.overrideScopes = overrideScopes;
+	}
+
+	@Parameter(names = {"-timeout", "-t"}, description = "Timeout in seconds for each generation (default: 30)")
+	public void setTimeout(long timeout) {
+		this.timeout = timeout;
+	}
+
+	@Parameter(names = {"-runs", "-r"}, description = "Number of runs per configuration (default: 1)")
+	public void setRuns(int runs) {
+		this.runs = runs;
+	}
+
+	@Parameter(names = {"-warmuptime", "-w"}, description = "Warmup time in seconds (default: 5)")
+	public void setWarmupTime(int warmupTime) {
+		this.warmupTime = warmupTime;
+	}
+
+	@Parameter(names = {"-generate-up", "-u"}, description = "Whether to generate UP rules (default: false)")
+	public void setGenerateUp(boolean generateUp) {
+		this.generateUp = generateUp;
 	}
 
 	@Parameter(names = {"-output", "-o"}, description = "Output folder", required = true)
@@ -64,7 +94,7 @@ public class MeasureCommand implements Command {
 		this.outputFolder = outputFolder;
 	}
 
-	@Parameter(names = {"-save", "-s"}, description = "Save models")
+	@Parameter(names = {"-save"}, description = "Save generated models (default: false)")
 	public void setSaveModels(boolean saveModels) {
 		this.saveModels = saveModels;
 	}
@@ -75,35 +105,13 @@ public class MeasureCommand implements Command {
 		date.getTime();
 		String timestamp = LocalDateTime.now().format(formatter);
 		var saveFolder = outputFolder + "/generated-models";
+		var inputFileName = inputPath.split("/")[inputPath.split("/").length - 1];
+		var outputFile = saveFolder + "/" + (generateUp ? "up-" : "") + inputFileName;
 
-
-
-		var configFile = new File(configPath);
-		InputStream inputStream = new FileInputStream(configFile);
-		InputStreamReader streamReader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
-		BufferedReader reader = new BufferedReader(streamReader);
-		var headerLine = reader.readLine(); // skip header
-
-		var runConfigs = new ArrayList<RunConfiguration>();
-
-		var maxCount = 0;
-		for (String line; (line = reader.readLine()) != null;) {
-			var columns = line.split(",");
-			var name = columns[0];
-			var size = Integer.parseInt(columns[1]);
-			var inputPath = inputFolder + "/" + columns[2];
-			var timeout = Long.parseLong(columns[3]);
-			var generateUP = Boolean.parseBoolean(columns[4]);
-			var count = Integer.parseInt(columns[5]);
-			var outputFile = saveFolder + "/" + (generateUP ? "up-" : "") + columns[2];
-			maxCount = Math.max(maxCount, count);
-			runConfigs.add(new RunConfiguration(name, size,inputPath, outputFile,timeout,generateUP,count));
-		}
+		var config = new RunConfiguration( String.join(",", scopes), inputPath, outputFile, timeout, generateUp, runs);
 
 		var warmupResults = new ArrayList<MeasurementResult>();
 		var measurementResults = new ArrayList<MeasurementResult>();
-
-
 
 		String csvPathWarmup = outputFolder + "/measurement_warmup_" + timestamp + ".csv";
 		String csvPath = outputFolder + "/measurement_" + timestamp + ".csv";
@@ -120,50 +128,29 @@ public class MeasureCommand implements Command {
 		}
 
 //		var timedOut = new HashMap<String, Integer>();
-		for (var config : runConfigs) {
 //			if (timedOut.containsKey(config.name() + "_" + config.generateUp()) && timedOut.get(config.name() + "_" + config.generateUp()) <= config.size()) {
 //				System.out.println("Skipping measurement due to previous timeout: " + config.name() + " size " + config.size());
 //				continue;
 //			}
-//			var warmupStart = System.currentTimeMillis();
-//			while (System.currentTimeMillis() - warmupStart < TimeUnit.SECONDS.toMillis(5)) {
-//				var result = runMeasurement(config, config.count() + 1);
-//				warmupResults.add(result);
-//				printToCsv(result, MeasurementType.WARMUP, csvPathWarmup);
-//			}
-//			for (int i = 0; i < config.count(); i++) {
-//				System.out.println("Running measurement: " + config.name() + " size " + config.size() + " iteration " + (i + 1));
-//				String pathWithIndex = null;
-//				if (outputFolder != null) {
-//					pathWithIndex = CliUtils.getFileNameWithIndex(config.output(), i + 1);
-//				}
-//				var result = runMeasurement(config, i, pathWithIndex);
-//				measurementResults.add(result);
-////				if (result.generatorResult() == GeneratorResult.TIMEOUT) {
-////					timedOut.put(config.name() + "_" + config.generateUp(), config.size());
-////				}
-//				printToCsv(result, MeasurementType.MEASUREMENT, csvPath);
-//			}
-			var i = 0;
-			var seed = 0;
-			while (i < config.count()) {
-				System.out.println("Running measurement: " + config.name() + " size " + config.size() + " iteration " + (i + 1));
-				String pathWithIndex = null;
-				if (outputFolder != null) {
-					pathWithIndex = CliUtils.getFileNameWithIndex(config.output(), i + 1);
-				}
-				var result = runMeasurement(config, seed++, pathWithIndex);
-				measurementResults.add(result);
-				if (result.generatorResult() != GeneratorResult.TIMEOUT) {
-					i++;
-				}
+		var warmupStart = System.currentTimeMillis();
+		while (System.currentTimeMillis() - warmupStart < TimeUnit.SECONDS.toMillis(warmupTime)) {
+			var result = runMeasurement(config, config.count() + 1);
+			warmupResults.add(result);
+			printToCsv(result, MeasurementType.WARMUP, csvPathWarmup);
+		}
+		for (int i = 0; i < config.count(); i++) {
+			System.out.println("Running measurement: " + config.input() + " scope " + config.scope() + " iteration " + (i + 1));
+			String pathWithIndex = null;
+			if (outputFolder != null) {
+				pathWithIndex = CliUtils.getFileNameWithIndex(config.output(), i + 1);
+			}
+			var result = runMeasurement(config, i, pathWithIndex);
+			measurementResults.add(result);
 //				if (result.generatorResult() == GeneratorResult.TIMEOUT) {
 //					timedOut.put(config.name() + "_" + config.generateUp(), config.size());
 //				}
-				printToCsv(result, MeasurementType.MEASUREMENT, csvPath);
-			}
+			printToCsv(result, MeasurementType.MEASUREMENT, csvPath);
 		}
-
 		return RefineryCli.EXIT_SUCCESS;
 	}
 
@@ -174,7 +161,7 @@ public class MeasureCommand implements Command {
 	private MeasurementResult runMeasurement(RunConfiguration config, int randomSeed, String outputPath) throws IOException {
 		var timestamp = LocalDateTime.now().format(formatter);
 		var parseStart = System.currentTimeMillis();
-		var problem = loader.loadProblem(config.input());
+		var problem = loader.loadProblem(config.input(), scopes, overrideScopes);
 		var parseEnd = System.currentTimeMillis();
 		var parseTime = (parseEnd - parseStart);
 		System.out.println("Parsing time: " + parseTime);
@@ -222,10 +209,11 @@ public class MeasureCommand implements Command {
 		var config = result.config();
 		File csvOutputFile = new File(csvPath);
 		try (FileWriter fw = new FileWriter(csvOutputFile, true)) {
-			fw.write(String.join(",", result.timestamp(), measurementType.name(), config.name(), config.input(),
-					String.valueOf(config.generateUp()), String.valueOf(config.timeout()),
-					String.valueOf(result.parsingTime()), String.valueOf(result.initializationTime()),
-					String.valueOf(result.generationTime()), String.valueOf(result.explorationTime()),
+			fw.write(String.join(",", result.timestamp(), measurementType.name(), config.input(),
+					config.scope(),
+					String.valueOf(config.generateUp()), java.lang.String.valueOf(config.timeout()),
+					String.valueOf(result.parsingTime()), java.lang.String.valueOf(result.initializationTime()),
+					String.valueOf(result.generationTime()), java.lang.String.valueOf(result.explorationTime()),
 					result.generatorResult().name()));
 			fw.write("\n");
 		}
