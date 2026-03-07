@@ -9,7 +9,7 @@ OUTPUT_XML = Path('benchmark-set/refinery-up-generation.xml')
 
 TIMEOUT = 60
 RUNS = 30
-WARMUPTIME = 5
+WARMUPTIME = 10
 
 NUM_GENERATED = 10           # number of new files to generate per input file
 START_NODE = 10             # starting value for the first node number
@@ -30,7 +30,7 @@ NODE_STEP = 10              # increment for each generated file
 root = ET.Element('benchmark', attrib={
     'tool': 'refinery', 
     'displayName': 'refinery', 
-    'timelimit': f'{str(math.ceil(TIMEOUT * RUNS / 60 + WARMUPTIME + 2))} min', 
+    'timelimit': f'{str(math.ceil((TIMEOUT * RUNS + WARMUPTIME) / 60 + 2))} min', 
     'memlimit': '15 GB',
     'cpuCores': '2'})
 
@@ -38,7 +38,7 @@ ET.SubElement(root, 'option').text = 'measure'
 ET.SubElement(root, 'option', attrib={'name': '-timeout'}).text = f'{TIMEOUT}'
 ET.SubElement(root, 'option', attrib={'name': '-runs'}).text = f'{RUNS}'
 ET.SubElement(root, 'option', attrib={'name': '-warmuptime'}).text = f'{WARMUPTIME}'
-ET.SubElement(root, 'option', attrib={'name': '-output'}).text = '.'
+ET.SubElement(root, 'option', attrib={'name': '-output'}).text = 'output'
 
 for generate_up in (False, True):
     for i in range(NUM_GENERATED):
@@ -58,6 +58,8 @@ for generate_up in (False, True):
 
 task = ET.SubElement(root, 'tasks', attrib={'name': 'generation'})
 ET.SubElement(task, 'includesfile').text = '../benchmark-input/ModelGeneration.set'
+
+ET.SubElement(root, 'resultfiles').text = '**/*.csv'
 
 tree = ET.ElementTree(root)
 tree.write(OUTPUT_XML, encoding='utf-8', xml_declaration=True)
