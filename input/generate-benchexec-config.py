@@ -7,7 +7,7 @@ from pathlib import Path
 INPUT_DIR = Path('benchmark-set/generate')          # folder with .problem files
 OUTPUT_XML = Path('benchmark-set/refinery-up-generation.xml')
 
-TIMEOUT = 60
+TIMEOUT = 120
 RUNS = 30
 WARMUPTIME = 10
 

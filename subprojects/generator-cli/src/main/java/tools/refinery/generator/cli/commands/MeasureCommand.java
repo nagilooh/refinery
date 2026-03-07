@@ -135,7 +135,7 @@ public class MeasureCommand implements Command {
 //			}
 		var warmupStart = System.currentTimeMillis();
 		var warmupIteration = 0;
-		while (System.currentTimeMillis() - warmupStart < TimeUnit.SECONDS.toMillis(warmupTime) && warmupIteration < 5) {
+		while (System.currentTimeMillis() - warmupStart < TimeUnit.SECONDS.toMillis(warmupTime) || warmupIteration < 5) {
 			var warmupConfig = new RunConfiguration(config.scope(), config.input(), null, 10, config.generateUp(), 1);
 			var result = runMeasurement(warmupConfig, warmupIteration++);
 			warmupResults.add(result);
