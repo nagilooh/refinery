@@ -43,7 +43,8 @@ public class MeasureCommand implements Command {
 	private boolean saveModels = false;
 
 	private List<String> header = new ArrayList<>(Arrays.asList("timestamp", "measurement-type", "input",
-			"scope", "generate-up", "timeout", "parse-time", "init-time", "generation-time", "exploration-time",
+			"scope", "generate-up", "iteration", "timeout", "parse-time", "init-time", "generation-time",
+			"exploration-time",
 			"generation-result"));
 
 	@Inject
@@ -133,13 +134,17 @@ public class MeasureCommand implements Command {
 //				continue;
 //			}
 		var warmupStart = System.currentTimeMillis();
-		while (System.currentTimeMillis() - warmupStart < TimeUnit.SECONDS.toMillis(warmupTime)) {
-			var result = runMeasurement(config, config.count() + 1);
+		var warmupIteration = 0;
+		while (System.currentTimeMillis() - warmupStart < TimeUnit.SECONDS.toMillis(warmupTime) && warmupIteration < 5) {
+			var warmupConfig = new RunConfiguration(config.scope(), config.input(), null, 10, config.generateUp(), 1);
+			var result = runMeasurement(warmupConfig, warmupIteration++);
 			warmupResults.add(result);
-			printToCsv(result, MeasurementType.WARMUP, csvPathWarmup);
+			printToCsv(warmupIteration, result, MeasurementType.WARMUP, csvPathWarmup);
+			printToConsole(warmupIteration, result, MeasurementType.WARMUP);
+
 		}
 		for (int i = 0; i < config.count(); i++) {
-			System.out.println("Running measurement: " + config.input() + " scope " + config.scope() + " iteration " + (i + 1));
+//			System.out.println("Running measurement: " + config.input() + " scope " + config.scope() + " iteration " + (i + 1));
 			String pathWithIndex = null;
 			if (outputFolder != null) {
 				pathWithIndex = CliUtils.getFileNameWithIndex(config.output(), i + 1);
@@ -149,7 +154,8 @@ public class MeasureCommand implements Command {
 //				if (result.generatorResult() == GeneratorResult.TIMEOUT) {
 //					timedOut.put(config.name() + "_" + config.generateUp(), config.size());
 //				}
-			printToCsv(result, MeasurementType.MEASUREMENT, csvPath);
+			printToCsv(i, result, MeasurementType.MEASUREMENT, csvPath);
+			printToConsole(i, result, MeasurementType.MEASUREMENT);
 		}
 		return RefineryCli.EXIT_SUCCESS;
 	}
@@ -164,23 +170,23 @@ public class MeasureCommand implements Command {
 		var problem = loader.loadProblem(config.input(), scopes, overrideScopes);
 		var parseEnd = System.currentTimeMillis();
 		var parseTime = (parseEnd - parseStart);
-		System.out.println("Parsing time: " + parseTime);
+//		System.out.println("Parsing time: " + parseTime);
 
 		var initStart = System.currentTimeMillis();
 		var generator = generatorFactory.createGenerator(problem, config.generateUp());
 		generator.setRandomSeed(randomSeed);
 		var initEnd = System.currentTimeMillis();
 		var initTime = (initEnd - initStart);
-		System.out.println("Initialization time: " + initTime);
+//		System.out.println("Initialization time: " + initTime);
 
 		generator.setMaxNumberOfSolutions(1);
 		var generationStart = System.currentTimeMillis();
 		var generationResult = generator.tryGenerateWithTimeout(config.timeout(), TimeUnit.SECONDS);
 		var generationEnd = System.currentTimeMillis();
 		var generationTime = (generationEnd - generationStart);
-		System.out.println("Generation time: " + generationTime);
+//		System.out.println("Generation time: " + generationTime);
 		if (saveModels && outputPath != null && generator.isLastGenerationSuccessful()) {
-			System.out.println("Saving model to " + outputPath);
+//			System.out.println("Saving model to " + outputPath);
 			serializer.saveModel(generator, outputPath, false);
 		}
 		try {
@@ -205,18 +211,25 @@ public class MeasureCommand implements Command {
 		}
 	}
 
-	private void printToCsv(MeasurementResult result, MeasurementType measurementType, String csvPath) throws IOException {
-		var config = result.config();
+	private void printToCsv(int iteration, MeasurementResult result, MeasurementType measurementType, String csvPath) throws IOException {
 		File csvOutputFile = new File(csvPath);
 		try (FileWriter fw = new FileWriter(csvOutputFile, true)) {
-			fw.write(String.join(",", result.timestamp(), measurementType.name(), config.input(),
-					config.scope(),
-					String.valueOf(config.generateUp()), java.lang.String.valueOf(config.timeout()),
-					String.valueOf(result.parsingTime()), java.lang.String.valueOf(result.initializationTime()),
-					String.valueOf(result.generationTime()), java.lang.String.valueOf(result.explorationTime()),
-					result.generatorResult().name()));
+			fw.write(resultToString(iteration, result, measurementType));
 			fw.write("\n");
 		}
+	}
+
+	private void printToConsole(int iteration, MeasurementResult result, MeasurementType measurementType) {
+		System.out.println(resultToString(iteration, result, measurementType));
+	}
+
+	private String resultToString(int iteration, MeasurementResult result, MeasurementType measurementType) {
+		var config = result.config();
+		return String.join(",", result.timestamp(), measurementType.name(), config.input(),
+				config.scope(), String.valueOf(config.generateUp()), String.valueOf(iteration),
+				java.lang.String.valueOf(config.timeout()), String.valueOf(result.parsingTime()),
+				java.lang.String.valueOf(result.initializationTime()), String.valueOf(result.generationTime()),
+				java.lang.String.valueOf(result.explorationTime()), result.generatorResult().name());
 	}
 }
 
