@@ -29,12 +29,14 @@ public class ModelGeneratorImpl extends ConcreteModelFacade implements ModelGene
 	private int maxNumberOfSolutions = 1;
 	private SolutionStore solutionStore;
 	private final List<Long> generationTimes;
+	private final List<Integer> stateSpaceSizes;
 
 	public ModelGeneratorImpl(Args args, CancellableCancellationToken cancellationToken) {
 		super(args);
 		this.cancellationToken = cancellationToken;
 		initialVersion = getModel().commit();
 		generationTimes = new ArrayList<>();
+		stateSpaceSizes = new ArrayList<>();
 	}
 
 	@Override
@@ -89,6 +91,7 @@ public class ModelGeneratorImpl extends ConcreteModelFacade implements ModelGene
 		var bestFirst = new BestFirstStoreManager(getModelStore(), maxNumberOfSolutions);
 		try {
 			generationTimes.add(bestFirst.startExploration(initialVersion, randomSeed));
+			stateSpaceSizes.add(bestFirst.getStateCount());
 		} catch (PropagationRejectedException e) {
 			// Fatal propagation error.
 			throw getDiagnostics().wrapPropagationRejectedException(e, getProblemTrace());
@@ -110,6 +113,7 @@ public class ModelGeneratorImpl extends ConcreteModelFacade implements ModelGene
 				return tryGenerate();
 			} catch (GeneratorTimeoutException e) {
 				generationTimes.add(-1L);
+				stateSpaceSizes.add(-1);
 				return GeneratorResult.TIMEOUT;
 			} finally {
 				timeoutFuture.cancel(true);
@@ -121,6 +125,11 @@ public class ModelGeneratorImpl extends ConcreteModelFacade implements ModelGene
 	@Override
 	public List<Long> getGenerationTimes() {
 		return generationTimes;
+	}
+
+	@Override
+	public List<Integer> getStateSpaceSizes() {
+		return stateSpaceSizes;
 	}
 
 	@Override

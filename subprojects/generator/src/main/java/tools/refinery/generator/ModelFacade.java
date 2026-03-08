@@ -54,4 +54,8 @@ public interface ModelFacade extends AutoCloseable {
 
 	@Override
 	void close();
+
+	int getUnknownCount();
+
+	int getUnknownCount(PartialSymbol<? extends AbstractValue<?, ?>, ?> partialSymbol);
 }

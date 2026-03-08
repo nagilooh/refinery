@@ -28,6 +28,7 @@ import tools.refinery.store.model.ModelStore;
 import tools.refinery.store.reasoning.ReasoningAdapter;
 import tools.refinery.store.reasoning.ReasoningStoreAdapter;
 import tools.refinery.store.reasoning.interpretation.PartialInterpretation;
+import tools.refinery.store.reasoning.literal.Concreteness;
 import tools.refinery.store.reasoning.representation.PartialSymbol;
 import tools.refinery.store.reasoning.seed.ModelSeed;
 import tools.refinery.store.reasoning.seed.PropagatedModel;
@@ -190,6 +191,31 @@ public abstract class ModelFacadeImpl implements ModelFacade {
 				errors.add(new ConsistencyCheckResult.Error<>(partialSymbol, cursor.getKey(), value));
 			}
 		}
+	}
+
+	public int getUnknownCount() {
+		var count = 0;
+		for (var entry : problemTrace.getRelationTrace().entrySet()) {
+			var relation = entry.getKey();
+			if (ProblemUtil.isShadow(relation)) {
+				continue;
+			}
+			var partialSymbol = (PartialSymbol<? extends AbstractValue<?, ?>, ?>) entry.getValue();
+			count += getUnknownCount(partialSymbol);
+		}
+		return count;
+	}
+
+	public int getUnknownCount(PartialSymbol<? extends AbstractValue<?, ?>, ?> partialSymbol) {
+		var count = 0;
+		var interpretation = reasoningAdapter.getPartialInterpretation(Concreteness.PARTIAL, partialSymbol);
+		var cursor = interpretation.getAll();
+		while (cursor.move()) {
+			if (cursor.getValue().equals(TruthValue.UNKNOWN)) {
+				count++;
+			}
+		}
+		return count;
 	}
 
 	@Override

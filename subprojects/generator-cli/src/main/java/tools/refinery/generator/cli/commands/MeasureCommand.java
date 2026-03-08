@@ -42,16 +42,15 @@ public class MeasureCommand implements Command {
 	private String outputFolder;
 	private boolean saveModels = false;
 
-	private List<String> header = new ArrayList<>(Arrays.asList("timestamp", "measurement-type", "input",
+	private final List<String> header = new ArrayList<>(Arrays.asList("timestamp", "measurement-type", "input",
 			"scope", "generate-up", "iteration", "timeout", "parse-time", "init-time", "generation-time",
-			"exploration-time",
-			"generation-result"));
+			"exploration-time", "state-space-size", "unknown-count", "generation-result"));
 
 	@Inject
 	public MeasureCommand(CliProblemLoader loader, ModelGeneratorFactory generatorFactory,
                           CliProblemSerializer serializer) {
 		this.loader = loader;
-		this.generatorFactory = generatorFactory;
+		this.generatorFactory = generatorFactory.debugPartialInterpretations(true);
 		this.serializer = serializer;
 	}
 
@@ -185,6 +184,7 @@ public class MeasureCommand implements Command {
 		var generationEnd = System.currentTimeMillis();
 		var generationTime = (generationEnd - generationStart);
 //		System.out.println("Generation time: " + generationTime);
+		var unknownCount = generator.getUnknownCount();
 		if (saveModels && outputPath != null && generator.isLastGenerationSuccessful()) {
 //			System.out.println("Saving model to " + outputPath);
 			serializer.saveModel(generator, outputPath, false);
@@ -196,11 +196,12 @@ public class MeasureCommand implements Command {
 		}
 		generator.close();
 		var generationTimes = generator.getGenerationTimes();
+		var stateSpaceSizes = generator.getStateSpaceSizes();
 		if (generationTimes.size() > 1) {
 			throw new IllegalStateException("Expected only one generation time");
 		}
 		return new MeasurementResult(timestamp, config, parseTime, initTime, generationTime,
-				generator.getGenerationTimes().get(0), generationResult);
+				generator.getGenerationTimes().get(0), generator.getStateSpaceSizes().get(0), unknownCount, generationResult);
 	}
 
 	private void printHeaderToCsv(List<String> header, String csvPath) throws IOException {
@@ -225,11 +226,21 @@ public class MeasureCommand implements Command {
 
 	private String resultToString(int iteration, MeasurementResult result, MeasurementType measurementType) {
 		var config = result.config();
-		return String.join(",", result.timestamp(), measurementType.name(), config.input(),
-				config.scope(), String.valueOf(config.generateUp()), String.valueOf(iteration),
-				java.lang.String.valueOf(config.timeout()), String.valueOf(result.parsingTime()),
-				java.lang.String.valueOf(result.initializationTime()), String.valueOf(result.generationTime()),
-				java.lang.String.valueOf(result.explorationTime()), result.generatorResult().name());
+		return String.join(",",
+				result.timestamp(),
+				measurementType.name(),
+				config.input(),
+				config.scope(),
+				String.valueOf(config.generateUp()),
+				String.valueOf(iteration),
+				String.valueOf(config.timeout()),
+				String.valueOf(result.parsingTime()),
+				String.valueOf(result.initializationTime()),
+				String.valueOf(result.generationTime()),
+				String.valueOf(result.explorationTime()),
+				String.valueOf(result.stateSpaceSize()),
+				String.valueOf(result.unknownCount()),
+				result.generatorResult().name());
 	}
 }
 

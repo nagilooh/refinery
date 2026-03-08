@@ -89,4 +89,8 @@ public class BestFirstStoreManager {
 			return (end - start);
 		}
 	}
+
+	public int getStateCount() {
+		return visualizationStore.getStates().size();
+	}
 }

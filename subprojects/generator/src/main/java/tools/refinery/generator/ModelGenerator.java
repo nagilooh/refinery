@@ -38,4 +38,6 @@ public interface ModelGenerator extends ModelFacade {
 	}
 
 	List<Long> getGenerationTimes();
+
+	List<Integer> getStateSpaceSizes();
 }

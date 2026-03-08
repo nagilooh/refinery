@@ -82,11 +82,10 @@ public class BestFirstWorker {
 			storeManager.solutionStore.submit(versionWithObjectiveValue);
 		}
 
-		if (isVisualizationEnabled) {
-			visualizationStore.addState(version, objectiveValue.toString());
-			if (accepted) {
-				visualizationStore.addSolution(version);
-			}
+
+		visualizationStore.addState(version, objectiveValue.toString());
+		if (accepted) {
+			visualizationStore.addSolution(version);
 		}
 
 		return new SubmitResult(true, accepted, objectiveValue, last);
