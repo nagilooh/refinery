@@ -196,7 +196,6 @@ public class MeasureCommand implements Command {
 		}
 		generator.close();
 		var generationTimes = generator.getGenerationTimes();
-		var stateSpaceSizes = generator.getStateSpaceSizes();
 		if (generationTimes.size() > 1) {
 			throw new IllegalStateException("Expected only one generation time");
 		}

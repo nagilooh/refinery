@@ -18,7 +18,6 @@ import tools.refinery.store.dse.transition.statespace.internal.SolutionStoreImpl
 import tools.refinery.store.map.Version;
 import tools.refinery.store.model.ModelStore;
 import tools.refinery.store.statecoding.StateCoderStoreAdapter;
-import tools.refinery.visualization.ModelVisualizerAdapter;
 import tools.refinery.visualization.statespace.VisualizationStore;
 import tools.refinery.visualization.statespace.internal.VisualizationStoreImpl;
 
@@ -32,6 +31,7 @@ public class BestFirstStoreManager {
 	SolutionStore solutionStore;
 	EquivalenceClassStore equivalenceClassStore;
 	VisualizationStore visualizationStore;
+	long explorationTime = 0;
 
 	public BestFirstStoreManager(ModelStore modelStore, int maxNumberOfSolutions) {
 		this.modelStore = modelStore;
@@ -86,8 +86,13 @@ public class BestFirstStoreManager {
 			var start = System.currentTimeMillis();
 			bestFirstExplorer.explore();
 			var end = System.currentTimeMillis();
+			explorationTime = end - start;
 			return (end - start);
 		}
+	}
+
+	public long getExplorationTime() {
+		return explorationTime;
 	}
 
 	public int getStateCount() {
