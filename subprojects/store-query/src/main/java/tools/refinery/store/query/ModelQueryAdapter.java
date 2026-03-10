@@ -11,6 +11,8 @@ import tools.refinery.logic.dnf.Query;
 import tools.refinery.store.query.resultset.AnyResultSet;
 import tools.refinery.store.query.resultset.ResultSet;
 
+import java.util.Map;
+
 public interface ModelQueryAdapter extends ModelAdapter {
 	ModelQueryStoreAdapter getStoreAdapter();
 
@@ -19,6 +21,8 @@ public interface ModelQueryAdapter extends ModelAdapter {
 	}
 
 	<T> ResultSet<T> getResultSet(Query<T> query);
+
+	Map<AnyQuery, AnyResultSet> getResultSets();
 
 	boolean hasPendingChanges();
 

@@ -6,6 +6,7 @@
 package tools.refinery.store.dse.strategy;
 
 import org.jetbrains.annotations.Nullable;
+import tools.refinery.logic.dnf.AnyQuery;
 import tools.refinery.store.dse.propagation.PropagationAdapter;
 import tools.refinery.store.dse.transition.DesignSpaceExplorationAdapter;
 import tools.refinery.store.dse.transition.ObjectiveValue;
@@ -14,9 +15,15 @@ import tools.refinery.store.dse.transition.statespace.internal.ActivationStoreWo
 import tools.refinery.store.map.Version;
 import tools.refinery.store.model.Model;
 import tools.refinery.store.query.ModelQueryAdapter;
+import tools.refinery.store.query.resultset.AnyResultSet;
 import tools.refinery.store.statecoding.StateCoderAdapter;
 import tools.refinery.visualization.statespace.VisualizationStore;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.time.Instant;
+import java.util.Map;
 import java.util.Random;
 
 public class BestFirstWorker {
@@ -87,8 +94,63 @@ public class BestFirstWorker {
 		if (accepted) {
 			visualizationStore.addSolution(version);
 		}
+		saveResultSets(version, queryAdapter.getResultSets());
 
 		return new SubmitResult(true, accepted, objectiveValue, last);
+	}
+
+	private void saveResultSets(Version version, Map<AnyQuery, AnyResultSet> resultSets) {
+		File csvOutputFile = new File("query-results-at-commit.csv");
+		boolean needHeader = !csvOutputFile.exists() || csvOutputFile.length() == 0L;
+		try (FileWriter fw = new FileWriter(csvOutputFile, true)) {
+			if (needHeader) {
+				fw.write(headerLine(resultSets));
+				fw.write("\n");
+			}
+			fw.write(resultSetToString(version, resultSets));
+			fw.write("\n");
+		} catch (IOException e) {
+			throw new java.io.UncheckedIOException(e);
+		}
+	}
+
+	private String headerLine(Map<AnyQuery, AnyResultSet> resultSets) {
+		StringBuilder sb = new StringBuilder();
+		sb.append("timestamp");
+		// state hash column
+		sb.append(",stateHash");
+		for (Map.Entry<AnyQuery, AnyResultSet> entry : resultSets.entrySet()) {
+			sb.append(',');
+			// use query name as column header
+			sb.append(escapeCsv(entry.getKey().name()));
+		}
+		return sb.toString();
+	}
+
+	private String resultSetToString(Version version, Map<AnyQuery, AnyResultSet> resultSets) {
+		StringBuilder sb = new StringBuilder();
+		// ISO-8601 timestamp
+		sb.append(Instant.now().toString());
+		// append model state hash code (0 if state is null)
+		sb.append(',');
+		int stateHash = (version == null) ? 0 : version.hashCode();
+		sb.append(stateHash);
+		for (Map.Entry<AnyQuery, AnyResultSet> entry : resultSets.entrySet()) {
+			sb.append(',');
+			AnyResultSet rs = entry.getValue();
+			long size = rs == null ? 0L : rs.size();
+			sb.append(size);
+		}
+		return sb.toString();
+	}
+
+	private String escapeCsv(String s) {
+		if (s == null) return "";
+		if (s.contains(",") || s.contains("\"") || s.contains("\n")) {
+			// escape by wrapping in quotes and doubling internal quotes
+			return '"' + s.replace("\"", "\"\"") + '"';
+		}
+		return s;
 	}
 
 	private VersionWithObjectiveValue concretizeIfNeeded(VersionWithObjectiveValue originalValue) {
