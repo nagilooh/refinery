@@ -72,29 +72,29 @@ public class ErrorPredicateTranslatorWithUnitPropagation extends PredicateTransl
 				if (propRule != null) {
 					propRuleParameters.add(propRule);
 				}
-
-				for (var propRuleParameter : propRuleParameters) {
-					var preconditionQuery = Query.of(propagationName + "#precondition", builder -> builder
-							.parameters(propRuleParameter.ruleParameters())
-							.clause(propRuleParameter.precondition()));
-
-					var rule = Rule.of(propagationName, builder -> builder
-							.parameters(propRuleParameter.ruleParameters())
-							.clause(must(preconditionQuery.call(CallPolarity.POSITIVE,
-									propRuleParameter.ruleParameters())))
-							.action(PartialActionLiterals.merge(propRuleParameter.partialRelationTarget(),
-									propRuleParameter.toMerge(), propRuleParameter.actionParameters())));
-					propagationBuilder.rule(rule);
-
-					var concretizationRule = Rule.of(propagationName + "#concretize", builder -> builder
-							.parameters(propRuleParameter.ruleParameters())
-							.clause(candidateMust(preconditionQuery.call(CallPolarity.POSITIVE,
-									propRuleParameter.ruleParameters())))
-							.action(PartialActionLiterals.merge(propRuleParameter.partialRelationTarget(),
-									propRuleParameter.toMerge(), propRuleParameter.actionParameters())));
-					propagationBuilder.concretizationRule(concretizationRule);
-				}
 			}
+		}
+
+		for (var propRuleParameter : propRuleParameters) {
+			var preconditionQuery = Query.of(propRuleParameter.propagationName() + "#precondition", builder -> builder
+					.parameters(propRuleParameter.ruleParameters())
+					.clause(propRuleParameter.precondition()));
+
+			var rule = Rule.of(propRuleParameter.propagationName(), builder -> builder
+					.parameters(propRuleParameter.ruleParameters())
+					.clause(must(preconditionQuery.call(CallPolarity.POSITIVE,
+							propRuleParameter.ruleParameters())))
+					.action(PartialActionLiterals.merge(propRuleParameter.partialRelationTarget(),
+							propRuleParameter.toMerge(), propRuleParameter.actionParameters())));
+			propagationBuilder.rule(rule);
+
+			var concretizationRule = Rule.of(propRuleParameter.propagationName() + "#concretize", builder -> builder
+					.parameters(propRuleParameter.ruleParameters())
+					.clause(candidateMust(preconditionQuery.call(CallPolarity.POSITIVE,
+							propRuleParameter.ruleParameters())))
+					.action(PartialActionLiterals.merge(propRuleParameter.partialRelationTarget(),
+							propRuleParameter.toMerge(), propRuleParameter.actionParameters())));
+			propagationBuilder.concretizationRule(concretizationRule);
 		}
 	}
 
@@ -123,6 +123,7 @@ public class ErrorPredicateTranslatorWithUnitPropagation extends PredicateTransl
 				throw new UnsupportedOperationException("I do not know what to do");
 			}
 			return new RuleParameters(
+					propagationName,
 					ruleParameters,
 					precondition,
 					partialRelationTarget,
@@ -211,6 +212,7 @@ public class ErrorPredicateTranslatorWithUnitPropagation extends PredicateTransl
 				precondition.add(Literals.not(addModality(callLiteral, Modality.MUST)));
 
 				return new RuleParameters(
+						propagationName,
 						ruleParameters,
 						precondition,
 						partialRelationTarget,
@@ -276,7 +278,7 @@ public class ErrorPredicateTranslatorWithUnitPropagation extends PredicateTransl
 				throw new IllegalArgumentException("This argument is illegal");
 			}
 		}
-		return new RuleParameters(ruleParameters, null, null, null, actionParameters);
+		return new RuleParameters(propagationName, ruleParameters, null, null, null, actionParameters);
 	}
 
 	private boolean shouldPropagate(CallLiteral literal, DnfClause clause) {
