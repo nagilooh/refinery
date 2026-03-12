@@ -12,7 +12,7 @@ import tools.refinery.store.reasoning.representation.PartialRelation;
 
 import java.util.List;
 
-public record RuleParameters(List<NodeVariable> ruleParameters, List<Literal> precondition,
+public record RuleParameters(String propagationName, List<NodeVariable> ruleParameters, List<Literal> precondition,
 							 PartialRelation partialRelationTarget, TruthValue toMerge,
 							 List<NodeVariable> actionParameters) {
 }
