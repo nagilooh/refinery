@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 
 # ---------------- Configuration ----------------
-INPUT_DIR = Path("gen")          # folder with .problem files
+INPUT_DIR = Path("generation-with-ratios")          # folder with .problem files
 OUTPUT_CSV = Path("measurement-uncertainty.csv")
 
 TIMEOUT = 30
@@ -41,7 +41,7 @@ for file_path in INPUT_DIR.iterdir():
     name = NAME_MAP[prefix]
     # output_filename = f"{prefix}-{size}.problem"
 
-    for generate_up in ("false", "true"):
+    for generate_up in ["false", "true"]:
         rows.append([
             name,
             size,
