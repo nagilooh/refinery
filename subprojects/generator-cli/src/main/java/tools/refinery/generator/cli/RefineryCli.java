@@ -33,6 +33,9 @@ public class RefineryCli {
 	@Inject
 	private MeasureCommand measureCommand;
 
+	@Inject
+	private CountUnknownCommand countUnknownCommand;
+
 	private JCommander jCommander;
 
 	public int run(String[] args) {
@@ -63,6 +66,7 @@ public class RefineryCli {
 					.addCommand("check", checkCommand)
 					.addCommand("concretize", concretizeCommand)
 					.addCommand("measure", measureCommand, "m")
+					.addCommand("count-unknown", countUnknownCommand)
 					.build();
 		}
 		return jCommander;

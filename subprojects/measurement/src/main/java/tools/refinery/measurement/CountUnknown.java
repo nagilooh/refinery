@@ -52,14 +52,39 @@ public class CountUnknown {
 			"SC1",
 			"hasCancle",
 			"SC2",
-			"computed");
+			"computed"
+	);
 
 	public static void main(String[] args) throws IOException {
-		Path dir = Paths.get("output-measurement-uncertainty/generated-models");
+		Path dir = Paths.get("modified-generated-models-with-extra-90-percent");
 
 		if (!Files.isDirectory(dir)) {
 			System.err.println("Directory not found: " + dir);
 			return;
+		}
+
+//		Warmup
+		try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir, "*.problem")) {
+			int i = 0;
+			for (Path path : stream) {
+				System.out.println("Processing file: " + path.getFileName());
+
+				var withUP = count(path, true);
+				var noUP = count(path, false);
+				System.out.println("Warmup result for file: " + path.getFileName() + " with UP: " + withUP.unknownCount() + " unknowns, parse time: " + withUP.parseTime() + "ms, init time: " + withUP.initTime() + "ms");
+				Thread.sleep(200);
+				if (++i >= 10) {
+					break;
+				}
+			}
+		} catch (InterruptedException e) {
+			throw new RuntimeException(e);
+		}
+
+		try {
+			Thread.sleep(200);
+		} catch (InterruptedException e) {
+			throw new RuntimeException(e);
 		}
 
 		try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir, "*.problem")) {
@@ -71,7 +96,7 @@ public class CountUnknown {
 
 
 				// append result for this file to CSV
-				Path csv = Paths.get("unknown_counts_up_tb2_20.csv");
+				Path csv = Paths.get("unknown_counts_up_90_percent-2026-03-15.csv");
 				if (!Files.exists(csv)) {
 					Files.writeString(csv, "file,parseTime,initTime,allCount,unknownCount,parseUPTime,initUPTime," +
 							"allUPCount,unknownUPCount\n");
@@ -109,7 +134,7 @@ public class CountUnknown {
 			if (ignored.contains(name)) {
 				continue;
 			}
-			System.out.println(name);
+//			System.out.println(name);
 			PartialRelation partialRelation;
 			try {
 				partialRelation = entry.getValue().asPartialRelation();
