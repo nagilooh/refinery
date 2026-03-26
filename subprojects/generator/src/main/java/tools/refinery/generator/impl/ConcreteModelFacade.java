@@ -46,6 +46,7 @@ public class ConcreteModelFacade extends ModelFacadeImpl {
 	@Override
 	public Problem serialize() {
 		var serializer = getSolutionSerializer();
+		serializer.setPreserveNewNodes(true);
 		return serializer.serializeSolution(getProblemTrace(), getModel());
 	}
 

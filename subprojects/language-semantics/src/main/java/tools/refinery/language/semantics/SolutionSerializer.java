@@ -105,7 +105,7 @@ public class SolutionSerializer {
 		this.trace = trace;
 		this.model = model;
 		reasoningAdapter = model.getAdapter(ReasoningAdapter.class);
-		existsInterpretation = reasoningAdapter.getPartialInterpretation(Concreteness.CANDIDATE,
+		existsInterpretation = reasoningAdapter.getPartialInterpretation(Concreteness.PARTIAL,
 				ReasoningAdapter.EXISTS_SYMBOL);
 		originalProblem = trace.getProblem();
 		originalProblemName = qualifiedNameProvider.getFullyQualifiedName(originalProblem);
@@ -165,9 +165,9 @@ public class SolutionSerializer {
 
 	private boolean isExistingNode(int nodeId) {
 		var exists = existsInterpretation.get(Tuple.of(nodeId));
-		if (!exists.isConcrete()) {
-			throw new IllegalStateException("Invalid EXISTS %s for node %d".formatted(exists, nodeId));
-		}
+//		if (!exists.isConcrete()) {
+//			throw new IllegalStateException("Invalid EXISTS %s for node %d".formatted(exists, nodeId));
+//		}
 		return exists.may();
 	}
 
@@ -278,8 +278,8 @@ public class SolutionSerializer {
 			// If a node is a new node of the class, we should replace it with a normal node unless
 			// {@code preserveNewNodes} is set.
 			if (preserveNewNodes && ProblemUtil.isMultiNode(newNode) && isExistingNode(nodeId)) {
-				addAssertion(builtinSymbols.exists(), LogicValue.TRUE, newNode);
-				addAssertion(builtinSymbols.equals(), LogicValue.TRUE, newNode, newNode);
+				addAssertion(builtinSymbols.exists(), LogicValue.UNKNOWN, newNode);
+				addAssertion(builtinSymbols.equals(), LogicValue.UNKNOWN, newNode, newNode);
 				nodes.put(nodeId, newNode);
 			} else {
 				addAssertion(builtinSymbols.exists(), LogicValue.FALSE, newNode);
@@ -301,23 +301,26 @@ public class SolutionSerializer {
 	}
 
 	private void createNodeAndAssertType(int nodeId, InferredType inferredType, Map<PartialRelation, Relation> types) {
-		var candidateTypeSymbol = inferredType.candidateType();
-		var candidateRelation = types.get(candidateTypeSymbol);
-		if (candidateRelation instanceof EnumDeclaration) {
+		var mustTypeSymbol = inferredType.candidateType();
+		var mustRelation = types.get(mustTypeSymbol);
+		if (mustRelation == null) {
+			return;
+		}
+		if (mustRelation instanceof EnumDeclaration) {
 			// Type assertions for enum literals are added implicitly.
 			return;
 		}
 		Node node = nodes.get(nodeId);
 		if (node == null) {
-			var typeName = candidateRelation.getName();
+			var typeName = mustRelation.getName();
 			var nodeName = nameProvider.getNextName(typeName);
 			node = ProblemFactory.eINSTANCE.createNode();
 			node.setName(nodeName);
 			nodeDeclaration.getNodes().add(node);
 			nodes.put(nodeId, node);
 		}
-		addAssertion(candidateRelation, LogicValue.TRUE, node);
-		var typeAnalysisResult = trace.getMetamodel().typeHierarchy().getPreservedTypes().get(candidateTypeSymbol);
+		addAssertion(mustRelation, LogicValue.TRUE, node);
+		var typeAnalysisResult = trace.getMetamodel().typeHierarchy().getPreservedTypes().get(mustTypeSymbol);
 		for (var subtype : typeAnalysisResult.getDirectSubtypes()) {
 			var subtypeRelation = types.get(subtype);
 			addAssertion(subtypeRelation, LogicValue.FALSE, node);
@@ -332,7 +335,7 @@ public class SolutionSerializer {
 			addAssertions(partialRelation);
 		}
 		for (var partialRelation : metamodel.directedCrossReferences().keySet()) {
-			addDefaultAssertion(partialRelation);
+//			addDefaultAssertion(partialRelation);
 			addAssertions(partialRelation);
 		}
 		// No need to add directed opposite references, because their default value is {@code unknown} and their
@@ -340,7 +343,7 @@ public class SolutionSerializer {
 		// However, undirected cross-references have to be serialized in both directions due to the default value of
 		// {@code false}.
 		for (var partialRelation : metamodel.undirectedCrossReferences().keySet()) {
-			addDefaultAssertion(partialRelation);
+//			addDefaultAssertion(partialRelation);
 			addAssertions(partialRelation);
 		}
 	}
@@ -357,7 +360,7 @@ public class SolutionSerializer {
 			if (entry.getKey() instanceof PredicateDefinition predicateDefinition &&
 					ProblemUtil.isBasePredicate(predicateDefinition)) {
 				var partialRelation = entry.getValue().asPartialRelation();
-				addDefaultAssertion(partialRelation);
+//				addDefaultAssertion(partialRelation);
 				addAssertions(partialRelation);
 			}
 		}
@@ -365,7 +368,7 @@ public class SolutionSerializer {
 
 	private <A extends AbstractValue<A, C>, C> void addAssertions(PartialSymbol<A, C> partialSymbol) {
 		var relation = findRelation(partialSymbol);
-		var cursor = reasoningAdapter.getPartialInterpretation(Concreteness.CANDIDATE, partialSymbol).getAll();
+		var cursor = reasoningAdapter.getPartialInterpretation(Concreteness.PARTIAL, partialSymbol).getAll();
 		// Make sure to output assertions in a deterministic order.
 		var sortedTuples = new TreeMap<Tuple, Expr>();
 		var interpreter = importAdapterProvider.getTermInterpreter(relation);
@@ -441,9 +444,9 @@ public class SolutionSerializer {
 
 	private void addComputedAssertions(PartialRelation computedRelation, PartialRelation partialRelation) {
 		var relation = findRelation(partialRelation);
-		var assertedInterpretation = reasoningAdapter.getPartialInterpretation(Concreteness.CANDIDATE,
+		var assertedInterpretation = reasoningAdapter.getPartialInterpretation(Concreteness.PARTIAL,
 				partialRelation);
-		var cursor = reasoningAdapter.getPartialInterpretation(Concreteness.CANDIDATE, computedRelation).getAll();
+		var cursor = reasoningAdapter.getPartialInterpretation(Concreteness.PARTIAL, computedRelation).getAll();
 		var sortedTuples = new TreeMap<Tuple, Expr>();
 		while (cursor.move()) {
 			var tuple = cursor.getKey();
@@ -494,9 +497,9 @@ public class SolutionSerializer {
 		}
 		@SuppressWarnings("unchecked")
 		var uncheckedPartialFunction = (PartialFunction<A, C>) partialFunction;
-		var assertedInterpretation = reasoningAdapter.getPartialInterpretation(Concreteness.CANDIDATE,
+		var assertedInterpretation = reasoningAdapter.getPartialInterpretation(Concreteness.PARTIAL,
 				uncheckedPartialFunction);
-		var cursor = reasoningAdapter.getPartialInterpretation(Concreteness.CANDIDATE, computedFunction).getAll();
+		var cursor = reasoningAdapter.getPartialInterpretation(Concreteness.PARTIAL, computedFunction).getAll();
 		var sortedTuples = new TreeMap<Tuple, Expr>();
 		while (cursor.move()) {
 			var tuple = cursor.getKey();

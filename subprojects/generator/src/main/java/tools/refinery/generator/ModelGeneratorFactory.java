@@ -27,7 +27,7 @@ import java.util.Set;
 // This class is used as a fluent builder, so it's not necessary to use the return value of all of its methods.
 @SuppressWarnings("UnusedReturnValue")
 public final class ModelGeneratorFactory extends ModelFacadeFactory<ModelGeneratorFactory> {
-	private boolean debugPartialInterpretations;
+	private boolean debugPartialInterpretations = true;
 
 	private boolean partialInterpretationBasedNeighborhoods;
 

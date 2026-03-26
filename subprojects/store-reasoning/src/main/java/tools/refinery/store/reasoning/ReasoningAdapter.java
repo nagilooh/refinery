@@ -24,6 +24,8 @@ import tools.refinery.store.reasoning.seed.ModelSeed;
 import tools.refinery.store.tuple.Tuple1;
 
 import java.math.BigInteger;
+import java.util.Map;
+import java.util.Set;
 
 public interface ReasoningAdapter extends ModelAdapter {
 	PartialRelation EXISTS_SYMBOL = PartialSymbol.of("exists", 1);
@@ -41,6 +43,11 @@ public interface ReasoningAdapter extends ModelAdapter {
 
 	<A extends AbstractValue<A, C>, C> PartialInterpretation<A, C> getPartialInterpretation(
 			Concreteness concreteness, PartialSymbol<A, C> partialSymbol);
+
+	public Set<AnyPartialSymbol> getPartialSymbols();
+
+	public Map<AnyPartialSymbol, AnyPartialInterpretation> getPartialInterpretations(
+			Concreteness concreteness);
 
 	default AnyPartialInterpretationRefiner getRefiner(AnyPartialSymbol partialSymbol) {
 		var typedPartialSymbol = (PartialSymbol<?, ?>) partialSymbol;

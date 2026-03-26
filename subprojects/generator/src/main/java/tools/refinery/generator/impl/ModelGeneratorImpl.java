@@ -122,7 +122,7 @@ public class ModelGeneratorImpl extends ConcreteModelFacade implements ModelGene
 
 	@Override
 	public Problem serialize() {
-		checkSuccessfulGeneration();
+//		checkSuccessfulGeneration();
 		return super.serialize();
 	}
 

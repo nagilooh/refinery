@@ -26,8 +26,7 @@ import tools.refinery.store.representation.Symbol;
 import tools.refinery.store.tuple.Tuple;
 import tools.refinery.store.tuple.Tuple1;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 class ReasoningAdapterImpl implements ReasoningAdapter {
 	static final Symbol<Integer> NODE_COUNT_SYMBOL = Symbol.of("MODEL_SIZE", 0, Integer.class, 0);
@@ -145,6 +144,15 @@ class ReasoningAdapterImpl implements ReasoningAdapter {
 		@SuppressWarnings("unchecked")
 		var typedInterpretation = (PartialInterpretation<A, C>) interpretation;
 		return typedInterpretation;
+	}
+
+	public Set<AnyPartialSymbol> getPartialSymbols() {
+		return partialInterpretations[Concreteness.PARTIAL.ordinal()].keySet();
+	}
+
+	public Map<AnyPartialSymbol, AnyPartialInterpretation> getPartialInterpretations(
+			Concreteness concreteness) {
+		return Collections.unmodifiableMap(partialInterpretations[concreteness.ordinal()]);
 	}
 
 	@Override
