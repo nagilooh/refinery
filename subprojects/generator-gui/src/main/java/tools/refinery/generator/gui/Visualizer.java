@@ -1,9 +1,11 @@
 package tools.refinery.generator.gui;
 
+import tools.refinery.language.semantics.ProblemTrace;
 import tools.refinery.logic.term.truthvalue.TruthValue;
 import tools.refinery.store.model.Interpretation;
 import tools.refinery.store.model.Model;
 import tools.refinery.store.reasoning.ReasoningAdapter;
+import tools.refinery.store.reasoning.interpretation.AnyPartialInterpretation;
 import tools.refinery.store.reasoning.interpretation.PartialInterpretation;
 import tools.refinery.store.reasoning.literal.Concreteness;
 import tools.refinery.store.reasoning.representation.AnyPartialSymbol;
@@ -31,8 +33,13 @@ public class Visualizer {
 			false, "0"
 	);
 
-	public static SVGDocument renderModel(Model model) {
-		var modelDot = createDotForModel(model);
+	public static SVGDocument renderModel(Model model, ProblemTrace trace) {
+		var modelDot = createDotForModel(model, trace, null);
+		return renderDotToSvg(modelDot);
+	}
+
+	public static SVGDocument renderModel(Model model, ProblemTrace trace, Activation activation) {
+		var modelDot = createDotForModel(model, trace, activation);
 		return renderDotToSvg(modelDot);
 	}
 
@@ -57,12 +64,15 @@ public class Visualizer {
 		}
 	}
 
-	public static String createDotForModel(Model model) {
+	public static String createDotForModel(Model model, ProblemTrace trace, Activation activation) {
 		var unaryTupleToInterpretationsMap = new HashMap<Tuple, LinkedHashSet<PartialInterpretation<?, ?>>>();
 		var reasoningAdapter = model.getAdapter(ReasoningAdapter.class);
-//		var symbols = reasoningAdapter.getPartialSymbols();
-		var allInterpretations = new LinkedHashMap<AnySymbol, Interpretation<?>>();
-		var allPartialInterpretations = reasoningAdapter.getPartialInterpretations(Concreteness.PARTIAL);
+		var relationTrace = trace.getRelationTrace();
+		Map<AnyPartialSymbol, AnyPartialInterpretation> allPartialInterpretations = HashMap.newHashMap(relationTrace.size());
+		for (var partialSymbol : relationTrace.values()) {
+			allPartialInterpretations.put(partialSymbol,
+					reasoningAdapter.getPartialInterpretation(Concreteness.PARTIAL, partialSymbol));
+		}
 
 		var sb = new StringBuilder();
 
@@ -107,13 +117,27 @@ public class Visualizer {
 			}
 		}
 		for (var entry : unaryTupleToInterpretationsMap.entrySet()) {
-			sb.append(drawElement(entry));
+			var isActivation = false;
+			if (activation != null) {
+				var node = entry.getKey().get(0);
+				var activationSize = activation.tuple().getSize();
+				for (int i = 0; i < activationSize; i++) {
+					if (activation.tuple().get(i) == node) {
+						System.out.println("Node " + node + " is part of activation " + activation);
+						isActivation = true;
+						break;
+					}
+				}
+			}
+			sb.append(drawElement(entry, isActivation));
 		}
 		sb.append("}");
 		return sb.toString();
+
 	}
 
-	private static StringBuilder drawElement(Map.Entry<Tuple, LinkedHashSet<PartialInterpretation<?, ?>>> entry) {
+	private static StringBuilder drawElement(Map.Entry<Tuple, LinkedHashSet<PartialInterpretation<?, ?>>> entry,
+											 boolean isActivation) {
 		var sb = new StringBuilder();
 
 		var tableStyle =  " CELLSPACING=\"0\" BORDER=\"2\" CELLBORDER=\"0\" CELLPADDING=\"4\" STYLE=\"ROUNDED\"";
@@ -123,6 +147,9 @@ public class Visualizer {
 		var mainLabel = String.valueOf(id);
 		var interpretations = entry.getValue();
 		var backgroundColor = "#ffffff";
+		if (isActivation) {
+			backgroundColor = "#aaaaff";
+		}
 
 		sb.append(id);
 		sb.append(" [\n");

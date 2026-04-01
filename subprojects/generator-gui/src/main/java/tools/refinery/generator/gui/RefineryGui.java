@@ -1,6 +1,7 @@
 package tools.refinery.generator.gui;
 
 import com.google.inject.Inject;
+import org.jspecify.annotations.NonNull;
 import tools.refinery.generator.ModelGenerator;
 import tools.refinery.generator.standalone.StandaloneRefinery;
 import tools.refinery.language.semantics.ProblemTrace;
@@ -14,28 +15,24 @@ import com.github.weisj.jsvg.SVGDocument;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
  * Simple Swing GUI that shows a list of items and a button. When the button
  * is pressed (or an item is double-clicked) the selected item is passed to
- * {@link #onItemSelected(Object)} which is left as a stub for the user to
+ * {@link #onItemSent(Object)} which is left as a stub for the user to
  * implement.
  */
 public class RefineryGui {
 	@Inject
 	private static PropagationAdapter propagationAdapter;
 	private static DesignSpaceExplorationAdapter designSpaceExplorationAdapter;
-	private static ReasoningAdapter reasoningAdapter;
 	private static ProblemTrace trace;
 	private final JFrame frame;
 	private final DefaultListModel<Activation> listModel;
@@ -45,12 +42,12 @@ public class RefineryGui {
 	private double zoomFactor = 1.0;
 	private SVGDocument currentSvg;
 	// optional handler set by the caller; if non-null it's invoked instead of onItemSelected
+	private Consumer<Activation> sendHandler;
 	private Consumer<Activation> selectionHandler;
 	// optional supplier to refresh the list contents after each send action
 	private Supplier<List<Activation>> itemsSupplier;
 	private static Model model;
 	private static ModelQueryAdapter queryEngine;
-	private static int id = 0;
 
 	public RefineryGui() {
 		frame = new JFrame("Refinery GUI");
@@ -175,48 +172,7 @@ public class RefineryGui {
 		imagePanel.addMouseMotionListener(dragAdapter);
 
 		JPanel rightPanel = new JPanel(new BorderLayout());
-		JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT));
-		JButton zoomInBtn = new JButton("+");
-		JButton zoomOutBtn = new JButton("-");
-		JButton fitBtn = new JButton("⛶");
-
-		zoomInBtn.addActionListener(e -> {
-			if (autoFit && currentSvg != null) {
-				autoFit = false;
-				com.github.weisj.jsvg.geometry.size.FloatSize size = currentSvg.size();
-				Container parent = imagePanel.getParent();
-				int w = parent != null ? parent.getWidth() : imagePanel.getWidth();
-				int h = parent != null ? parent.getHeight() : imagePanel.getHeight();
-				zoomFactor = Math.min((double) w / size.width, (double) h / size.height);
-			}
-			zoomFactor *= 1.2;
-			imagePanel.revalidate();
-			imagePanel.repaint();
-		});
-
-		zoomOutBtn.addActionListener(e -> {
-			if (autoFit && currentSvg != null) {
-				autoFit = false;
-				com.github.weisj.jsvg.geometry.size.FloatSize size = currentSvg.size();
-				Container parent = imagePanel.getParent();
-				int w = parent != null ? parent.getWidth() : imagePanel.getWidth();
-				int h = parent != null ? parent.getHeight() : imagePanel.getHeight();
-				zoomFactor = Math.min((double) w / size.width, (double) h / size.height);
-			}
-			zoomFactor /= 1.2;
-			imagePanel.revalidate();
-			imagePanel.repaint();
-		});
-
-		fitBtn.addActionListener(e -> {
-			autoFit = true;
-			imagePanel.revalidate();
-			imagePanel.repaint();
-		});
-
-		toolbar.add(zoomInBtn);
-		toolbar.add(zoomOutBtn);
-		toolbar.add(fitBtn);
+		JPanel toolbar = getJPanel();
 
 		rightPanel.add(toolbar, BorderLayout.NORTH);
 		rightPanel.add(imageScrollPane, BorderLayout.CENTER);
@@ -225,17 +181,15 @@ public class RefineryGui {
 		splitPane.setDividerLocation(300);
 
 		JButton sendButton = new JButton("Send Selected");
-		sendButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				sendSelected();
-			}
-		});
+		sendButton.addActionListener(e -> sendSelected());
 
 		// double-click to send
 		list.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
+				if (e.getClickCount() == 1) {
+					selectItem();
+				}
 				if (e.getClickCount() == 2) {
 					sendSelected();
 				}
@@ -250,6 +204,49 @@ public class RefineryGui {
 		frame.getContentPane().add(bottom, BorderLayout.SOUTH);
 	}
 
+	private @NonNull JPanel getJPanel() {
+		JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT));
+		JButton zoomInBtn = new JButton("+");
+		JButton zoomOutBtn = new JButton("-");
+		JButton fitBtn = new JButton("⛶");
+
+		zoomInBtn.addActionListener(e -> {
+			baseZoomFactor();
+			zoomFactor *= 1.2;
+			imagePanel.revalidate();
+			imagePanel.repaint();
+		});
+
+		zoomOutBtn.addActionListener(e -> {
+			baseZoomFactor();
+			zoomFactor /= 1.2;
+			imagePanel.revalidate();
+			imagePanel.repaint();
+		});
+
+		fitBtn.addActionListener(e -> {
+			autoFit = true;
+			imagePanel.revalidate();
+			imagePanel.repaint();
+		});
+
+		toolbar.add(zoomInBtn);
+		toolbar.add(zoomOutBtn);
+		toolbar.add(fitBtn);
+		return toolbar;
+	}
+
+	private void baseZoomFactor() {
+		if (autoFit && currentSvg != null) {
+			autoFit = false;
+			com.github.weisj.jsvg.geometry.size.FloatSize size = currentSvg.size();
+			Container parent = imagePanel.getParent();
+			int w = parent != null ? parent.getWidth() : imagePanel.getWidth();
+			int h = parent != null ? parent.getHeight() : imagePanel.getHeight();
+			zoomFactor = Math.min((double) w / size.width, (double) h / size.height);
+		}
+	}
+
 	public void setSvg(SVGDocument svg) {
 		this.currentSvg = svg;
 		if (imagePanel != null) {
@@ -258,7 +255,7 @@ public class RefineryGui {
 		}
 	}
 
-	private void sendSelected() {
+	private void selectItem() {
 		Activation sel = list.getSelectedValue();
 		if (sel == null) {
 			JOptionPane.showMessageDialog(frame, "No item selected", "Warning", JOptionPane.WARNING_MESSAGE);
@@ -268,6 +265,20 @@ public class RefineryGui {
 			selectionHandler.accept(sel);
 		} else {
 			onItemSelected(sel);
+		}
+
+	}
+
+	private void sendSelected() {
+		Activation sel = list.getSelectedValue();
+		if (sel == null) {
+			JOptionPane.showMessageDialog(frame, "No item selected", "Warning", JOptionPane.WARNING_MESSAGE);
+			return;
+		}
+		if (sendHandler != null) {
+			sendHandler.accept(sel);
+		} else {
+			onItemSent(sel);
 		}
 		// after every press of the button, refresh the list from the supplier if provided
 		refreshItems();
@@ -289,6 +300,14 @@ public class RefineryGui {
 
 	/**
 	 * Set a handler that will be invoked when an item is sent.
+	 * If not set, {@link #onItemSent(Object)} is called instead.
+	 */
+	public void setSendHandler(Consumer<Activation> handler) {
+		this.sendHandler = handler;
+	}
+
+	/**
+	 * Set a handler that will be invoked when an item is selected.
 	 * If not set, {@link #onItemSelected(Object)} is called instead.
 	 */
 	public void setSelectionHandler(Consumer<Activation> handler) {
@@ -305,8 +324,18 @@ public class RefineryGui {
 	}
 
 	/**
-	 * Stub to be implemented by the user. This method will be called when an
+	 * Stub to be implemented. This method will be called when an
 	 * item is sent (button click or double-click). Replace the body with the
+	 * desired behavior (e.g. call into StandaloneRefinery or other code).
+	 */
+	protected void onItemSent(Object item) {
+		// TODO: implement behavior when an item is selected. Example:
+		System.out.println("Sent: " + item);
+	}
+
+	/**
+	 * Stub to be implemented. This method will be called when an
+	 * item is selected (single-click). Replace the body with the
 	 * desired behavior (e.g. call into StandaloneRefinery or other code).
 	 */
 	protected void onItemSelected(Object item) {
@@ -339,18 +368,18 @@ public class RefineryGui {
 		}
 	}
 
-	private static void showModel(ModelGenerator generator, RefineryGui gui) {
-		SVGDocument svg = Visualizer.renderModel(model);
+	private static void showModel(ModelGenerator generator, RefineryGui gui, Activation activation) {
+		SVGDocument svg = Visualizer.renderModel(model, trace, activation);
 		if (gui != null) {
 			gui.setSvg(svg);
 		}
-		var stateProblem = generator.serialize();
-		var resource = stateProblem.eResource();
-		try {
-			resource.save(System.out, Map.of());
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
+//		var stateProblem = generator.serialize();
+//		var resource = stateProblem.eResource();
+//		try {
+//			resource.save(System.out, Map.of());
+//		} catch (IOException e) {
+//			throw new RuntimeException(e);
+//		}
 	}
 
 	private static void step(Activation activation) {
@@ -412,36 +441,34 @@ public class RefineryGui {
 		trace = generator.getProblemTrace();
 		propagationAdapter = model.getAdapter(PropagationAdapter.class);
 		designSpaceExplorationAdapter = model.getAdapter(DesignSpaceExplorationAdapter.class);
-		reasoningAdapter = model.getAdapter(ReasoningAdapter.class);
 
-		SwingUtilities.invokeLater(new Runnable() {
-			@Override
-			public void run() {
+		SwingUtilities.invokeLater(() -> {
+			RefineryGui gui = new RefineryGui();
+			// Demo: mutable list that will be updated when the user sends an item.
+			final List<Activation> activationList = new ArrayList<>();
+			showModel(generator, gui, null);
+			refreshActivations(activationList);
 
+			// supply the current contents of activationList whenever the GUI refreshes
+			gui.setItemsSupplier(() -> new ArrayList<>(activationList));
 
-				RefineryGui gui = new RefineryGui();
-				// Demo: mutable list that will be updated when the user sends an item.
-				final List<Activation> activationList = new ArrayList<>();
-				showModel(generator, gui);
+			// when an item is selected, remove it from activationList to simulate processing
+			gui.setSendHandler(item -> {
+				System.out.println("Processing: " + item);
+				step(item);
+				showModel(generator, gui, null);
 				refreshActivations(activationList);
+			});
 
-				// supply the current contents of activationList whenever the GUI refreshes
-				gui.setItemsSupplier(() -> new ArrayList<>(activationList));
+			gui.setSelectionHandler(item -> {
+				System.out.println("Selected: " + item);
+				showModel(generator, gui, item);
+			});
 
-				// when an item is selected, remove it from activationList to simulate processing
-				gui.setSelectionHandler(item -> {
-					System.out.println("Processing: " + item);
-					step(item);
-					showModel(generator, gui);
-					refreshActivations(activationList);
-				});
+			// initialize GUI list from the supplier
+			gui.refreshItems();
 
-				// initialize GUI list from the supplier
-				gui.refreshItems();
-
-				gui.show();
-
-			}
+			gui.show();
 		});
 	}
 }
