@@ -286,6 +286,7 @@
     <eLiterals name="PROPAGATION" value="1"/>
     <eLiterals name="DECISION" value="2"/>
     <eLiterals name="CONCRETIZATION" value="3"/>
+    <eLiterals name="TRANSFORMATION" value="4" literal="TRANSFORMATION"/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="Assertion" eSuperTypes="#//Statement #//AbstractAssertion">
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="default" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"
