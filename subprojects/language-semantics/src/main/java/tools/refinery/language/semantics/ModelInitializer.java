@@ -1090,6 +1090,12 @@ public class ModelInitializer {
 				var rule = ruleCompiler.toRule(name, ruleDefinition);
 				problemTrace.putRuleDefinition(ruleDefinition, rule);
 			}
+			case TRANSFORMATION -> {
+				var rule = ruleCompiler.toRule(name, ruleDefinition);
+				problemTrace.putRuleDefinition(ruleDefinition, rule);
+				storeBuilder.tryGetAdapter(DesignSpaceExplorationBuilder.class)
+						.ifPresent(dseBuilder -> dseBuilder.transformation(rule));
+			}
 			}
 		} catch (InvalidClauseException e) {
 			int clauseIndex = e.getClauseIndex();
