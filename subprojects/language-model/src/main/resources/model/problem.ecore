@@ -109,7 +109,7 @@
   <eClassifiers xsi:type="ecore:EClass" name="VariableOrNode" abstract="true" eSuperTypes="#//NamedElement"/>
   <eClassifiers xsi:type="ecore:EClass" name="Constant" abstract="true" eSuperTypes="#//Expr"/>
   <eClassifiers xsi:type="ecore:EClass" name="IntConstant" eSuperTypes="#//Constant">
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="intValue" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="intValue" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBigInteger"
         defaultValueLiteral="0"/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="RealConstant" eSuperTypes="#//Constant">
@@ -326,4 +326,11 @@
   <eClassifiers xsi:type="ecore:EClass" name="OverloadedDeclaration" eSuperTypes="#//ParametricDefinition #//Relation">
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="shadow" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
   </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="TheoryAction" eSuperTypes="#//Action #//ExistentialQuantifier">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="term" eType="#//Expr" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="theories" upperBound="-1"
+        eType="#//TheoryDeclaration"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="theoryOverride" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="TheoryDeclaration" eSuperTypes="#//NamedElement #//Statement #//AnnotatedElement"/>
 </ecore:EPackage>

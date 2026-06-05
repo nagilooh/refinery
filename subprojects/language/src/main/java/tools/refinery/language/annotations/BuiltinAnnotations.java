@@ -19,6 +19,7 @@ import tools.refinery.language.utils.ProblemUtil;
 import tools.refinery.language.validation.ClassHierarchyCollector;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.List;
 
 public class BuiltinAnnotations extends DeclarativeAnnotationValidator {
@@ -47,6 +48,7 @@ public class BuiltinAnnotations extends DeclarativeAnnotationValidator {
 
 	private static final List<QualifiedName> BINDING_MODES = List.of(FOCUS, LONE, MULTI);
 	private static final List<QualifiedName> VISIBILITIES = List.of(SHOW, HIDE);
+	private static final BigInteger COLOR_COUNT = BigInteger.valueOf(TypeHashProvider.COLOR_COUNT);
 
 	@Inject
 	private BuiltinAnnotationContext builtinAnnotationContext;
@@ -148,7 +150,7 @@ public class BuiltinAnnotations extends DeclarativeAnnotationValidator {
 		var concretize = annotationsFor(relation).getAnnotation(CONCRETIZE)
 				.flatMap(a -> a.getBoolean(CONCRETIZE_AUTO));
 		boolean defaultValue;
-		if (concretize.isPresent() && Boolean.FALSE.equals(concretize.get())) {
+		if (concretize.isPresent() && !concretize.get()) {
 			defaultValue = false;
 		} else {
 			defaultValue = ProblemUtil.isDecideByDefault(relation);
@@ -196,20 +198,24 @@ public class BuiltinAnnotations extends DeclarativeAnnotationValidator {
 		}
 	}
 
-	@ValidateAnnotation("PRIORITY")
-	@ValidateAnnotation("WEIGHT")
-	private void validateDecisionRuleAnnotation(Annotation annotation) {
-		if (!(annotation.getAnnotatedElement() instanceof RuleDefinition ruleDefinition) ||
-				!RuleKind.DECISION.equals(ruleDefinition.getKind())) {
-			var message = "@%s can only be applied to decision rules."
-					.formatted(annotation.getAnnotation().getDeclaration().getName());
-			error(message, annotation);
-		}
+	// This method does not make sense inverted.
+	@SuppressWarnings("BooleanMethodIsAlwaysInverted")
+	private boolean isDecisionRuleDefinition(EObject annotatedElement) {
+		return annotatedElement instanceof RuleDefinition ruleDefinition &&
+				RuleKind.DECISION.equals(ruleDefinition.getKind());
 	}
 
 	@ValidateAnnotation("PRIORITY")
 	private void validatePriority(Annotation annotation) {
-		var value = annotation.getInteger(PRIORITY_VALUE).orElse(DecisionSettings.DEFAULT_PRIORITY);
+		var annotatedElement = annotation.getAnnotatedElement();
+		if (!isDecisionRuleDefinition(annotatedElement) && !(annotatedElement instanceof TheoryDeclaration)) {
+			var message = "@%s can only be applied to decision rules and theory declarations."
+					.formatted(annotation.getAnnotation().getDeclaration().getName());
+			error(message, annotation);
+		}
+		var value = annotation.getBigInteger(PRIORITY_VALUE)
+				.map(BigInteger::intValue)
+				.orElse(DecisionSettings.DEFAULT_PRIORITY);
 		if (value == DecisionSettings.DEFAULT_PRIORITY) {
 			var message = "Priority is already at its default value (%d)."
 					.formatted(DecisionSettings.DEFAULT_PRIORITY);
@@ -219,6 +225,11 @@ public class BuiltinAnnotations extends DeclarativeAnnotationValidator {
 
 	@ValidateAnnotation("WEIGHT")
 	private void validateWeight(Annotation annotation) {
+		if (!isDecisionRuleDefinition(annotation.getAnnotatedElement())) {
+			var message = "@%s can only be applied to decision rules."
+					.formatted(annotation.getAnnotation().getDeclaration().getName());
+			error(message, annotation);
+		}
 		var coefficient = annotation.getBigDecimal(WEIGHT_COEFFICIENT);
 		var exponent = annotation.getBigDecimal(WEIGHT_EXPONENT);
 		if (coefficient.isEmpty() && exponent.isEmpty()) {
@@ -242,7 +253,7 @@ public class BuiltinAnnotations extends DeclarativeAnnotationValidator {
 			error("Only class declarations can be colored.", annotation);
 			return;
 		}
-		var colorId = annotation.getInteger(COLOR_COLOR_ID);
+		var colorId = annotation.getBigInteger(COLOR_COLOR_ID);
 		var hex = annotation.getString(COLOR_HEX);
 		if (colorId.isEmpty() && hex.isEmpty()) {
 			error("Must set either %s or %s.".formatted(COLOR_COLOR_ID, COLOR_HEX), annotation);
@@ -251,7 +262,7 @@ public class BuiltinAnnotations extends DeclarativeAnnotationValidator {
 			error("Can't set %s and %s at the same time.".formatted(COLOR_COLOR_ID, COLOR_HEX), annotation);
 		}
 		colorId.ifPresent(value -> {
-			if (value < 0 || value >= TypeHashProvider.COLOR_COUNT) {
+			if (value.compareTo(BigInteger.ZERO) < 0 || value.compareTo(COLOR_COUNT) >= 0) {
 				var message = "Color ID must be a positive integer between 0 and %d."
 						.formatted(TypeHashProvider.COLOR_COUNT - 1);
 				error(message, annotation);

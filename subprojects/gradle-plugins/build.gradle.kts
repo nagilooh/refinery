@@ -4,6 +4,9 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
+import org.gradle.plugin.compatibility.compatibility
+import tools.refinery.gradle.utils.JvmArgsUtils
+
 plugins {
 	`java-gradle-plugin`
 	`maven-publish`
@@ -19,8 +22,8 @@ val generatedSourceFile = generatedSourcesDir.map {
 }
 
 java {
-	setSourceCompatibility(11)
-	setTargetCompatibility(11)
+	setSourceCompatibility(17)
+	setTargetCompatibility(17)
 }
 
 sourceSets.main {
@@ -36,18 +39,26 @@ gradlePlugin {
 			id = "tools.refinery.settings"
 			displayName = "Refinery settings plugin"
 			description = "Configures common build settings for projects using Refinery"
-			@Suppress("UnstableApiUsage")
 			tags = listOf("refinery", "settings", "conventions")
 			implementationClass = "tools.refinery.gradle.plugins.RefinerySettingsPlugin"
+			compatibility {
+				features {
+					configurationCache.set(true)
+				}
+			}
 		}
 
 		create("javaConventions") {
 			id = "tools.refinery.java"
 			displayName = "Refinery Java conventions plugin"
 			description = "Configures common Java settings for projects using Refinery"
-			@Suppress("UnstableApiUsage")
 			tags = listOf("refinery", "java", "conventions")
 			implementationClass = "tools.refinery.gradle.plugins.RefineryJavaPlugin"
+			compatibility {
+				features {
+					configurationCache.set(true)
+				}
+			}
 		}
 	}
 }
@@ -65,10 +76,14 @@ abstract class GenerateVersionsFileTask : DefaultTask() {
 	@get:Input
 	abstract val javaLanguageVersion: Property<Int>
 
+	@get:Input
+	abstract val guiceVersion: Property<String>
+
 	@TaskAction
 	fun execute() {
 		val file = outputFile.asFile.get()
 		file.parentFile.mkdirs()
+		val jvmArgs = JvmArgsUtils.JVM_ARGS.joinToString(", ") { "\"${it.replace("\"", "\\")}\"" }
 		file.writeText(
 			"""
 			package tools.refinery.gradle.plugins.internal;
@@ -79,6 +94,10 @@ abstract class GenerateVersionsFileTask : DefaultTask() {
 				public static final boolean USE_MAVEN_LOCAL = ${useMavenLocal.get()};
 
 				public static final int JAVA_LANGUAGE_VERSION = ${javaLanguageVersion.get()};
+
+				public static final String GUICE_VERSION = "${guiceVersion.get()}";
+
+				public static final java.util.List<String> JVM_ARGS = java.util.List.of(${jvmArgs});
 
 				private Versions() {
 					throw new IllegalStateException("This is a static utility class and should not be " +
@@ -96,6 +115,7 @@ val generateVersionsFile by tasks.registering(GenerateVersionsFileTask::class) {
 	refineryVersion = version.toString()
 	useMavenLocal = false
 	javaLanguageVersion = java.toolchain.languageVersion.map { it.asInt() }
+	guiceVersion = libs.versions.guice
 }
 
 gradle.taskGraph.whenReady {

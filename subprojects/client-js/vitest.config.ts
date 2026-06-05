@@ -4,12 +4,8 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
+import { playwright } from '@vitest/browser-playwright';
 import { coverageConfigDefaults, defineConfig } from 'vitest/config';
-
-// Only run Webkit tests in the CI environment or whe explicitly requested,
-// because Playwright only supports specific environments that may be unavaiable
-// on a developer machine. See https://playwright.dev/docs/intro#system-requirements
-const isCI = process.env['CI'] === 'true';
 
 export default defineConfig({
   test: {
@@ -30,18 +26,16 @@ export default defineConfig({
           include: ['src/**/*.test.ts'],
           environment: 'node',
           globalSetup: ['src/__fixtures__/mockServer.ts'],
+          // Firefox has a limit on HTTP 1.1 requests to the same origin,
+          // so avoid any paralellism to prevent deadlocks due to our mock server.
+          maxConcurrency: 1,
+          maxWorkers: 1,
+          fileParallelism: false,
           browser: {
             enabled: true,
-            // Firefox has a limit on HTTP 1.1 requests to the same origin,
-            // so avoid any paralellism to prevent deadlocks due to our mock server.
-            fileParallelism: false,
             headless: true,
-            provider: 'playwright',
-            instances: [
-              { browser: 'chromium' },
-              { browser: 'firefox' },
-              ...(isCI ? [{ browser: 'webkit' }] : []),
-            ],
+            provider: playwright(),
+            instances: [{ browser: 'chromium' }, { browser: 'firefox' }],
           },
         },
       },

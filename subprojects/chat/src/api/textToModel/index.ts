@@ -17,7 +17,7 @@ import {
 import type { RequestHandler } from 'express';
 import type { OpenAI } from 'openai';
 import { zodResponseFormat } from 'openai/helpers/zod';
-import { z } from 'zod';
+import { z } from 'zod/v3';
 
 import system from './system.md';
 
@@ -108,7 +108,7 @@ function concretizationResultToChatMessage(
 
 <errors>
 ${issues.join('\n')}
-</error>
+</errors>
 
 Please check your assertions and fix the errors.`;
 }
@@ -212,7 +212,7 @@ ${text}
       await res.writeSuccess({
         ...refineryResult,
       } satisfies TextToModelResult);
-      break;
+      return;
     }
     res.log.debug({ errorMessage }, 'Semantic errors');
     messages.push({
