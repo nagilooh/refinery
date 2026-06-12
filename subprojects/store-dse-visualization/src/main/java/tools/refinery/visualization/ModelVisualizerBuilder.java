@@ -14,4 +14,5 @@ public interface ModelVisualizerBuilder extends ModelAdapterBuilder {
 	ModelVisualizerBuilder withFormat(FileFormat format);
 	ModelVisualizerBuilder saveDesignSpace();
 	ModelVisualizerBuilder saveStates();
+	ModelVisualizerBuilder saveTransitionsToAlreadyVisitedStates();
 }

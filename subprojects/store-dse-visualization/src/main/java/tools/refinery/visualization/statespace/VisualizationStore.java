@@ -10,9 +10,10 @@ import tools.refinery.store.map.Version;
 import java.util.Map;
 
 public interface VisualizationStore {
-	void addState(Version state, String label);
+	void addState(Version state, String label, Integer stateCode);
 	void addSolution(Version state);
 	void addTransition(Version from, Version to, String label);
-	StringBuilder getDesignSpaceStringBuilder();
+	void addTransition(Version from, int to, String label);
+	StringBuilder getDesignSpaceStringBuilder(boolean includeTransitionsToAlreadyVisitedStates);
 	Map<Version, Integer> getStates();
 }

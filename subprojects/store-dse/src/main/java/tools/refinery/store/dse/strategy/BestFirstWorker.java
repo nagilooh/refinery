@@ -83,7 +83,7 @@ public class BestFirstWorker {
 		}
 
 		if (isVisualizationEnabled) {
-			visualizationStore.addState(version, objectiveValue.toString());
+			visualizationStore.addState(version, objectiveValue.toString(), stateCoderAdapter.calculateModelCode());
 			if (accepted) {
 				visualizationStore.addSolution(version);
 			}
@@ -192,10 +192,14 @@ public class BestFirstWorker {
 			oldVersion = last.version();
 		}
 		var submitResult = submit();
-		if (isVisualizationEnabled && submitResult.newVersion() != null) {
-			var newVersion = submitResult.newVersion().version();
-			visualizationStore.addTransition(oldVersion, newVersion,
-					"fire: " + visitResult.transformation() + ", " + visitResult.activation());
+		if (isVisualizationEnabled) {
+			var label = visitResult.transformationName() + " " + visitResult.activationTuple();
+			if (submitResult.newVersion() != null) {
+				var newVersion = submitResult.newVersion().version();
+				visualizationStore.addTransition(oldVersion, newVersion, label);
+			} else {
+				visualizationStore.addTransition(oldVersion, stateCoderAdapter.calculateModelCode(), label);
+			}
 		}
 		return new RandomVisitResult(submitResult, visitResult.mayHaveMore());
 	}

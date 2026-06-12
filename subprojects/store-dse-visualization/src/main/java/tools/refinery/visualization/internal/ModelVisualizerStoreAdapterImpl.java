@@ -18,16 +18,19 @@ public class ModelVisualizerStoreAdapterImpl implements ModelVisualizerStoreAdap
 	private final String outputPath;
 	private final boolean renderDesignSpace;
 	private final boolean renderStates;
+	private final boolean renderTransitionsToAlreadyVisitedStates;
 	private final Set<FileFormat> formats;
 
 	public ModelVisualizerStoreAdapterImpl(ModelStore store, String dotBinaryPath, String outputPath,
-										   Set<FileFormat> formats, boolean renderDesignSpace, boolean renderStates) {
+	                                       Set<FileFormat> formats, boolean renderDesignSpace, boolean renderStates,
+	                                       boolean renderTransitionsToAlreadyVisitedStates) {
 		this.store = store;
 		this.dotBinaryPath = dotBinaryPath;
 		this.outputPath = outputPath;
 		this.formats = formats;
 		this.renderDesignSpace = renderDesignSpace;
 		this.renderStates = renderStates;
+		this.renderTransitionsToAlreadyVisitedStates = renderTransitionsToAlreadyVisitedStates;
 	}
 
 	@Override
@@ -57,6 +60,11 @@ public class ModelVisualizerStoreAdapterImpl implements ModelVisualizerStoreAdap
 	@Override
 	public boolean isRenderStates() {
 		return renderStates;
+	}
+
+	@Override
+	public boolean isRenderTransitionsToAlreadyVisitedStates() {
+		return renderTransitionsToAlreadyVisitedStates;
 	}
 
 	@Override

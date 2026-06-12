@@ -14,16 +14,19 @@ import java.util.Map;
 public class VisualizationStoreImpl implements VisualizationStore {
 
 	private final Map<Version, Integer> states = new HashMap<>();
+	private final Map<Version, Integer> stateCodes = new HashMap<>();
 	private int transitionCounter = 0;
 	private Integer numberOfStates = 0;
 	private final StringBuilder designSpaceBuilder = new StringBuilder();
+	private final StringBuilder transitionsToAlreadyVisitedStatesBuilder = new StringBuilder();
 
 	@Override
-	public synchronized void addState(Version state, String label) {
+	public synchronized void addState(Version state, String label, Integer stateCode) {
 		if (states.containsKey(state)) {
 			return;
 		}
 		states.put(state, numberOfStates++);
+		stateCodes.put(state, stateCode);
 		designSpaceBuilder.append(states.get(state)).append(" [label = \"").append(states.get(state)).append(" (");
 		designSpaceBuilder.append(label);
 		designSpaceBuilder.append(")\"\n").append("URL=\"./").append(states.get(state)).append(".svg\"]\n");
@@ -36,12 +39,26 @@ public class VisualizationStoreImpl implements VisualizationStore {
 
 	@Override
 	public synchronized void addTransition(Version from, Version to, String label) {
-		designSpaceBuilder.append(states.get(from)).append(" -> ").append(states.get(to))
-				.append(" [label=\"").append(transitionCounter++).append(": ").append(label).append("\"]\n");
+		addTransition(designSpaceBuilder, from, to, label, "style=solid");
 	}
 
-	public synchronized StringBuilder getDesignSpaceStringBuilder() {
-		return designSpaceBuilder;
+	@Override
+	public synchronized void addTransition(Version from, int to, String label) {
+		var toVersion = stateCodes.entrySet().stream().filter(e -> e.getValue() == to).findAny().get().getKey();
+		addTransition(transitionsToAlreadyVisitedStatesBuilder, from, toVersion, label, "style=dashed, " +
+				"color=\"#00000080\", fontcolor=\"#00000080\"");
+	}
+
+	private void addTransition(StringBuilder builder, Version from, Version to, String label, String style) {
+		builder.append(states.get(from)).append(" -> ").append(states.get(to))
+				.append(" [label=\"").append(transitionCounter++).append(": ").append(label).append("\", ")
+				.append(style).append("]\n");
+	}
+
+	public synchronized StringBuilder getDesignSpaceStringBuilder(boolean includeTransitionsToAlreadyVisitedStates) {
+		return includeTransitionsToAlreadyVisitedStates ?
+				designSpaceBuilder.append(transitionsToAlreadyVisitedStatesBuilder) :
+				designSpaceBuilder;
 	}
 
 	@Override

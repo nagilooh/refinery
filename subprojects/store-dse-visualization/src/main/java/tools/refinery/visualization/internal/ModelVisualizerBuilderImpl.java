@@ -19,11 +19,13 @@ public class ModelVisualizerBuilderImpl
 	private String outputPath;
 	private boolean saveDesignSpace = false;
 	private boolean saveStates = false;
+	private boolean saveTransitionsToAlreadyVisitedStates = false;
 	private final Set<FileFormat> formats = new LinkedHashSet<>();
 
 	@Override
 	protected ModelVisualizerStoreAdapterImpl doBuild(ModelStore store) {
-		return new ModelVisualizerStoreAdapterImpl(store, dotBinaryPath, outputPath, formats, saveDesignSpace, saveStates);
+		return new ModelVisualizerStoreAdapterImpl(store, dotBinaryPath, outputPath, formats, saveDesignSpace,
+				saveStates, saveTransitionsToAlreadyVisitedStates);
 	}
 
 	@Override
@@ -58,6 +60,13 @@ public class ModelVisualizerBuilderImpl
 	public ModelVisualizerBuilder saveStates() {
 		checkNotConfigured();
 		this.saveStates = true;
+		return this;
+	}
+
+	@Override
+	public ModelVisualizerBuilder saveTransitionsToAlreadyVisitedStates() {
+		checkNotConfigured();
+		this.saveTransitionsToAlreadyVisitedStates = true;
 		return this;
 	}
 }
