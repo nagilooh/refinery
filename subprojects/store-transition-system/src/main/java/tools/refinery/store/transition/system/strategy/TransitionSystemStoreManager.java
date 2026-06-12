@@ -1,0 +1,116 @@
+package tools.refinery.store.transition.system.strategy;
+
+import tools.refinery.store.dse.transition.VersionWithObjectiveValue;
+import tools.refinery.store.dse.transition.statespace.ActivationStore;
+import tools.refinery.store.dse.transition.statespace.EquivalenceClassStore;
+import tools.refinery.store.dse.transition.statespace.ObjectivePriorityQueue;
+import tools.refinery.store.dse.transition.statespace.internal.ActivationStoreImpl;
+import tools.refinery.store.dse.transition.statespace.internal.FastEquivalenceClassStore;
+import tools.refinery.store.dse.transition.statespace.internal.ObjectivePriorityQueueImpl;
+import tools.refinery.store.map.Version;
+import tools.refinery.store.model.ModelStore;
+import tools.refinery.store.statecoding.StateCoderStoreAdapter;
+import tools.refinery.store.transition.system.TransitionSystemStoreAdapter;
+import tools.refinery.store.transition.system.statespace.State;
+import tools.refinery.store.transition.system.statespace.Trace;
+import tools.refinery.store.transition.system.statespace.Transition;
+import tools.refinery.visualization.ModelVisualizerStoreAdapter;
+import tools.refinery.visualization.statespace.VisualizationStore;
+import tools.refinery.visualization.statespace.internal.VisualizationStoreImpl;
+
+import java.util.Comparator;
+import java.util.List;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+
+public class TransitionSystemStoreManager {
+
+	private final ModelStore modelStore;
+	private final ActivationStore<Version> activationStore;
+	private final EquivalenceClassStore equivalenceClassStore;
+	private final VisualizationStore visualizationStore;
+	private final VisualizationStore solutionVisualizationStore;
+	private final ObjectivePriorityQueue<State> objectiveStore;
+	Trace solution;
+
+	public TransitionSystemStoreManager(ModelStore modelStore) {
+		this.modelStore = modelStore;
+
+		var storeAdapter = modelStore.getAdapter(TransitionSystemStoreAdapter.class);
+		this.objectiveStore = new ObjectivePriorityQueueImpl<>(Comparator.comparingInt(State::depth).reversed());
+		BiFunction<Transition.Builder, Integer, Double> weightProvider = (rule, unvisited) -> unvisited == 0 ? 0.0 : 1.0;
+		Consumer<Version> whenAllActivationsVisited = x -> objectiveStore.removeIf(s -> x.equals(s.version()));
+		this.activationStore = new ActivationStoreImpl<>(storeAdapter.getTransitions(), weightProvider,
+				whenAllActivationsVisited);
+		this.equivalenceClassStore = new FastEquivalenceClassStore(modelStore.getAdapter(StateCoderStoreAdapter.class)) {
+			@Override
+			protected void delegate(VersionWithObjectiveValue version, int[] emptyActivations, boolean accept) {
+				throw new UnsupportedOperationException("This equivalence storage is not prepared to resolve " +
+						"symmetries!");
+			}
+		};
+
+		if (modelStore.tryGetAdapter(ModelVisualizerStoreAdapter.class).isPresent()) {
+			this.visualizationStore = new VisualizationStoreImpl();
+			this.solutionVisualizationStore = new VisualizationStoreImpl();
+		} else {
+			this.visualizationStore = null;
+			this.solutionVisualizationStore = null;
+		}
+	}
+
+	public ActivationStore<Version> getActivationStore() {
+		return activationStore;
+	}
+
+	public EquivalenceClassStore getEquivalenceClassStore() {
+		return equivalenceClassStore;
+	}
+
+	public VisualizationStore getVisualizationStore() {
+		return visualizationStore;
+	}
+
+	public VisualizationStore getSolutionVisualizationStore() {
+		return solutionVisualizationStore;
+	}
+
+	public ObjectivePriorityQueue<State> getObjectiveStore() {
+		return objectiveStore;
+	}
+
+	public void setSolution(Trace solution) {
+		this.solution = solution;
+
+		if (solutionVisualizationStore != null) {
+			List<State> states = solution.states();
+			for (int i = 0; i < states.size(); i++) {
+				var state = states.get(i).version();
+				solutionVisualizationStore.addState(state, "", null);
+				if (i == states.size() - 1) {
+					solutionVisualizationStore.addSolution(state);
+				}
+				if (i > 0) {
+					var transition = solution.transitions().get(i - 1);
+					var label = transition.transition().toString() + " " + transition.activation();
+					solutionVisualizationStore.addTransition(states.get(i - 1).version(), state, label);
+				}
+			}
+		}
+	}
+
+	public Trace getSolution() {
+		return solution;
+	}
+
+	public void startExploration(Version initial) {
+		startExploration(initial, 1);
+	}
+
+	public void startExploration(Version initial, long randomSeed) {
+		try (var model = modelStore.createModelForState(initial)) {
+			TransitionSystemExplorer explorer = new TransitionSystemExplorer(this, model, randomSeed);
+			explorer.explore();
+		}
+	}
+}

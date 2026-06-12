@@ -23,10 +23,10 @@ public class DesignSpaceExplorationBuilderImpl
 		extends AbstractModelAdapterBuilder<DesignSpaceExplorationStoreAdapterImpl>
 		implements DesignSpaceExplorationBuilder {
 
-	LinkedHashSet<DecisionRule> decisionRules = new LinkedHashSet<>();
-	LinkedHashSet<Criterion> accepts = new LinkedHashSet<>();
-	LinkedHashSet<Criterion> excludes = new LinkedHashSet<>();
-	LinkedHashSet<Objective> objectives = new LinkedHashSet<>();
+	protected LinkedHashSet<DecisionRule> decisionRules = new LinkedHashSet<>();
+	protected LinkedHashSet<Criterion> accepts = new LinkedHashSet<>();
+	protected LinkedHashSet<Criterion> excludes = new LinkedHashSet<>();
+	protected LinkedHashSet<Objective> objectives = new LinkedHashSet<>();
 
 	@Override
 	public DesignSpaceExplorationBuilder transformation(DecisionRule decisionRule) {

@@ -22,6 +22,10 @@ public class BoundAction {
 		localVariables = new int[action.getLocalVariables().size()];
 	}
 
+	public Action getAction() {
+		return action;
+	}
+
 	public boolean fire(Tuple activation) {
 		model.checkCancelled();
 		if (this.activation != null) {
@@ -58,6 +62,15 @@ public class BoundAction {
 			boundLiteralsArray[i] = actionLiterals.get(i).bindToModel(model);
 		}
 		return boundLiteralsArray;
+	}
+
+	public Tuple getInputTuple(int @Nullable [] inputAllocation, Tuple activation) {
+		this.activation = activation;
+		try {
+			return getInputTuple(inputAllocation);
+		} finally {
+			this.activation = null;
+		}
 	}
 
 	private Tuple getInputTuple(int @Nullable [] inputAllocation) {

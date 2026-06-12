@@ -5,7 +5,9 @@
  */
 package tools.refinery.store.reasoning.translator;
 
+import org.jetbrains.annotations.Nullable;
 import tools.refinery.logic.Constraint;
+import tools.refinery.logic.dnf.AnyQuery;
 import tools.refinery.logic.dnf.Query;
 import tools.refinery.logic.dnf.QueryBuilder;
 import tools.refinery.logic.dnf.RelationalQuery;
@@ -65,6 +67,11 @@ public final class PartialRelationTranslator extends PartialSymbolTranslator<Tru
 
 	public PartialRelation getPartialRelation() {
 		return partialRelation;
+	}
+
+	@Override
+	public @Nullable AnyQuery getQuery() {
+		return query;
 	}
 
 	@Override
@@ -365,7 +372,7 @@ public final class PartialRelationTranslator extends PartialSymbolTranslator<Tru
 			// We checked in the condition that this is safe.
 			@SuppressWarnings("unchecked")
 			var typedStorageSymbol = (Symbol<TruthValue>) storageSymbol;
-			interpretationRefiner = ConcreteRelationRefiner.of(typedStorageSymbol, roundingMode);
+			interpretationRefiner = ConcreteRelationRefiner.of(typedStorageSymbol, query, roundingMode);
 		}
 	}
 

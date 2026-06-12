@@ -40,5 +40,7 @@ public interface ModelStoreBuilder {
 
 	<T extends ModelAdapterBuilder> T getAdapter(Class<T> adapterType);
 
+	Optional<AnySymbol> getSymbol(String name);
+
 	ModelStore build();
 }

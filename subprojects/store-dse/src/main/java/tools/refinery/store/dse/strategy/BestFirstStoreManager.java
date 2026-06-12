@@ -5,6 +5,7 @@
  */
 package tools.refinery.store.dse.strategy;
 
+import tools.refinery.store.dse.transition.DecisionRule;
 import tools.refinery.store.dse.transition.DesignSpaceExplorationStoreAdapter;
 import tools.refinery.store.dse.transition.VersionWithObjectiveValue;
 import tools.refinery.store.dse.transition.statespace.ActivationStore;
@@ -22,13 +23,14 @@ import tools.refinery.visualization.ModelVisualizerStoreAdapter;
 import tools.refinery.visualization.statespace.VisualizationStore;
 import tools.refinery.visualization.statespace.internal.VisualizationStoreImpl;
 
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 public class BestFirstStoreManager {
 
 	ModelStore modelStore;
-	ObjectivePriorityQueue objectiveStore;
-	ActivationStore activationStore;
+	ObjectivePriorityQueue<VersionWithObjectiveValue> objectiveStore;
+	ActivationStore<VersionWithObjectiveValue> activationStore;
 	SolutionStore solutionStore;
 	EquivalenceClassStore equivalenceClassStore;
 	VisualizationStore visualizationStore;
@@ -38,9 +40,11 @@ public class BestFirstStoreManager {
 		DesignSpaceExplorationStoreAdapter storeAdapter =
 				modelStore.getAdapter(DesignSpaceExplorationStoreAdapter.class);
 
-		objectiveStore = new ObjectivePriorityQueueImpl(storeAdapter.getObjectives());
+		objectiveStore = ObjectivePriorityQueueImpl.of(storeAdapter.getObjectives());
 		Consumer<VersionWithObjectiveValue> whenAllActivationsVisited = x -> objectiveStore.remove(x);
-		activationStore = new ActivationStoreImpl(storeAdapter.getTransformations(), whenAllActivationsVisited);
+		BiFunction<DecisionRule, Integer, Double> weightProvider = DecisionRule::getWeight;
+		activationStore = new ActivationStoreImpl<>(storeAdapter.getTransformations(), weightProvider,
+				whenAllActivationsVisited);
 		solutionStore = new SolutionStoreImpl(maxNumberOfSolutions);
 		equivalenceClassStore = new FastEquivalenceClassStore(modelStore.getAdapter(StateCoderStoreAdapter.class)) {
 			@Override
@@ -61,11 +65,11 @@ public class BestFirstStoreManager {
 		return modelStore;
 	}
 
-	ObjectivePriorityQueue getObjectiveStore() {
+	ObjectivePriorityQueue<VersionWithObjectiveValue> getObjectiveStore() {
 		return objectiveStore;
 	}
 
-	ActivationStore getActivationStore() {
+	ActivationStore<VersionWithObjectiveValue> getActivationStore() {
 		return activationStore;
 	}
 

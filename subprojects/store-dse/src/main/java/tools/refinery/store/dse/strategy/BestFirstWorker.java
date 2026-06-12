@@ -22,7 +22,7 @@ import java.util.Random;
 public class BestFirstWorker {
 	final BestFirstStoreManager storeManager;
 	final Model model;
-	final ActivationStoreWorker activationStoreWorker;
+	final ActivationStoreWorker<VersionWithObjectiveValue> activationStoreWorker;
 	final StateCoderAdapter stateCoderAdapter;
 	final DesignSpaceExplorationAdapter explorationAdapter;
 	final ModelQueryAdapter queryAdapter;
@@ -38,7 +38,7 @@ public class BestFirstWorker {
 		stateCoderAdapter = model.getAdapter(StateCoderAdapter.class);
 		queryAdapter = model.getAdapter(ModelQueryAdapter.class);
 		propagationAdapter = model.tryGetAdapter(PropagationAdapter.class).orElse(null);
-		activationStoreWorker = new ActivationStoreWorker(storeManager.getActivationStore(),
+		activationStoreWorker = new ActivationStoreWorker<>(storeManager.getActivationStore(),
 				explorationAdapter.getTransformations());
 		visualizationStore = storeManager.getVisualizationStore();
 		isVisualizationEnabled = visualizationStore != null;

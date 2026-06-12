@@ -6,17 +6,16 @@
 package tools.refinery.store.dse.transition.statespace.internal;
 
 import tools.refinery.store.dse.transition.Transformation;
-import tools.refinery.store.dse.transition.VersionWithObjectiveValue;
 import tools.refinery.store.dse.transition.statespace.ActivationStore;
 
 import java.util.List;
 import java.util.Random;
 
-public class ActivationStoreWorker {
-	final ActivationStore store;
+public class ActivationStoreWorker<V> {
+	final ActivationStore<V> store;
 	final List<Transformation> transformations;
 
-	public ActivationStoreWorker(ActivationStore store, List<Transformation> transformations) {
+	public ActivationStoreWorker(ActivationStore<V> store, List<Transformation> transformations) {
 		this.store = store;
 		this.transformations = transformations;
 	}
@@ -29,8 +28,7 @@ public class ActivationStoreWorker {
 		return result;
 	}
 
-
-	public ActivationStore.VisitResult fireRandomActivation(VersionWithObjectiveValue thisVersion, Random random) {
+	public ActivationStore.VisitResult fireRandomActivation(V thisVersion, Random random) {
 		var result = store.getRandomAndMarkAsVisited(thisVersion, random);
 		if (result.successfulVisit()) {
 			int selectedTransformation = result.transformation();
@@ -41,13 +39,20 @@ public class ActivationStoreWorker {
 
 			boolean success = transformation.fireActivation(tuple);
 			if (success) {
-				return result;
+				return new ActivationStore.VisitResult(
+						true, result.mayHaveMore(),
+						selectedTransformation,
+						selectedActivation,
+						transformation.getDefinition().rule().getName(),
+						tuple);
 			} else {
 				return new ActivationStore.VisitResult(
 						false,
 						result.mayHaveMore(),
 						selectedTransformation,
-						selectedActivation);
+						selectedActivation,
+						transformation.getDefinition().rule().getName(),
+						tuple);
 			}
 		}
 		return result;

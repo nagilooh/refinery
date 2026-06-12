@@ -5,8 +5,10 @@
  */
 package tools.refinery.store.reasoning.translator;
 
+import org.jetbrains.annotations.Nullable;
 import tools.refinery.logic.AbstractValue;
 import tools.refinery.logic.Constraint;
+import tools.refinery.logic.dnf.AnyQuery;
 import tools.refinery.logic.dnf.FunctionalQuery;
 import tools.refinery.logic.dnf.Query;
 import tools.refinery.logic.dnf.QueryBuilder;
@@ -65,6 +67,11 @@ public final class PartialFunctionTranslator<A extends AbstractValue<A, C>, C>
 
 	public PartialFunction<A, C> getPartialFunction() {
 		return partialFunction;
+	}
+
+	@Override
+	public @Nullable AnyQuery getQuery() {
+		return query;
 	}
 
 	@Override

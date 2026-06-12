@@ -10,12 +10,14 @@ import tools.refinery.store.map.Version;
 
 import java.util.Comparator;
 import java.util.Random;
+import java.util.function.Predicate;
 
-public interface ObjectivePriorityQueue {
-	Comparator<VersionWithObjectiveValue> getComparator();
-	void submit(VersionWithObjectiveValue versionWithObjectiveValue);
-	void remove(VersionWithObjectiveValue versionWithObjectiveValue);
+public interface ObjectivePriorityQueue<V> {
+	Comparator<V> getComparator();
+	void submit(V version);
+	void remove(V version);
+	void removeIf(Predicate<V> predicate);
 	int getSize();
-	VersionWithObjectiveValue getBest();
-	VersionWithObjectiveValue getRandom(Random random);
+	V getBest();
+	V getRandom(Random random);
 }
