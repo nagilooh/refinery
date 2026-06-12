@@ -26,10 +26,21 @@ public class ConcreteSymbolRefiner<A extends AbstractValue<A, C>, C>
 
 	@Override
 	public boolean merge(Tuple key, A value) {
-		var currentValue = get(key);
-		var mergedValue = currentValue.meet(value);
-		if (!Objects.equals(currentValue, mergedValue)) {
+		var oldValue = get(key);
+		var mergedValue = oldValue.meet(value);
+		if (!Objects.equals(oldValue, mergedValue)) {
 			put(key, mergedValue);
+		}
+		return true;
+	}
+
+	@Override
+	public boolean join(Tuple key, A value) {
+		var oldValue = get(key);
+		var joinedValue = oldValue.join(value);
+		if (!Objects.equals(oldValue, joinedValue)) {
+			put(key, joinedValue);
+			return notifyAbstractionListeners(key, oldValue, joinedValue);
 		}
 		return true;
 	}

@@ -17,6 +17,18 @@ public non-sealed interface PartialInterpretationRefiner<A extends AbstractValue
 
 	boolean merge(Tuple key, A value);
 
+	default boolean join(Tuple key, A value) {
+		return false;
+	}
+
+	default boolean modify(Tuple key, A value) {
+		return join(key, value) && merge(key, value);
+	}
+
+	void addAbstractionListener(PartialInterpretationAbstractionListener<A, C> listener);
+
+	void removeAbstractionListener(PartialInterpretationAbstractionListener<A, C> listener);
+
 	@FunctionalInterface
 	interface Factory<A extends AbstractValue<A, C>, C> {
 		PartialInterpretationRefiner<A, C> create(ReasoningAdapter adapter, PartialSymbol<A, C> partialSymbol);

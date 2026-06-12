@@ -37,6 +37,7 @@ class DirectedCrossReferenceRefiner extends ConcreteRelationRefiner {
 
 	@Override
 	public void afterCreate() {
+		super.afterCreate();
 		var adapter = getAdapter();
 		typeConstraintRefiner = new TypeConstraintRefiner(adapter, sourceType, targetType, supersets,
 				oppositeSupersets);

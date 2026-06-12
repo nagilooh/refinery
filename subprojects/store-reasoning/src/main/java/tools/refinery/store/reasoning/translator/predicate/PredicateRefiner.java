@@ -6,6 +6,7 @@
 package tools.refinery.store.reasoning.translator.predicate;
 
 import org.jetbrains.annotations.Nullable;
+import tools.refinery.logic.dnf.RelationalQuery;
 import tools.refinery.logic.term.truthvalue.TruthValue;
 import tools.refinery.store.reasoning.ReasoningAdapter;
 import tools.refinery.store.reasoning.refinement.ConcreteRelationRefiner;
@@ -18,6 +19,7 @@ import tools.refinery.store.reasoning.translator.RoundingMode;
 import tools.refinery.store.representation.Symbol;
 import tools.refinery.store.tuple.Tuple;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -37,8 +39,19 @@ class PredicateRefiner extends ConcreteRelationRefiner {
 		this.supertypes = supertypes;
 	}
 
+	protected PredicateRefiner(
+			ReasoningAdapter adapter, PartialSymbol<TruthValue, Boolean> partialSymbol,
+			Symbol<TruthValue> concreteSymbol, List<PartialRelation> parameterTypes, Set<PartialRelation> supertypes,
+			RoundingMode roundingMode, List<AbstractionPropagation> abstractionPropagations,
+			List<RefinementPropagation> refinementPropagations) {
+		super(adapter, partialSymbol, concreteSymbol, roundingMode, abstractionPropagations, refinementPropagations);
+		this.parameterTypes = parameterTypes;
+		this.supertypes = supertypes;
+	}
+
 	@Override
 	public void afterCreate() {
+		super.afterCreate();
 		int arity = parameterTypes.size();
 		// Generic array creation.
 		@SuppressWarnings("unchecked")
@@ -56,13 +69,16 @@ class PredicateRefiner extends ConcreteRelationRefiner {
 
 	@Override
 	public boolean merge(Tuple key, TruthValue value) {
-		var currentValue = get(key);
-		var mergedValue = concretizationAwareMeet(currentValue, value);
-		if (!Objects.equals(currentValue, mergedValue)) {
+		var oldValue = get(key);
+		var mergedValue = concretizationAwareMeet(oldValue, value);
+		if (!Objects.equals(oldValue, mergedValue)) {
 			put(key, mergedValue);
+			if (!notifyRefinementListeners(key, mergedValue)) {
+				return false;
+			}
 		}
 		// Avoid cyclic propagation between parameter types by avoiding propagation after reaching a fixed point.
-		if (mergedValue.must() && !currentValue.must()) {
+		if (mergedValue.must() && !oldValue.must()) {
 			return refineParameters(key);
 		}
 		return true;
@@ -100,5 +116,17 @@ class PredicateRefiner extends ConcreteRelationRefiner {
 			RoundingMode roundingMode) {
 		return (adapter, partialSymbol) -> new PredicateRefiner(adapter, partialSymbol, concreteSymbol,
 				parameterTypes, supertypes, roundingMode);
+	}
+
+	public static Factory<TruthValue, Boolean> of(
+			Symbol<TruthValue> concreteSymbol, List<PartialRelation> parameterTypes, Set<PartialRelation> supertypes,
+			RoundingMode roundingMode, RelationalQuery query) {
+		return (adapter, partialSymbol) -> {
+			var abstractionPropagations = new ArrayList<AbstractionPropagation>();
+			var refinementPropagations = new ArrayList<RefinementPropagation>();
+			collectPropagations(partialSymbol, query, abstractionPropagations, refinementPropagations);
+			return new PredicateRefiner(adapter, partialSymbol, concreteSymbol,
+					parameterTypes, supertypes, roundingMode, abstractionPropagations, refinementPropagations);
+		};
 	}
 }
