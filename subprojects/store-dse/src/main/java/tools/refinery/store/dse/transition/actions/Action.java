@@ -106,11 +106,11 @@ public class Action {
 		return actionLiterals;
 	}
 
-	int @Nullable [] getInputAllocation(int actionIndex) {
+	public int @Nullable [] getInputAllocation(int actionIndex) {
 		return inputAllocations[actionIndex];
 	}
 
-	int @Nullable [] getOutputAllocation(int actionIndex) {
+	public int @Nullable [] getOutputAllocation(int actionIndex) {
 		return outputAllocations[actionIndex];
 	}
 

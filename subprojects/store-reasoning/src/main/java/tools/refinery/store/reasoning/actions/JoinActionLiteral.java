@@ -6,45 +6,56 @@
 package tools.refinery.store.reasoning.actions;
 
 import tools.refinery.logic.AbstractValue;
-import tools.refinery.logic.dnf.FunctionalQuery;
 import tools.refinery.logic.term.NodeVariable;
+import tools.refinery.store.dse.transition.actions.AbstractActionLiteral;
 import tools.refinery.store.dse.transition.actions.BoundActionLiteral;
-import tools.refinery.store.dse.transition.actions.ComputedActionLiteral;
 import tools.refinery.store.model.Model;
-import tools.refinery.store.query.ModelQueryAdapter;
 import tools.refinery.store.reasoning.ReasoningAdapter;
 import tools.refinery.store.reasoning.representation.PartialSymbol;
 import tools.refinery.store.tuple.Tuple;
 
 import java.util.List;
 
-public class ComputedMergeActionLiteral<A extends AbstractValue<A, C>, C> extends ComputedActionLiteral<A> {
+public class JoinActionLiteral<A extends AbstractValue<A, C>, C> extends AbstractActionLiteral {
 	private final PartialSymbol<A, C> partialSymbol;
+	private final List<NodeVariable> parameters;
+	private final A value;
 
-	public ComputedMergeActionLiteral(PartialSymbol<A, C> partialSymbol, List<NodeVariable> parameters,
-									  FunctionalQuery<A> valueQuery, List<NodeVariable> arguments) {
-		super(parameters, valueQuery, arguments);
+	public JoinActionLiteral(PartialSymbol<A, C> partialSymbol, A value, List<NodeVariable> parameters) {
 		if (partialSymbol.arity() != parameters.size()) {
 			throw new IllegalArgumentException("Expected %d parameters for partial symbol %s, got %d instead"
 					.formatted(partialSymbol.arity(), partialSymbol, parameters.size()));
 		}
 		this.partialSymbol = partialSymbol;
+		this.parameters = parameters;
+		this.value = value;
 	}
 
 	public PartialSymbol<A, C> getPartialSymbol() {
 		return partialSymbol;
 	}
 
+	public List<NodeVariable> getParameters() {
+		return parameters;
+	}
+
+	public A getValue() {
+		return value;
+	}
+
+	@Override
+	public List<NodeVariable> getInputVariables() {
+		return getParameters();
+	}
+
+	@Override
+	public List<NodeVariable> getOutputVariables() {
+		return List.of();
+	}
+
 	@Override
 	public BoundActionLiteral bindToModel(Model model) {
 		var refiner = model.getAdapter(ReasoningAdapter.class).getRefiner(partialSymbol);
-		var resultSet = model.getAdapter(ModelQueryAdapter.class).getResultSet(valueQuery);
-		return tuple -> {
-			var value = resultSet.get(tuple.map(argumentMapping));
-			if (value == null) {
-				return null;
-			}
-			return refiner.merge(tuple.map(parameterMapping), value) ? Tuple.of() : null;
-		};
+		return tuple -> refiner.join(tuple, value) ? Tuple.of() : null;
 	}
 }

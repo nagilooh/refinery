@@ -45,6 +45,31 @@ public final class PartialActionLiterals {
 		return merge(partialRelation, TruthValue.FALSE, parameters);
 	}
 
+	public static <A extends AbstractValue<A, C>, C> JoinActionLiteral<A, C> join(
+			PartialSymbol<A, C> partialSymbol, A value, NodeVariable... parameters) {
+		return join(partialSymbol, value, List.of(parameters));
+	}
+
+	public static <A extends AbstractValue<A, C>, C> JoinActionLiteral<A, C> join(
+			PartialSymbol<A, C> partialSymbol, A value, List<NodeVariable> parameters) {
+		return new JoinActionLiteral<>(partialSymbol, value, parameters);
+	}
+
+	public static JoinActionLiteral<TruthValue, Boolean> forget(PartialSymbol<TruthValue, Boolean> partialSymbol,
+																NodeVariable... parameters) {
+		return join(partialSymbol, TruthValue.UNKNOWN, parameters);
+	}
+
+	public static <A extends AbstractValue<A, C>, C> ModifyActionLiteral<A, C> modify(
+			PartialSymbol<A, C> partialSymbol, A value, NodeVariable... parameters) {
+		return modify(partialSymbol, value, List.of(parameters));
+	}
+
+	public static <A extends AbstractValue<A, C>, C> ModifyActionLiteral<A, C> modify(
+			PartialSymbol<A, C> partialSymbol, A value, List<NodeVariable> parameters) {
+		return new ModifyActionLiteral<>(partialSymbol, value, parameters);
+	}
+
 	public static FocusActionLiteral focus(NodeVariable parent, NodeVariable child) {
 		return new FocusActionLiteral(parent, child);
 	}

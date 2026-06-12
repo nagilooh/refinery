@@ -6,6 +6,7 @@
 package tools.refinery.store.tuple;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public sealed interface Tuple extends Comparable<Tuple> permits Tuple0, Tuple1, Tuple2, Tuple3, Tuple4, TupleN {
 	int getSize();
@@ -28,6 +29,18 @@ public sealed interface Tuple extends Comparable<Tuple> permits Tuple0, Tuple1, 
 			}
 		}
 		return 0;
+	}
+
+	default Tuple map(int @Nullable [] mapping) {
+		if (mapping == null) {
+			return this;
+		}
+		int length = mapping.length;
+		var values = new int[length];
+		for (int i = 0; i < length; i++) {
+			values[i] = get(mapping[i]);
+		}
+		return Tuple.of(values);
 	}
 
 	static Tuple0 of() {
