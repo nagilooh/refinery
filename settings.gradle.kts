@@ -35,6 +35,7 @@ include(
 		"store-reasoning",
 		"store-reasoning-scope",
 		"store-reasoning-smt",
+		"store-transition-system",
 		"versions",
 )
 

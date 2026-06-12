@@ -14,7 +14,6 @@ import tools.refinery.store.dse.strategy.BestFirstStoreManager;
 import tools.refinery.store.dse.transition.Rule;
 import tools.refinery.store.dse.transition.objectives.Criteria;
 import tools.refinery.store.dse.transition.objectives.Criterion;
-import tools.refinery.store.model.Model;
 import tools.refinery.store.model.ModelStore;
 import tools.refinery.store.query.ModelQueryAdapter;
 import tools.refinery.store.query.interpreter.QueryInterpreterAdapter;
@@ -27,12 +26,13 @@ import tools.refinery.store.reasoning.translator.PartialRelationTranslator;
 import tools.refinery.store.reasoning.translator.multiobject.MultiObjectTranslator;
 import tools.refinery.store.representation.Symbol;
 import tools.refinery.store.statecoding.StateCoderAdapter;
+import tools.refinery.store.transition.system.simple.SimpleTransitionSystemAdapter;
 import tools.refinery.store.tuple.Tuple;
 import tools.refinery.visualization.ModelVisualizerAdapter;
 import tools.refinery.visualization.internal.FileFormat;
 
 import java.util.List;
-import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import static tools.refinery.logic.literal.Literals.check;
 import static tools.refinery.logic.literal.Literals.not;
@@ -124,7 +124,7 @@ public class SimplePartialTransitionSystemTest {
 			)
 			.with(StateCoderAdapter.builder())
 			.with(ModificationAdapter.builder())
-			.with(TransitionSystemAdapter.builder()
+			.with(SimpleTransitionSystemAdapter.builder()
 							.transition(befriend)
 							.transition(estrange)
 							.accept(target)
@@ -163,7 +163,7 @@ public class SimplePartialTransitionSystemTest {
 						.put(Tuple.of(3, 2), TruthValue.TRUE)
 				)
 				.build();
-		performTest(seed, (model, bestFirst) -> {
+		performTest(seed, (bestFirst) -> {
 			var solutions = bestFirst.getSolutionStore().getSolutions();
 			Assertions.assertEquals(1, solutions.size());
 		});
@@ -179,13 +179,13 @@ public class SimplePartialTransitionSystemTest {
 						.put(Tuple.of(3, 2), TruthValue.TRUE)
 				)
 				.build();
-		performTest(seed, (model, bestFirst) -> {
+		performTest(seed, (bestFirst) -> {
 			var solutions = bestFirst.getSolutionStore().getSolutions();
 			Assertions.assertEquals(0, solutions.size());
 		});
 	}
 
-	private void performTest(ModelSeed seed, BiConsumer<Model, BestFirstStoreManager> check) {
+	private void performTest(ModelSeed seed, Consumer<BestFirstStoreManager> check) {
 		try (var model = store.getAdapter(ReasoningStoreAdapter.class).createInitialModel(seed)) {
 			var queryEngine = model.getAdapter(ModelQueryAdapter.class);
 			var initialVersion = model.commit();
@@ -194,7 +194,7 @@ public class SimplePartialTransitionSystemTest {
 			var bestFirst = new BestFirstStoreManager(store, 1);
 			bestFirst.startExploration(initialVersion);
 			model.getAdapter(ModelVisualizerAdapter.class).visualize(bestFirst.getVisualizationStore());
-			check.accept(model, bestFirst);
+			check.accept(bestFirst);
 		}
 	}
 
