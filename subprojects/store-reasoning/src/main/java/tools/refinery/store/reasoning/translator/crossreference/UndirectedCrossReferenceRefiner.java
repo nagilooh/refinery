@@ -54,10 +54,14 @@ class UndirectedCrossReferenceRefiner extends ConcreteRelationRefiner {
 					return false;
 				}
 
-				return notifyRefinementListeners(key, mergedValue) &&
-						notifyRefinementListeners(oppositeKey, mergedValue);
+				if (!(notifyRefinementListeners(key, mergedValue) &&
+						notifyRefinementListeners(oppositeKey, mergedValue))) {
+					return false;
+				}
 			} else {
-				return notifyRefinementListeners(key, mergedValue);
+				if (!notifyRefinementListeners(key, mergedValue)) {
+					return false;
+				}
 			}
 		}
 		if (value.must()) {
@@ -101,7 +105,7 @@ class UndirectedCrossReferenceRefiner extends ConcreteRelationRefiner {
 	}
 
 	public static Factory<TruthValue, Boolean> of(Symbol<TruthValue> concreteSymbol, UndirectedCrossReferenceInfo info,
-												  RoundingMode roundingMode) {
+	                                              RoundingMode roundingMode) {
 		return (adapter, partialSymbol) -> new UndirectedCrossReferenceRefiner(adapter, partialSymbol, concreteSymbol,
 				info, roundingMode);
 	}
