@@ -77,6 +77,7 @@
       <genEnumLiterals ecoreEnumLiteral="problem.ecore#//RuleKind/PROPAGATION"/>
       <genEnumLiterals ecoreEnumLiteral="problem.ecore#//RuleKind/DECISION"/>
       <genEnumLiterals ecoreEnumLiteral="problem.ecore#//RuleKind/CONCRETIZATION"/>
+      <genEnumLiterals ecoreEnumLiteral="problem.ecore#//RuleKind/TRANSITION"/>
     </genEnums>
     <genEnums typeSafeEnumCompatible="false" ecoreEnum="problem.ecore#//PredicateKind">
       <genEnumLiterals ecoreEnumLiteral="problem.ecore#//PredicateKind/DEFAULT"/>
@@ -184,6 +185,7 @@
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference problem.ecore#//RuleDefinition/consequents"/>
       <genFeatures children="true" createChild="true" propertySortChoices="true" ecoreFeature="ecore:EReference problem.ecore#//RuleDefinition/preconditions"/>
       <genFeatures createChild="false" ecoreFeature="ecore:EAttribute problem.ecore#//RuleDefinition/kind"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference problem.ecore#//RuleDefinition/preconditionPredicate"/>
     </genClasses>
     <genClasses ecoreClass="problem.ecore#//Consequent">
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference problem.ecore#//Consequent/actions"/>

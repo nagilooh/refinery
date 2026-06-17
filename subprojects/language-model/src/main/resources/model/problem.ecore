@@ -140,6 +140,8 @@
     <eStructuralFeatures xsi:type="ecore:EReference" name="preconditions" upperBound="-1"
         eType="#//Conjunction" containment="true"/>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="kind" eType="#//RuleKind"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="preconditionPredicate"
+        eType="#//PredicateDefinition" transient="true" containment="true"/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="Consequent">
     <eStructuralFeatures xsi:type="ecore:EReference" name="actions" upperBound="-1"
@@ -286,6 +288,7 @@
     <eLiterals name="PROPAGATION" value="1"/>
     <eLiterals name="DECISION" value="2"/>
     <eLiterals name="CONCRETIZATION" value="3"/>
+    <eLiterals name="TRANSITION" value="4"/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="Assertion" eSuperTypes="#//Statement #//AbstractAssertion">
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="default" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"

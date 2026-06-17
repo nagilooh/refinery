@@ -28,6 +28,7 @@ import java.util.function.UnaryOperator;
 public class ProblemDerivedStateComputer implements IDerivedStateComputer {
 	public static final String NEW_NODE = "new";
 	public static final String COMPUTED_NAME = "computed";
+	public static final String PRECONDITION_NAME = "precondition";
 
 	@Inject
 	@Named(Constants.LANGUAGE_NAME)
@@ -84,6 +85,7 @@ public class ProblemDerivedStateComputer implements IDerivedStateComputer {
 				installOrRemoveComputedValueFunction(adapter, functionDefinition);
 				installOrRemoveDomainPredicate(adapter, functionDefinition);
 			}
+			case RuleDefinition ruleDefinition -> installOrRemovePreconditionPredicate(adapter, ruleDefinition);
 			default -> {
 				// Nothing to install.
 			}
@@ -100,7 +102,7 @@ public class ProblemDerivedStateComputer implements IDerivedStateComputer {
 			}
 		} else {
 			if (declaration.getNewNode() == null) {
-				var newNode = adapter.createNewNodeIfAbsent(declaration, key -> createNode(NEW_NODE));
+				var newNode = adapter.createNewNodeIfAbsent(declaration, _ -> createNode(NEW_NODE));
 				declaration.setNewNode(newNode);
 			}
 		}
@@ -110,7 +112,7 @@ public class ProblemDerivedStateComputer implements IDerivedStateComputer {
 			Adapter adapter, ClassDeclaration containingClassDeclaration, ReferenceDeclaration declaration) {
 		if (ProblemUtil.hasMultiplicityConstraint(declaration)) {
 			if (declaration.getInvalidMultiplicity() == null) {
-				var invalidMultiplicity = adapter.createInvalidMultiplicityPredicateIfAbsent(declaration, key -> {
+				var invalidMultiplicity = adapter.createInvalidMultiplicityPredicateIfAbsent(declaration, _ -> {
 					var predicate = ProblemFactory.eINSTANCE.createPredicateDefinition();
 					predicate.setKind(PredicateKind.ERROR);
 					predicate.setName("invalidMultiplicity");
@@ -133,7 +135,7 @@ public class ProblemDerivedStateComputer implements IDerivedStateComputer {
 
 	protected void installOrRemoveComputedValuePredicate(Adapter adapter, PredicateDefinition predicateDefinition) {
 		if (ProblemUtil.hasComputedValue(predicateDefinition)) {
-			var computedValue = adapter.createComputedValuePredicateIfAbsent(predicateDefinition, key -> {
+			var computedValue = adapter.createComputedValuePredicateIfAbsent(predicateDefinition, _ -> {
 				var predicate = ProblemFactory.eINSTANCE.createPredicateDefinition();
 				predicate.setKind(PredicateKind.SHADOW);
 				predicate.setName(COMPUTED_NAME);
@@ -158,7 +160,7 @@ public class ProblemDerivedStateComputer implements IDerivedStateComputer {
 
 	protected void installOrRemoveComputedValueFunction(Adapter adapter, FunctionDefinition functionDefinition) {
 		if (ProblemUtil.hasComputedValue(functionDefinition)) {
-			var computedValue = adapter.createComputedValueFunctionIfAbsent(functionDefinition, key -> {
+			var computedValue = adapter.createComputedValueFunctionIfAbsent(functionDefinition, _ -> {
 				var function = ProblemFactory.eINSTANCE.createFunctionDefinition();
 				function.setShadow(true);
 				function.setName(COMPUTED_NAME);
@@ -178,7 +180,7 @@ public class ProblemDerivedStateComputer implements IDerivedStateComputer {
 
 	protected void installOrRemoveDomainPredicate(Adapter adapter, FunctionDefinition functionDefinition) {
 		if (ProblemUtil.hasDomainPredicate(functionDefinition)) {
-			var domainPredicate = adapter.createDomainPredicateIfAbsent(functionDefinition, key -> {
+			var domainPredicate = adapter.createDomainPredicateIfAbsent(functionDefinition, _ -> {
 				var function = ProblemFactory.eINSTANCE.createPredicateDefinition();
 				function.setName("defined");
 				return function;
@@ -192,6 +194,36 @@ public class ProblemDerivedStateComputer implements IDerivedStateComputer {
 			if (domainPredicate != null) {
 				functionDefinition.setComputedValue(null);
 				adapter.removeDomainPredicate(functionDefinition);
+			}
+		}
+	}
+
+	protected void installOrRemovePreconditionPredicate(Adapter adapter, RuleDefinition ruleDefinition) {
+		if (ProblemUtil.hasPreconditionPredicate(ruleDefinition)) {
+			var preconditionPredicate = adapter.createPreconditionPredicateIfAbsent(ruleDefinition, _ -> {
+				var predicate = ProblemFactory.eINSTANCE.createPredicateDefinition();
+				predicate.setName(PRECONDITION_NAME);
+				return predicate;
+			});
+			var targetParameters = preconditionPredicate.getParameters();
+			targetParameters.clear();
+			for (var parameter : ruleDefinition.getParameters()) {
+				var newParameter = ProblemFactory.eINSTANCE.createParameter();
+				newParameter.setParameterType(parameter.getParameterType());
+				newParameter.setKind(parameter.getKind());
+				newParameter.setName(parameter.getName());
+				newParameter.setAnnotations(ProblemFactory.eINSTANCE.createAnnotationContainer());
+				targetParameters.add(newParameter);
+			}
+			preconditionPredicate.setKind(
+					ruleDefinition.getKind() == RuleKind.TRANSITION ? PredicateKind.DEFAULT : PredicateKind.SHADOW);
+			ruleDefinition.setPreconditionPredicate(preconditionPredicate);
+			installOrRemoveComputedValuePredicate(adapter, preconditionPredicate);
+		} else {
+			var preconditionPredicate = ruleDefinition.getPreconditionPredicate();
+			if (preconditionPredicate != null) {
+				ruleDefinition.setPreconditionPredicate(null);
+				adapter.removePreconditionPredicate(ruleDefinition);
 			}
 		}
 	}
@@ -228,6 +260,7 @@ public class ProblemDerivedStateComputer implements IDerivedStateComputer {
 		var predicateDefinitionsWithComputedValue = new HashSet<PredicateDefinition>();
 		var functionDefinitionsWithComputedValue = new HashSet<FunctionDefinition>();
 		var functionDefinitionsWithDomainPredicate = new HashSet<FunctionDefinition>();
+		var ruleDefinitionsWithDomainPredicate = new HashSet<RuleDefinition>();
 		problem.getNodes().clear();
 		for (var statement : problem.getStatements()) {
 			switch (statement) {
@@ -256,6 +289,15 @@ public class ProblemDerivedStateComputer implements IDerivedStateComputer {
 					}
 				}
 			}
+			case RuleDefinition ruleDefinition -> {
+				if (ProblemUtil.hasPreconditionPredicate(ruleDefinition)) {
+					ruleDefinitionsWithDomainPredicate.add(ruleDefinition);
+					var preconditionPredicate = ruleDefinition.getPreconditionPredicate();
+					if (preconditionPredicate != null && ProblemUtil.hasComputedValue(preconditionPredicate)) {
+						predicateDefinitionsWithComputedValue.add(preconditionPredicate);
+					}
+				}
+			}
 			default -> {
 				// Nothing to discard.
 			}
@@ -263,7 +305,7 @@ public class ProblemDerivedStateComputer implements IDerivedStateComputer {
 		}
 		adapter.retainAll(abstractClassDeclarations, referenceDeclarationsWithMultiplicity,
 				predicateDefinitionsWithComputedValue, functionDefinitionsWithComputedValue,
-				functionDefinitionsWithDomainPredicate);
+				functionDefinitionsWithDomainPredicate, ruleDefinitionsWithDomainPredicate);
 		derivedVariableComputer.discardDerivedVariables(problem);
 	}
 
@@ -289,9 +331,10 @@ public class ProblemDerivedStateComputer implements IDerivedStateComputer {
 		private final Map<PredicateDefinition, PredicateDefinition> computedValuePredicates = new HashMap<>();
 		private final Map<FunctionDefinition, FunctionDefinition> computedFunctionValues = new HashMap<>();
 		private final Map<FunctionDefinition, PredicateDefinition> domainPredicates = new HashMap<>();
+		private final Map<RuleDefinition, PredicateDefinition> preconditionPredicates = new HashMap<>();
 
 		public Node createNewNodeIfAbsent(ClassDeclaration classDeclaration,
-										  Function<ClassDeclaration, Node> createNode) {
+		                                  Function<ClassDeclaration, Node> createNode) {
 			return newNodes.computeIfAbsent(classDeclaration, createNode);
 		}
 
@@ -340,16 +383,31 @@ public class ProblemDerivedStateComputer implements IDerivedStateComputer {
 			}
 		}
 
+		public PredicateDefinition createPreconditionPredicateIfAbsent(
+				RuleDefinition ruleDefinition,
+				Function<RuleDefinition, PredicateDefinition> createPredicate) {
+			return preconditionPredicates.computeIfAbsent(ruleDefinition, createPredicate);
+		}
+
+		public void removePreconditionPredicate(RuleDefinition ruleDefinition) {
+			var predicate = preconditionPredicates.remove(ruleDefinition);
+			if (predicate != null && predicate.getComputedValue() != null) {
+				removeComputedValuePredicate(predicate);
+			}
+		}
+
 		public void retainAll(Collection<ClassDeclaration> abstractClassDeclarations,
-							  Collection<ReferenceDeclaration> referenceDeclarationsWithMultiplicity,
-							  Collection<PredicateDefinition> predicateDefinitionsWithComputedValue,
-							  Collection<FunctionDefinition> functionDefinitionsWithComputedValue,
-							  Collection<FunctionDefinition> functionDefinitionsWithDomainPredicate) {
+		                      Collection<ReferenceDeclaration> referenceDeclarationsWithMultiplicity,
+		                      Collection<PredicateDefinition> predicateDefinitionsWithComputedValue,
+		                      Collection<FunctionDefinition> functionDefinitionsWithComputedValue,
+		                      Collection<FunctionDefinition> functionDefinitionsWithDomainPredicate,
+		                      Collection<RuleDefinition> ruleDefinitionsWithDomainPredicate) {
 			newNodes.keySet().retainAll(abstractClassDeclarations);
 			invalidMultiplicityPredicates.keySet().retainAll(referenceDeclarationsWithMultiplicity);
 			computedValuePredicates.keySet().retainAll(predicateDefinitionsWithComputedValue);
 			computedFunctionValues.keySet().retainAll(functionDefinitionsWithComputedValue);
 			domainPredicates.keySet().retainAll(functionDefinitionsWithDomainPredicate);
+			preconditionPredicates.keySet().retainAll(ruleDefinitionsWithDomainPredicate);
 		}
 
 		@Override

@@ -129,7 +129,7 @@ Case:
 	condition=Conjunction ("->" value=Expr)?;
 
 enum RuleKind:
-	DECISION="decision" | PROPAGATION="propagation" | CONCRETIZATION="concretization";
+	DECISION="decision" | PROPAGATION="propagation" | CONCRETIZATION="concretization" | TRANSITION="transition";
 
 enum ParameterKind:
 	PRED="pred";
@@ -340,7 +340,7 @@ Identifier:
 NonContainmentIdentifier:
 	ID | QUOTED_ID | "as" | "atom" | "multi" | "problem" | "module" |
 	"datatype" | "aggregator" | "primitive" |
-	"decision" | "propagation" | "concretization" |
+	"decision" | "propagation" | "concretization" | "transition" |
 	"shadow" | "assert" | "theory" | "using";
 
 Integer returns ecore::EBigInteger:

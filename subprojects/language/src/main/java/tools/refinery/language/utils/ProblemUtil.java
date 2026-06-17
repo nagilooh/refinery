@@ -11,6 +11,7 @@ import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.eclipse.xtext.EcoreUtil2;
 import tools.refinery.language.library.BuiltinLibrary;
 import tools.refinery.language.model.problem.*;
+import tools.refinery.language.model.problem.ProblemPackage.Literals;
 
 public final class ProblemUtil {
 	public static final String MODULE_EXTENSION = "refinery";
@@ -66,7 +67,7 @@ public final class ProblemUtil {
 
 	public static boolean mayReferToShadow(EObject context) {
 		var definitionContext = EcoreUtil2.getContainerOfType(context, ParametricDefinition.class);
-		if (!isShadow(definitionContext) && !(definitionContext instanceof RuleDefinition)) {
+		if (!isShadow(definitionContext) && !(definitionContext instanceof RuleDefinition ruleDefinition && ruleDefinition.getKind() != RuleKind.TRANSITION)) {
 			return false;
 		}
 		var theoryAction = EcoreUtil2.getContainerOfType(context, TheoryAction.class);
@@ -141,6 +142,7 @@ public final class ProblemUtil {
 		return containingFeature == ProblemPackage.Literals.REFERENCE_DECLARATION__INVALID_MULTIPLICITY ||
 				containingFeature == ProblemPackage.Literals.PREDICATE_DEFINITION__COMPUTED_VALUE ||
 				containingFeature == ProblemPackage.Literals.FUNCTION_DEFINITION__COMPUTED_VALUE ||
+				containingFeature == Literals.RULE_DEFINITION__PRECONDITION_PREDICATE ||
 				isDomainPredicate(definition);
 	}
 
@@ -149,8 +151,14 @@ public final class ProblemUtil {
 		return containingFeature == ProblemPackage.Literals.FUNCTION_DEFINITION__DOMAIN_PREDICATE;
 	}
 
+	public static boolean isPreconditionPredicate(EObject predicateDefinition) {
+		var containingFeature = predicateDefinition.eContainingFeature();
+		return containingFeature == Literals.RULE_DEFINITION__PRECONDITION_PREDICATE;
+	}
+
 	public static boolean isBasePredicate(PredicateDefinition predicateDefinition) {
-		if (predicateDefinition == null || isBuiltIn(predicateDefinition) || isDomainPredicate(predicateDefinition)) {
+		if (predicateDefinition == null || isBuiltIn(predicateDefinition) || isDomainPredicate(predicateDefinition)
+				|| isPreconditionPredicate(predicateDefinition)) {
 			// Built-in predicates have no clauses, but are not base.
 			return false;
 		}
@@ -185,6 +193,12 @@ public final class ProblemUtil {
 	public static boolean hasComputedValue(FunctionDefinition functionDefinition) {
 		return hasDomainPredicate(functionDefinition) && !functionDefinition.isShadow() &&
 				!isBaseFunction(functionDefinition);
+	}
+
+	public static boolean hasPreconditionPredicate(RuleDefinition ruleDefinition) {
+		return ruleDefinition.getKind() == RuleKind.DECISION
+				|| ruleDefinition.getKind() == RuleKind.REFINEMENT
+				|| ruleDefinition.getKind() == RuleKind.TRANSITION;
 	}
 
 	public static boolean isContainmentReference(ReferenceDeclaration referenceDeclaration) {

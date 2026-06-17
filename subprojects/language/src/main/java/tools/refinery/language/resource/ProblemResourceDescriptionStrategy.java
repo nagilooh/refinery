@@ -204,11 +204,7 @@ public class ProblemResourceDescriptionStrategy extends DefaultResourceDescripti
 	protected boolean shouldExportSimpleName(EObject eObject) {
 		return switch (eObject) {
 			case Node node -> !ProblemUtil.isMultiNode(node);
-			case PredicateDefinition predicateDefinition ->
-					!ProblemUtil.isInvalidMultiplicityConstraint(predicateDefinition) &&
-							!ProblemUtil.isComputedValuePredicate(predicateDefinition) &&
-							!ProblemUtil.isDomainPredicate(predicateDefinition);
-
+			case PredicateDefinition predicateDefinition -> !ProblemUtil.isDerivedStatePredicate(predicateDefinition);
 			case FunctionDefinition functionDefinition -> !ProblemUtil.isComputedValueFunction(functionDefinition);
 			default -> true;
 		};
