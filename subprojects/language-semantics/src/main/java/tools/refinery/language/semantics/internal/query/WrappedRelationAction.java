@@ -24,8 +24,8 @@ class WrappedRelationAction extends WrappedAction {
 
 	public WrappedRelationAction(
 			RuleCompiler ruleCompiler, PreparedRule preparedRule, PartialRelation partialRelation,
-			List<AssertionArgument> problemArguments, TruthValue truthValue) {
-		super(ruleCompiler, preparedRule, problemArguments);
+			List<AssertionArgument> problemArguments, TruthValue truthValue, boolean useModifyActions) {
+		super(ruleCompiler, preparedRule, problemArguments, useModifyActions);
 		this.partialRelation = partialRelation;
 		this.truthValue = truthValue;
 	}
@@ -55,6 +55,9 @@ class WrappedRelationAction extends WrappedAction {
 
 	@Override
 	protected ActionLiteral getActionLiteral(Concreteness concreteness, List<NodeVariable> arguments) {
+		if (useModifyActions) {
+			return PartialActionLiterals.modify(partialRelation, truthValue, arguments);
+		}
 		return PartialActionLiterals.merge(partialRelation, truthValue, arguments);
 	}
 }

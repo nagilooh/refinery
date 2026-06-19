@@ -23,8 +23,8 @@ class WrappedConstantFunctionAction<A extends AbstractValue<A, C>, C> extends Wr
 
 	public WrappedConstantFunctionAction(
 			RuleCompiler ruleCompiler, PreparedRule preparedRule, PartialFunction<A, C> partialFunction,
-			List<AssertionArgument> problemArguments, A value) {
-		super(ruleCompiler, preparedRule, partialFunction, problemArguments);
+			List<AssertionArgument> problemArguments, A value, boolean useModifyActions) {
+		super(ruleCompiler, preparedRule, partialFunction, problemArguments, useModifyActions);
 		this.value = value;
 	}
 

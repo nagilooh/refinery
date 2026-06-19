@@ -17,6 +17,7 @@ dependencies {
 	api(project(":refinery-store"))
 	api(project(":refinery-store-query"))
 	api(project(":refinery-store-reasoning"))
+	api(project(":refinery-store-transition-system"))
 	api(libs.eclipseCollections)
 	implementation(project(":refinery-store-reasoning-scope"))
 	runtimeOnly(libs.eclipseCollections.impl)

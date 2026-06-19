@@ -25,8 +25,9 @@ class WrappedComputedRelationAction extends TermBasedWrappedAction<TruthValue, B
 
 	public WrappedComputedRelationAction(
 			RuleCompiler ruleCompiler, PreparedRule preparedRule, PartialRelation partialRelation,
-			List<AssertionArgument> problemArguments, List<Literal> literals, Term<TruthValue> valueTerm) {
-		super(ruleCompiler, preparedRule, partialRelation, problemArguments);
+			List<AssertionArgument> problemArguments, List<Literal> literals, Term<TruthValue> valueTerm,
+			boolean useModifyActions) {
+		super(ruleCompiler, preparedRule, partialRelation, problemArguments, useModifyActions);
 		helper = new ComputedHelper<>(preparedRule, partialRelation, literals, valueTerm);
 	}
 
@@ -59,6 +60,6 @@ class WrappedComputedRelationAction extends TermBasedWrappedAction<TruthValue, B
 
 	@Override
 	protected ActionLiteral getActionLiteral(Concreteness concreteness, List<NodeVariable> arguments) {
-		return helper.toActionLiteral(concreteness, arguments);
+		return helper.toActionLiteral(concreteness, arguments, useModifyActions);
 	}
 }

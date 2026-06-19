@@ -65,6 +65,7 @@ import tools.refinery.store.reasoning.translator.predicate.BasePredicateTranslat
 import tools.refinery.store.reasoning.translator.predicate.PredicateTranslator;
 import tools.refinery.store.reasoning.translator.predicate.ShadowPredicateTranslator;
 import tools.refinery.store.statecoding.StateCoderBuilder;
+import tools.refinery.store.transition.system.TransitionSystemBuilder;
 import tools.refinery.store.tuple.Tuple;
 import tools.refinery.store.tuple.Tuple1;
 
@@ -331,6 +332,7 @@ public class ModelInitializer {
 						collectPartialRelation(enumDeclaration, 1, TruthValue.FALSE, TruthValue.FALSE);
 				case PredicateDefinition predicateDefinition -> collectPredicateDefinitionSymbol(predicateDefinition);
 				case FunctionDefinition functionDefinition -> collectFunctionDefinitionSymbol(functionDefinition);
+				case RuleDefinition ruleDefinition -> collectRuleDefinitionSymbol(ruleDefinition);
 				default -> {
 					// Nothing to collect.
 				}
@@ -381,6 +383,13 @@ public class ModelInitializer {
 		var domainPredicate = functionDefinition.getDomainPredicate();
 		if (domainPredicate != null) {
 			collectPredicateDefinitionSymbol(domainPredicate);
+		}
+	}
+
+	private void collectRuleDefinitionSymbol(RuleDefinition ruleDefinition) {
+		var preconditionPredicate = ruleDefinition.getPreconditionPredicate();
+		if (preconditionPredicate != null) {
+			collectPredicateDefinitionSymbol(preconditionPredicate);
 		}
 	}
 
@@ -748,6 +757,12 @@ public class ModelInitializer {
 						collectPredicateDefinitionTraced(predicateDefinition, storeBuilder);
 				case FunctionDefinition functionDefinition ->
 						collectFunctionDefinitionTraced(functionDefinition, storeBuilder);
+				case RuleDefinition ruleDefinition -> {
+					var preconditionPredicate = ruleDefinition.getPreconditionPredicate();
+					if (preconditionPredicate != null) {
+						collectPredicateDefinitionTraced(ruleDefinition.getPreconditionPredicate(), storeBuilder);
+					}
+				}
 				default -> {
 					// Nothing to collect.
 				}
@@ -1098,6 +1113,12 @@ public class ModelInitializer {
 				// Rules not marked for decision or propagation are not invoked automatically.
 				var rule = ruleCompiler.toRule(name, ruleDefinition);
 				problemTrace.putRuleDefinition(ruleDefinition, rule);
+			}
+			case TRANSITION -> {
+				var rule = ruleCompiler.toTransitionRule(name, ruleDefinition);
+				problemTrace.putRuleDefinition(ruleDefinition, rule.rule());
+				storeBuilder.tryGetAdapter(TransitionSystemBuilder.class)
+						.ifPresent(transitionSystemBuilder -> transitionSystemBuilder.transition(rule));
 			}
 			}
 		} catch (InvalidClauseException e) {
