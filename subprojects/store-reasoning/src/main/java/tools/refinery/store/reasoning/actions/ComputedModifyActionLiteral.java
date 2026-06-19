@@ -16,10 +16,10 @@ import tools.refinery.store.tuple.Tuple;
 
 import java.util.List;
 
-public class ComputedMergeActionLiteral<A extends AbstractValue<A, C>, C> extends ComputedPartialActionLiteral<A, C> {
+public class ComputedModifyActionLiteral<A extends AbstractValue<A, C>, C> extends ComputedPartialActionLiteral<A, C> {
 
-	public ComputedMergeActionLiteral(PartialSymbol<A, C> partialSymbol, List<NodeVariable> parameters,
-									  FunctionalQuery<A> valueQuery, List<NodeVariable> arguments) {
+	public ComputedModifyActionLiteral(PartialSymbol<A, C> partialSymbol, List<NodeVariable> parameters,
+	                                   FunctionalQuery<A> valueQuery, List<NodeVariable> arguments) {
 		super(partialSymbol, parameters, valueQuery, arguments);
 	}
 
@@ -30,7 +30,7 @@ public class ComputedMergeActionLiteral<A extends AbstractValue<A, C>, C> extend
 			if (value == null) {
 				return null;
 			}
-			return refiner.merge(tuple.map(parameterMapping), value) ? Tuple.of() : null;
+			return refiner.modify(tuple.map(parameterMapping), value) ? Tuple.of() : null;
 		};
 	}
 }

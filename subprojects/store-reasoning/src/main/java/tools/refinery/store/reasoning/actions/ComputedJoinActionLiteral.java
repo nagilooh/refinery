@@ -16,15 +16,15 @@ import tools.refinery.store.tuple.Tuple;
 
 import java.util.List;
 
-public class ComputedMergeActionLiteral<A extends AbstractValue<A, C>, C> extends ComputedPartialActionLiteral<A, C> {
+public class ComputedJoinActionLiteral<A extends AbstractValue<A, C>, C> extends ComputedPartialActionLiteral<A, C> {
 
-	public ComputedMergeActionLiteral(PartialSymbol<A, C> partialSymbol, List<NodeVariable> parameters,
-									  FunctionalQuery<A> valueQuery, List<NodeVariable> arguments) {
+	public ComputedJoinActionLiteral(PartialSymbol<A, C> partialSymbol, List<NodeVariable> parameters,
+                                     FunctionalQuery<A> valueQuery, List<NodeVariable> arguments) {
 		super(partialSymbol, parameters, valueQuery, arguments);
 	}
 
 	@Override
-	public BoundActionLiteral bindToModel(PartialInterpretationRefiner<A, C> refiner, ResultSet<A> resultSet) {
+	protected BoundActionLiteral bindToModel(PartialInterpretationRefiner<A, C> refiner, ResultSet<A> resultSet) {
 		return tuple -> {
 			var value = resultSet.get(tuple.map(argumentMapping));
 			if (value == null) {

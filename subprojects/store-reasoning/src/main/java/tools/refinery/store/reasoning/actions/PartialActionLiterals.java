@@ -70,6 +70,12 @@ public final class PartialActionLiterals {
 		return new ModifyActionLiteral<>(partialSymbol, value, parameters);
 	}
 
+	public static <A extends AbstractValue<A, C>, C> ComputedModifyActionLiteral<A, C> modifyComputed(
+			PartialSymbol<A, C> partialSymbol, List<NodeVariable> parameters, FunctionalQuery<A> valueQuery,
+			List<NodeVariable> arguments) {
+		return new ComputedModifyActionLiteral<>(partialSymbol, parameters, valueQuery, arguments);
+	}
+
 	public static FocusActionLiteral focus(NodeVariable parent, NodeVariable child) {
 		return new FocusActionLiteral(parent, child);
 	}
