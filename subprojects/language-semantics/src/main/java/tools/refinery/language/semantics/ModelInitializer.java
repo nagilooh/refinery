@@ -28,7 +28,10 @@ import tools.refinery.logic.AbstractDomain;
 import tools.refinery.logic.AbstractValue;
 import tools.refinery.logic.AnyAbstractDomain;
 import tools.refinery.logic.dnf.InvalidClauseException;
+import tools.refinery.logic.dnf.Query;
+import tools.refinery.logic.literal.CallPolarity;
 import tools.refinery.logic.term.ConstantTerm;
+import tools.refinery.logic.term.NodeVariable;
 import tools.refinery.logic.term.Term;
 import tools.refinery.logic.term.cardinalityinterval.CardinalityInterval;
 import tools.refinery.logic.term.cardinalityinterval.CardinalityIntervals;
@@ -37,6 +40,7 @@ import tools.refinery.logic.term.uppercardinality.UpperCardinalities;
 import tools.refinery.store.dse.propagation.PropagationBuilder;
 import tools.refinery.store.dse.transition.DesignSpaceExplorationBuilder;
 import tools.refinery.store.dse.transition.Rule;
+import tools.refinery.store.dse.transition.objectives.QueryCriterion;
 import tools.refinery.store.model.ModelStoreBuilder;
 import tools.refinery.store.model.ModelStoreConfiguration;
 import tools.refinery.store.reasoning.ReasoningAdapter;
@@ -795,6 +799,21 @@ public class ModelInitializer {
 			collectShadowPredicateDefinition(predicateDefinition, storeBuilder);
 		} else {
 			collectComputedPredicateDefinition(predicateDefinition, storeBuilder);
+		}
+
+		if (builtinAnnotationContext.isTarget(predicateDefinition)) {
+			storeBuilder.tryGetAdapter(TransitionSystemBuilder.class)
+					.ifPresent(builder -> {
+						var relation = getPartialRelation(predicateDefinition);
+						var parameterList = new ArrayList<NodeVariable>(relation.arity());
+						for (int i = 0; i < relation.arity(); i++) {
+							parameterList.add(NodeVariable.of());
+						}
+						var query = Query.builder(relation.name())
+								.clause(relation.call(CallPolarity.POSITIVE, parameterList))
+								.build();
+						builder.accept(new QueryCriterion(query, true));
+					});
 		}
 	}
 

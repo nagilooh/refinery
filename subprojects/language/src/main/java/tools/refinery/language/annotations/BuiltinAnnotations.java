@@ -30,6 +30,8 @@ public class BuiltinAnnotations extends DeclarativeAnnotationValidator {
 	public static final QualifiedName FOCUS = BuiltinLibrary.BUILTIN_STRATEGY_LIBRARY_NAME.append("focus");
 	public static final QualifiedName LONE = BuiltinLibrary.BUILTIN_STRATEGY_LIBRARY_NAME.append("lone");
 	public static final QualifiedName MULTI = BuiltinLibrary.BUILTIN_STRATEGY_LIBRARY_NAME.append("multi");
+	public static final QualifiedName NEW = BuiltinLibrary.BUILTIN_STRATEGY_LIBRARY_NAME.append("new");
+	public static final QualifiedName DELETE = BuiltinLibrary.BUILTIN_STRATEGY_LIBRARY_NAME.append("delete");
 	public static final QualifiedName CONCRETIZE = BuiltinLibrary.BUILTIN_STRATEGY_LIBRARY_NAME.append("concretize");
 	public static final String CONCRETIZE_AUTO = "auto";
 	public static final QualifiedName DECIDE = BuiltinLibrary.BUILTIN_STRATEGY_LIBRARY_NAME.append("decide");
@@ -39,6 +41,7 @@ public class BuiltinAnnotations extends DeclarativeAnnotationValidator {
 	public static final QualifiedName WEIGHT = BuiltinLibrary.BUILTIN_STRATEGY_LIBRARY_NAME.append("weight");
 	public static final String WEIGHT_COEFFICIENT = "coefficient";
 	public static final String WEIGHT_EXPONENT = "exponent";
+	public static final QualifiedName TARGET = BuiltinLibrary.BUILTIN_STRATEGY_LIBRARY_NAME.append("target");
 	public static final QualifiedName COLOR = BuiltinLibrary.BUILTIN_VIEW_LIBRARY_NAME.append("color");
 	public static final String COLOR_COLOR_ID = "colorId";
 	public static final String COLOR_HEX = "hex";
@@ -46,7 +49,7 @@ public class BuiltinAnnotations extends DeclarativeAnnotationValidator {
 	public static final String SHOW_HIDE_UNKNOWN = "hideUnknown";
 	public static final QualifiedName HIDE = BuiltinLibrary.BUILTIN_VIEW_LIBRARY_NAME.append("hide");
 
-	private static final List<QualifiedName> BINDING_MODES = List.of(FOCUS, LONE, MULTI);
+	private static final List<QualifiedName> BINDING_MODES = List.of(FOCUS, LONE, MULTI, NEW, DELETE);
 	private static final List<QualifiedName> VISIBILITIES = List.of(SHOW, HIDE);
 	private static final BigInteger COLOR_COUNT = BigInteger.valueOf(TypeHashProvider.COLOR_COUNT);
 
@@ -76,6 +79,8 @@ public class BuiltinAnnotations extends DeclarativeAnnotationValidator {
 	@ValidateAnnotation("FOCUS")
 	@ValidateAnnotation("LONE")
 	@ValidateAnnotation("MULTI")
+	@ValidateAnnotation("NEW")
+	@ValidateAnnotation("DELETE")
 	private void validateBindingMode(Annotation annotation) {
 		var annotatedElement = annotation.getAnnotatedElement();
 		if (!isParameter(annotatedElement, RuleDefinition.class)) {
@@ -88,7 +93,7 @@ public class BuiltinAnnotations extends DeclarativeAnnotationValidator {
 				.filter(annotations::hasAnnotation)
 				.count();
 		if (bindingModeCount >= 2) {
-			error("Only one of @focus, @lone, or @multi can be applied to a rule parameter at a time.",
+			error("Only one binding mode can be applied to a rule parameter at a time.",
 					annotation);
 		}
 	}
@@ -243,6 +248,15 @@ public class BuiltinAnnotations extends DeclarativeAnnotationValidator {
 		}
 		if (exponent.orElse(DecisionSettings.DEFAULT_EXPONENT).compareTo(BigDecimal.ZERO) < 0) {
 			var message = "Weight exponent must be non-negative.";
+			error(message, annotation);
+		}
+	}
+
+	@ValidateAnnotation("TARGET")
+	private void validateTarget(Annotation annotation) {
+		if (!(annotation.getAnnotatedElement() instanceof PredicateDefinition)) {
+			var message = "@%s can only be applied to predicates"
+					.formatted(annotation.getAnnotation().getDeclaration().getName());
 			error(message, annotation);
 		}
 	}

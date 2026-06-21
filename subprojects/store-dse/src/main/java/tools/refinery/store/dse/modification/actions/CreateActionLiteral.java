@@ -17,7 +17,6 @@ public class CreateActionLiteral extends AbstractActionLiteral {
 	private final NodeVariable variable;
 
 	public CreateActionLiteral(NodeVariable variable) {
-
 		this.variable = variable;
 	}
 

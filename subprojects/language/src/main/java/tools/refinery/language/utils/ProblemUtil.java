@@ -251,6 +251,23 @@ public final class ProblemUtil {
 		return kind != RuleKind.DECISION && kind != RuleKind.CONCRETIZATION;
 	}
 
+	public static boolean isParameterBindingAnnotationForbidden(RuleDefinition ruleDefinition,
+															    ParameterBinding binding) {
+		if (binding == ParameterBinding.SINGLE) {
+			return false;
+		}
+
+		var kind = ruleDefinition.getKind();
+		var allowed = switch (kind) {
+			case DECISION, CONCRETIZATION ->
+					binding == ParameterBinding.LONE || binding == ParameterBinding.MULTI || binding == ParameterBinding.FOCUS;
+			case TRANSITION ->
+					binding == ParameterBinding.NEW || binding == ParameterBinding.DELETE;
+			default -> false;
+		};
+		return !allowed;
+	}
+
 	public static int getArityWithoutProxyResolution(Relation relation) {
 		return switch (relation) {
 			case ClassDeclaration ignoredClassDeclaration -> 1;

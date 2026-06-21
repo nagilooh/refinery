@@ -107,7 +107,9 @@ public class RuleCompiler {
 		var ruleBuilder = Rule.builder(name)
 				.parameters(parameters)
 				.clause(preconditionWithBlocker.call(CallPolarity.POSITIVE, parameters));
-		buildConsequent(firstConsequent, wrappedActions, preparedRule, ruleBuilder);
+		var actionLiterals = new ArrayList<ActionLiteral>();
+		buildConsequent(firstConsequent, wrappedActions, preparedRule, actionLiterals);
+		ruleBuilder.action(actionLiterals);
 		return ruleBuilder.build();
 	}
 
@@ -259,32 +261,39 @@ public class RuleCompiler {
 		var ruleBuilder = Rule.builder(name)
 				.parameters(parameters)
 				.clause(PartialLiterals.must(precondition.call(CallPolarity.POSITIVE, parameters)));
+		var actionLiterals = new ArrayList<ActionLiteral>();
 		for (var consequent : ruleDefinition.getConsequents()) {
 			var wrappedActions = wrapConsequent(consequent, preparedRule, false);
 			for (var action : wrappedActions) {
 				action.setPrecondition(precondition);
 			}
-			buildConsequent(consequent, wrappedActions, preparedRule, ruleBuilder);
+			buildConsequent(consequent, wrappedActions, preparedRule, actionLiterals);
 		}
+		ruleBuilder.action(actionLiterals);
 		return ruleBuilder.build();
 	}
 
 	public TransitionRule toTransitionRule(String name, RuleDefinition ruleDefinition) {
 		var preparedRule = prepareRule(ruleDefinition, true);
 		var parameters = preparedRule.allParameters();
-		var precondition = preparedRule.buildQuery(name, parameters, List.of(), queryCompiler);
+		var nonNewParameters = preparedRule.nonNewParameters();
+		var precondition = preparedRule.buildQuery(name, nonNewParameters, List.of(), queryCompiler);
 		var ruleBuilder = Rule.builder(name)
-				.parameters(parameters)
-				.clause(precondition.call(CallPolarity.POSITIVE, parameters));
+				.parameters(nonNewParameters)
+				.clause(precondition.call(CallPolarity.POSITIVE, nonNewParameters));
+		var actionLiterals = new ArrayList<ActionLiteral>();
+		actionLiterals.addAll(preparedRule.getCreateLiterals());
+		actionLiterals.addAll(preparedRule.getDeleteLiterals());
 		for (var consequent : ruleDefinition.getConsequents()) {
 			var wrappedActions = wrapConsequent(consequent, preparedRule, true);
 			for (var action : wrappedActions) {
 				action.setPrecondition(precondition);
 			}
-			buildConsequent(consequent, wrappedActions, preparedRule, ruleBuilder);
+			buildConsequent(consequent, wrappedActions, preparedRule, actionLiterals);
 		}
+		ruleBuilder.action(actionLiterals);
 		var rule = ruleBuilder.build();
-		var preconditionRelation = new PartialRelation(name + "#precondition", ruleDefinition.getParameters().size());
+		var preconditionRelation = new PartialRelation(name + "#precondition", rule.getPrecondition().arity());
 		return new TransitionRule(preconditionRelation, rule);
 	}
 
@@ -295,6 +304,8 @@ public class RuleCompiler {
 				.<tools.refinery.language.model.problem.Variable, NodeVariable>newLinkedHashMap(arity);
 		var commonLiterals = new ArrayList<Literal>();
 		var parametersToFocus = new ArrayList<tools.refinery.language.model.problem.Variable>();
+		var parametersToCreate = new ArrayList<tools.refinery.language.model.problem.Variable>();
+		var parametersToDelete = new ArrayList<tools.refinery.language.model.problem.Variable>();
 		for (var problemParameter : problemParameters) {
 			var parameter = Variable.of(problemParameter.getName());
 			parameterMap.put(problemParameter, parameter);
@@ -315,22 +326,27 @@ public class RuleCompiler {
 			}
 			if (binding == ParameterBinding.FOCUS) {
 				parametersToFocus.add(problemParameter);
+			} else if (binding == ParameterBinding.NEW) {
+				parametersToCreate.add(problemParameter);
+			} else if (binding == ParameterBinding.DELETE) {
+				parametersToDelete.add(problemParameter);
 			}
 		}
 		PreparedRule.toMonomorphicMatchingLiterals(parametersToFocus, parameterMap, commonLiterals);
 		return new PreparedRule(ruleDefinition, Collections.unmodifiableSequencedMap(parameterMap),
-				Collections.unmodifiableCollection(parametersToFocus), Collections.unmodifiableList(commonLiterals));
+				Collections.unmodifiableCollection(parametersToFocus),
+				Collections.unmodifiableCollection(parametersToCreate),
+				Collections.unmodifiableCollection(parametersToDelete),
+				Collections.unmodifiableList(commonLiterals));
 	}
 
 	private void buildConsequent(Consequent body, List<WrappedAction> wrappedActions, PreparedRule preparedRule,
-								 RuleBuilder builder) {
+	                             List<ActionLiteral> actionLiterals) {
 		try {
-			var actionLiterals = new ArrayList<ActionLiteral>();
 			var localScope = preparedRule.focusParameters(actionLiterals);
 			for (var action : wrappedActions) {
 				action.toActionLiterals(Concreteness.PARTIAL, actionLiterals, localScope);
 			}
-			builder.action(actionLiterals);
 		} catch (RuntimeException e) {
 			throw TracedException.addTrace(body, e);
 		}

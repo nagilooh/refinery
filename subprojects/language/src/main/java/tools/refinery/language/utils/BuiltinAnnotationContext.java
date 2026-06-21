@@ -34,6 +34,12 @@ public class BuiltinAnnotationContext {
 		if (annotations.hasAnnotation(BuiltinAnnotations.MULTI)) {
 			return ParameterBinding.MULTI;
 		}
+		if (annotations.hasAnnotation(BuiltinAnnotations.NEW)) {
+			return ParameterBinding.NEW;
+		}
+		if (annotations.hasAnnotation(BuiltinAnnotations.DELETE)) {
+			return ParameterBinding.DELETE;
+		}
 		return ParameterBinding.SINGLE;
 	}
 
@@ -89,6 +95,11 @@ public class BuiltinAnnotationContext {
 						.map(BigInteger::intValue)
 						.orElse(DecisionSettings.DEFAULT_PRIORITY))
 				.orElse(DecisionSettings.DEFAULT_PRIORITY);
+	}
+
+	public boolean isTarget(PredicateDefinition predicateDefinition) {
+		var annotations = annotationContext.annotationsFor(predicateDefinition);
+		return annotations.getAnnotation(BuiltinAnnotations.TARGET).isPresent();
 	}
 
 	public String getColor(EObject eObject) {

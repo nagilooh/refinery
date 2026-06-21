@@ -17,6 +17,7 @@ import org.eclipse.xtext.Constants;
 import org.eclipse.xtext.resource.DerivedStateAwareResource;
 import org.eclipse.xtext.resource.IDerivedStateComputer;
 import org.eclipse.xtext.resource.XtextResource;
+import tools.refinery.language.annotations.BuiltinAnnotations;
 import tools.refinery.language.model.problem.*;
 import tools.refinery.language.utils.ProblemUtil;
 
@@ -208,6 +209,16 @@ public class ProblemDerivedStateComputer implements IDerivedStateComputer {
 			var targetParameters = preconditionPredicate.getParameters();
 			targetParameters.clear();
 			for (var parameter : ruleDefinition.getParameters()) {
+				var shouldIncludeParamter = true;
+				for (var annotation : parameter.getAnnotations().getAnnotations()) {
+					if (BuiltinAnnotations.NEW.getLastSegment().equals(annotation.getDeclaration().getName())) {
+						shouldIncludeParamter = false;
+						break;
+					}
+				}
+				if (!shouldIncludeParamter) {
+					continue;
+				}
 				var newParameter = ProblemFactory.eINSTANCE.createParameter();
 				newParameter.setParameterType(parameter.getParameterType());
 				newParameter.setKind(parameter.getKind());

@@ -12,6 +12,9 @@ import tools.refinery.logic.dnf.RelationalQuery;
 import tools.refinery.logic.literal.Literal;
 import tools.refinery.logic.literal.Literals;
 import tools.refinery.logic.term.NodeVariable;
+import tools.refinery.store.dse.modification.DanglingEdges;
+import tools.refinery.store.dse.modification.actions.CreateActionLiteral;
+import tools.refinery.store.dse.modification.actions.DeleteActionLiteral;
 import tools.refinery.store.dse.transition.actions.ActionLiteral;
 import tools.refinery.store.reasoning.ReasoningAdapter;
 import tools.refinery.store.reasoning.actions.PartialActionLiterals;
@@ -21,9 +24,21 @@ import java.util.*;
 
 record PreparedRule(
 		RuleDefinition ruleDefinition, SequencedMap<Variable, NodeVariable> parameterMap,
-		Collection<Variable> parametersToFocus, List<Literal> commonLiterals) {
+		Collection<Variable> parametersToFocus, Collection<Variable> parametersToCreate,
+		Collection<Variable> parametersToDelete, List<Literal> commonLiterals) {
+
 	public List<NodeVariable> allParameters() {
 		return List.copyOf(parameterMap.sequencedValues());
+	}
+
+	public List<NodeVariable> nonNewParameters() {
+		var result = new ArrayList<NodeVariable>(parameterMap.size());
+		for (var parameter : parameterMap.sequencedEntrySet()) {
+			if (!parametersToCreate.contains(parameter.getKey())) {
+				result.add(parameter.getValue());
+			}
+		}
+		return result;
 	}
 
 	public RelationalQuery buildQuery(String name, List<NodeVariable> parameters, List<Literal> moreCommonLiterals,
@@ -69,6 +84,24 @@ record PreparedRule(
 			actionLiterals.add(PartialActionLiterals.focus(originalParameter, focusedParameter));
 		}
 		return Collections.unmodifiableMap(localScope);
+	}
+
+	public List<ActionLiteral> getCreateLiterals() {
+		var literals = new ArrayList<ActionLiteral>(parametersToCreate.size());
+		for (var parameterToCreate : parametersToCreate) {
+			var originalParameter = parameterMap.get(parameterToCreate);
+			literals.add(new CreateActionLiteral(originalParameter));
+		}
+		return literals;
+	}
+
+	public List<ActionLiteral> getDeleteLiterals() {
+		var literals = new ArrayList<ActionLiteral>(parametersToDelete.size());
+		for (var parameterToDelete : parametersToDelete) {
+			var originalParameter = parameterMap.get(parameterToDelete);
+			literals.add(new DeleteActionLiteral(originalParameter, DanglingEdges.FAIL));
+		}
+		return literals;
 	}
 
 	public static void toMonomorphicMatchingLiterals(

@@ -59,11 +59,6 @@ public class TransitionSystemBuilderImpl extends AbstractModelAdapterBuilder<Tra
 			}
 		});
 		accepts.forEach(x -> x.configure(storeBuilder));
-
-		// TODO do we need this?
-		storeBuilder.tryGetAdapter(PropagationBuilder.class).ifPresent(propagationBuilder ->
-				propagationBuilder.propagator(new ExclusionPropagator()));
-
 		super.doConfigure(storeBuilder);
 	}
 
