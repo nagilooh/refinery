@@ -111,6 +111,12 @@ public class RuleCompiler {
 				.toList();
 	}
 
+	private List<WrappedAction> wrapTransformationConsequent(Consequent consequent, PreparedRule preparedRule) {
+		return consequent.getActions().stream()
+				.map(action -> wrapTransformationAction(action, preparedRule))
+				.toList();
+	}
+
 	private WrappedAction wrapAction(Action action, PreparedRule preparedRule) {
 		if (!(action instanceof AssertionAction assertionAction)) {
 			throw new TracedException(action, UNKNOWN_ACTION_MESSAGE);
@@ -131,6 +137,29 @@ public class RuleCompiler {
 			}
 			case PartialFunction<?, ?> partialFunction -> wrapAction(arguments, literals, term, partialFunction,
 					preparedRule);
+		};
+	}
+
+	private WrappedAction wrapTransformationAction(Action action, PreparedRule preparedRule) {
+		if (!(action instanceof AssertionAction assertionAction)) {
+			throw new TracedException(action, UNKNOWN_ACTION_MESSAGE);
+		}
+		var literals = new ArrayList<Literal>();
+		var term = queryCompiler.interpretTerm(assertionAction.getValue(), preparedRule.parameterMap(), literals);
+		var partialSymbol = queryCompiler.getPartialSymbol(assertionAction.getRelation());
+		var arguments = assertionAction.getArguments();
+		return switch (partialSymbol) {
+			case PartialRelation partialRelation -> {
+				var truthValueTerm = term.asType(TruthValue.class);
+				if (truthValueTerm instanceof ConstantTerm<TruthValue> constantTerm && literals.isEmpty()) {
+					yield new WrappedRelationAction(this, preparedRule, partialRelation, arguments,
+							constantTerm.getValue()); // TODO: update
+				}
+				yield new WrappedComputedRelationAction(this, preparedRule, partialRelation, arguments, literals,
+						truthValueTerm); // TODO: update
+			}
+			case PartialFunction<?, ?> partialFunction -> wrapAction(arguments, literals, term, partialFunction,
+					preparedRule); // TODO: update
 		};
 	}
 
@@ -216,6 +245,20 @@ public class RuleCompiler {
 				action.setPrecondition(precondition);
 			}
 			buildConsequent(consequent, wrappedActions, preparedRule, ruleBuilder);
+		}
+		return ruleBuilder.build();
+	}
+
+	public Rule toTransformationRule(String name, RuleDefinition ruleDefinition) {
+		var preparedRule = prepareRule(ruleDefinition, true);
+		var parameters = preparedRule.allParameters();
+		var precondition = preparedRule.buildQuery(name, parameters, List.of(), queryCompiler);
+		var ruleBuilder = Rule.builder(name)
+				.parameters(parameters)
+				.clause(PartialLiterals.must(precondition.call(CallPolarity.POSITIVE, parameters)));
+		for (var consequent : ruleDefinition.getConsequents()) {
+			// TODO: finish
+			var wrappedActions = wrapTransformationConsequent(consequent, preparedRule);
 		}
 		return ruleBuilder.build();
 	}

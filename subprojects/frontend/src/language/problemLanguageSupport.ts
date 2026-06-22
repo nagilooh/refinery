@@ -40,7 +40,7 @@ const parserWithMetadata = parser.configure({
       'abstract extends refers contains container partial': t.modifier,
       'opposite subsets': t.modifier,
       default: t.modifier,
-      'shadow propagation decision concretization': t.modifier,
+      'shadow propagation decision concretization transformation': t.modifier,
       'true false unknown error': t.keyword,
       'candidate may must': t.operatorKeyword,
       is: t.operatorKeyword,
