@@ -53,11 +53,6 @@ public abstract sealed class PartialSymbolTranslator<A extends AbstractValue<A, 
 	}
 
 	@Override
-	public @Nullable AnySymbol getStorageSymbol() {
-		return storageSymbol;
-	}
-
-	@Override
 	public void apply(ModelStoreBuilder storeBuilder) {
 		storeBuilder.getAdapter(ReasoningBuilder.class).partialSymbol(this);
 	}

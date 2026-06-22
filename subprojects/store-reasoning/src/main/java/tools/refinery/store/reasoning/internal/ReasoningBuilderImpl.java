@@ -6,7 +6,6 @@
 package tools.refinery.store.reasoning.internal;
 
 import tools.refinery.logic.AbstractValue;
-import tools.refinery.logic.dnf.AnyQuery;
 import tools.refinery.logic.dnf.Dnf;
 import tools.refinery.logic.dnf.FunctionalQuery;
 import tools.refinery.logic.dnf.Query;
@@ -39,7 +38,14 @@ import tools.refinery.store.representation.AnySymbol;
 import tools.refinery.store.representation.Symbol;
 import tools.refinery.store.statecoding.StateCoderBuilder;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public class ReasoningBuilderImpl extends AbstractModelAdapterBuilder<ReasoningStoreAdapter>
 		implements ReasoningBuilder {
@@ -134,29 +140,6 @@ public class ReasoningBuilderImpl extends AbstractModelAdapterBuilder<ReasoningS
 	@Override
 	public Dnf lift(ModalitySpecification modality, ConcretenessSpecification concreteness, Dnf dnf) {
 		return lifter.lift(modality, concreteness, dnf);
-	}
-
-	@Override
-	public Map<AnyPartialSymbol, AnyPartialSymbolTranslator> getPartialSymbolTranslators() {
-		return translators;
-	}
-
-	@Override
-	public AnySymbol getStorageSymbolForPartialSymbol(AnyPartialSymbol partialSymbol) {
-		var translator = translators.get(partialSymbol);
-		if (translator == null) {
-			throw new IllegalArgumentException("No translator registered for partial symbol: " + partialSymbol);
-		}
-		return translator.getStorageSymbol();
-	}
-
-	@Override
-	public AnyQuery getQueryForPartialSymbol(AnyPartialSymbol partialSymbol) {
-		var translator = translators.get(partialSymbol);
-		if (translator == null) {
-			throw new IllegalArgumentException("No translator registered for partial symbol: " + partialSymbol);
-		}
-		return translator.getQuery();
 	}
 
 	@Override

@@ -40,7 +40,7 @@ import tools.refinery.logic.term.uppercardinality.UpperCardinalities;
 import tools.refinery.store.dse.propagation.PropagationBuilder;
 import tools.refinery.store.dse.transition.DesignSpaceExplorationBuilder;
 import tools.refinery.store.dse.transition.Rule;
-import tools.refinery.store.dse.transition.objectives.QueryCriterion;
+import tools.refinery.store.dse.transition.objectives.Criteria;
 import tools.refinery.store.model.ModelStoreBuilder;
 import tools.refinery.store.model.ModelStoreConfiguration;
 import tools.refinery.store.reasoning.ReasoningAdapter;
@@ -812,7 +812,7 @@ public class ModelInitializer {
 						var query = Query.builder(relation.name())
 								.clause(relation.call(CallPolarity.POSITIVE, parameterList))
 								.build();
-						builder.accept(new QueryCriterion(query, true));
+						builder.accept(Criteria.whenHasMatch(query));
 					});
 		}
 	}

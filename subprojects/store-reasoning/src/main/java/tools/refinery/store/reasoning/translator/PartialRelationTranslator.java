@@ -5,9 +5,7 @@
  */
 package tools.refinery.store.reasoning.translator;
 
-import org.jetbrains.annotations.Nullable;
 import tools.refinery.logic.Constraint;
-import tools.refinery.logic.dnf.AnyQuery;
 import tools.refinery.logic.dnf.Query;
 import tools.refinery.logic.dnf.QueryBuilder;
 import tools.refinery.logic.dnf.RelationalQuery;
@@ -28,7 +26,10 @@ import tools.refinery.store.query.view.MustView;
 import tools.refinery.store.reasoning.ReasoningAdapter;
 import tools.refinery.store.reasoning.ReasoningBuilder;
 import tools.refinery.store.reasoning.actions.PartialActionLiterals;
-import tools.refinery.store.reasoning.interpretation.*;
+import tools.refinery.store.reasoning.interpretation.PartialInterpretation;
+import tools.refinery.store.reasoning.interpretation.PartialRelationRewriter;
+import tools.refinery.store.reasoning.interpretation.QueryBasedRelationInterpretationFactory;
+import tools.refinery.store.reasoning.interpretation.QueryBasedRelationRewriter;
 import tools.refinery.store.reasoning.lifting.DnfLifter;
 import tools.refinery.store.reasoning.literal.Concreteness;
 import tools.refinery.store.reasoning.literal.Modality;
@@ -67,11 +68,6 @@ public final class PartialRelationTranslator extends PartialSymbolTranslator<Tru
 
 	public PartialRelation getPartialRelation() {
 		return partialRelation;
-	}
-
-	@Override
-	public @Nullable AnyQuery getQuery() {
-		return query;
 	}
 
 	@Override

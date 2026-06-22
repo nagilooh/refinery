@@ -275,7 +275,6 @@ public class RuleCompiler {
 
 	public TransitionRule toTransitionRule(String name, RuleDefinition ruleDefinition) {
 		var preparedRule = prepareRule(ruleDefinition, true);
-		var parameters = preparedRule.allParameters();
 		var nonNewParameters = preparedRule.nonNewParameters();
 		var precondition = preparedRule.buildQuery(name, nonNewParameters, List.of(), queryCompiler);
 		var ruleBuilder = Rule.builder(name)

@@ -5,28 +5,24 @@
  */
 package tools.refinery.store.reasoning;
 
-import tools.refinery.logic.dnf.AnyQuery;
-import tools.refinery.store.adapter.ModelAdapterBuilder;
-import tools.refinery.store.dse.transition.objectives.Objective;
-import tools.refinery.store.model.ModelStore;
 import tools.refinery.logic.dnf.Dnf;
 import tools.refinery.logic.dnf.FunctionalQuery;
 import tools.refinery.logic.dnf.Query;
 import tools.refinery.logic.dnf.RelationalQuery;
+import tools.refinery.store.adapter.ModelAdapterBuilder;
+import tools.refinery.store.dse.transition.objectives.Objective;
+import tools.refinery.store.model.ModelStore;
 import tools.refinery.store.reasoning.literal.Concreteness;
 import tools.refinery.store.reasoning.literal.ConcretenessSpecification;
 import tools.refinery.store.reasoning.literal.Modality;
 import tools.refinery.store.reasoning.literal.ModalitySpecification;
 import tools.refinery.store.reasoning.refinement.PartialModelInitializer;
 import tools.refinery.store.reasoning.refinement.StorageRefiner;
-import tools.refinery.store.reasoning.representation.AnyPartialSymbol;
 import tools.refinery.store.reasoning.translator.AnyPartialSymbolTranslator;
-import tools.refinery.store.representation.AnySymbol;
 import tools.refinery.store.representation.Symbol;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
 @SuppressWarnings("UnusedReturnValue")
 public interface ReasoningBuilder extends ModelAdapterBuilder {
@@ -70,12 +66,6 @@ public interface ReasoningBuilder extends ModelAdapterBuilder {
 	Dnf lift(Modality modality, Concreteness concreteness, Dnf dnf);
 
 	Dnf lift(ModalitySpecification modality, ConcretenessSpecification concreteness, Dnf dnf);
-
-	Map<AnyPartialSymbol, AnyPartialSymbolTranslator> getPartialSymbolTranslators();
-
-	AnySymbol getStorageSymbolForPartialSymbol(AnyPartialSymbol partialSymbol);
-
-	AnyQuery getQueryForPartialSymbol(AnyPartialSymbol partialSymbol);
 
 	@Override
 	ReasoningStoreAdapter build(ModelStore store);
