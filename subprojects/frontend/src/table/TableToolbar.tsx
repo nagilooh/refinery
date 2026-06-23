@@ -4,77 +4,94 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-import Checkbox from '@mui/material/Checkbox';
-import FormControlLabel from '@mui/material/FormControlLabel';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import SaveAltIcon from '@mui/icons-material/SaveAlt';
+import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
+import ViewColumnIcon from '@mui/icons-material/ViewColumn';
+import IconButton from '@mui/material/IconButton';
 import Stack from '@mui/material/Stack';
-import Tooltip from '@mui/material/Tooltip';
-import { styled } from '@mui/material/styles';
 import {
-  GridToolbarColumnsButton,
-  GridToolbarContainer,
-  GridToolbarExport,
-  GridToolbarFilterButton,
+  ColumnsPanelTrigger,
+  ExportCsv,
+  FilterPanelTrigger,
 } from '@mui/x-data-grid';
 import { observer } from 'mobx-react-lite';
 
+import Tooltip from '../Tooltip';
 import type GraphStore from '../graph/GraphStore';
 
 import SymbolSelector from './SymbolSelector';
 
-const DimLabel = styled(FormControlLabel)(({ theme }) => ({
-  margin: '-4px 8px -4px 0',
-  '.MuiFormControlLabel-label': {
-    ...theme.typography.body2,
-    color: theme.palette.text.secondary,
-    userSelect: 'none',
-  },
-}));
-
-const ComputedCheckbox = observer(function ComputedCheckbox({
-  graph,
-}: {
-  graph: GraphStore;
-}) {
-  const { selectedSymbolHasComputed } = graph;
+function TableToolbar({ graph }: { graph: GraphStore }): React.ReactElement {
+  const { showComputed } = graph;
 
   return (
-    <Tooltip title="Use only forward reasoning">
-      <DimLabel
-        control={
-          <Checkbox
-            disabled={!selectedSymbolHasComputed}
-            checked={graph.showComputed && selectedSymbolHasComputed}
-            onClick={() => graph.toggleShowComputed()}
-            size="small"
-          />
-        }
-        label="Computed"
-      />
-    </Tooltip>
-  );
-});
-
-export default function TableToolbar({
-  graph,
-}: {
-  graph: GraphStore;
-}): React.ReactElement {
-  return (
-    <GridToolbarContainer
-      sx={{
-        display: 'flex',
-        flexDirection: 'row',
-        flexWrap: 'wrap-reverse',
-        justifyContent: 'space-between',
-      }}
+    <Stack
+      direction="row"
+      className="TableToolbar-root"
+      sx={(theme) => ({
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        px: theme.spacing(1),
+        py: theme.spacing(0.5),
+      })}
     >
-      <Stack direction="row" flexWrap="wrap">
-        <GridToolbarColumnsButton />
-        <GridToolbarFilterButton />
-        <GridToolbarExport />
-        <ComputedCheckbox graph={graph} />
+      <Stack
+        direction="row"
+        sx={{
+          height: (theme) => theme.spacing(5),
+          alignItems: 'center',
+          flexBasis: 200,
+          maxWidth: 600,
+          flexGrow: 1000,
+          flexShrink: 1,
+        }}
+      >
+        <SymbolSelector graph={graph} />
       </Stack>
-      <SymbolSelector graph={graph} />
-    </GridToolbarContainer>
+      <Stack
+        direction="row"
+        sx={{
+          flexGrow: 1,
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+        }}
+      >
+        <Tooltip
+          title={
+            showComputed ? 'Forward reasoning only' : 'Bidirectional reasoning'
+          }
+        >
+          <IconButton
+            disabled={!graph.selectedSymbolHasComputed}
+            onClick={() => graph.toggleShowComputed()}
+          >
+            {showComputed ? (
+              <ArrowForwardIcon fontSize="inherit" />
+            ) : (
+              <SwapHorizIcon fontSize="inherit" />
+            )}
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Columns">
+          <ColumnsPanelTrigger render={<IconButton color="inherit" />}>
+            <ViewColumnIcon fontSize="inherit" />
+          </ColumnsPanelTrigger>
+        </Tooltip>
+        <Tooltip title="Filter">
+          <FilterPanelTrigger render={<IconButton color="inherit" />}>
+            <FilterListIcon fontSize="inherit" />
+          </FilterPanelTrigger>
+        </Tooltip>
+        <Tooltip title="Export CSV">
+          <ExportCsv render={<IconButton color="inherit" />}>
+            <SaveAltIcon fontSize="inherit" />
+          </ExportCsv>
+        </Tooltip>
+      </Stack>
+    </Stack>
   );
 }
+
+export default observer(TableToolbar);

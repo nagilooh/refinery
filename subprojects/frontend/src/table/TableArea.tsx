@@ -6,6 +6,7 @@
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 import { alpha, styled } from '@mui/material/styles';
 import {
   DataGrid,
@@ -13,7 +14,7 @@ import {
   type GridColDef,
 } from '@mui/x-data-grid';
 import { observer } from 'mobx-react-lite';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
 import type GraphStore from '../graph/GraphStore';
 import RelationName from '../graph/RelationName';
@@ -63,11 +64,13 @@ function NoRowsOverlay({
 }): React.ReactElement {
   return (
     <Stack
-      height="100%"
-      alignItems="center"
-      justifyContent="center"
-      textAlign="center"
-      p={2}
+      sx={{
+        height: '100%',
+        alignItems: 'center',
+        justifyContent: 'center',
+        textAlign: 'center',
+        p: (theme) => theme.spacing(2),
+      }}
     >
       {selectedSymbol === undefined ? (
         noSymbolMessage
@@ -86,7 +89,13 @@ function NoResultsOverlay({
   graph: GraphStore;
 }): React.ReactElement {
   return (
-    <Stack height="100%" alignItems="center" justifyContent="center">
+    <Stack
+      sx={{
+        height: '100%',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
       {selectedSymbol === undefined ? (
         noSymbolMessage
       ) : (
@@ -125,11 +134,8 @@ function TableArea({
   const attribute = selectedSymbol?.dataType !== undefined;
   const parameterNames = selectedSymbol?.parameterNames;
 
-  const [cachedConcretize, setCachedConcretize] = useState(false);
-  useEffect(
-    () => {
-      setCachedConcretize(concretize);
-    },
+  const cachedConcretize = useMemo(
+    () => concretize,
     /* eslint-disable-next-line react-hooks/exhaustive-deps --
      * Deliberately only update `concretize` whenever `semantics` changes to avoid flashing colors.
      */
@@ -156,6 +162,16 @@ function TableArea({
       field: 'value',
       headerName: namesOrEmpty.includes('value') ? '$VALUE' : 'value',
       flex: 1,
+      renderHeader: ({ field }) => (
+        <Typography
+          component="span"
+          variant="body2"
+          color={showComputed ? 'primary' : 'textPrimary'}
+        >
+          {showComputed && 'computed '}
+          {field}
+        </Typography>
+      ),
       renderCell: ({ value }: GridRenderCellParams<Row, WrappedValue>) => (
         <ValueRenderer
           concretize={cachedConcretize}
@@ -165,7 +181,7 @@ function TableArea({
       ),
     });
     return defs;
-  }, [arity, attribute, cachedConcretize, parameterNames]);
+  }, [arity, attribute, cachedConcretize, parameterNames, showComputed]);
 
   const rows = useMemo<Row[]>(() => {
     if (computedName === undefined) {
@@ -193,7 +209,7 @@ function TableArea({
   }, [arity, nodes, partialInterpretation, computedName]);
 
   return (
-    <Box width="100%" height="100%">
+    <Box sx={{ width: '100%', height: '100%' }}>
       <DataGrid
         slots={{
           toolbar: TableToolbar,
@@ -235,14 +251,10 @@ function TableArea({
           '.MuiDataGrid-withBorderColor': {
             borderColor: theme.palette.outer.border,
           },
-          '.MuiDataGrid-toolbarContainer': {
+          '.TableToolbar-root': {
             background: touchesTop
               ? 'transparent'
               : theme.palette.outer.background,
-            padding: theme.spacing(1),
-            // Correct for the non-integer height of the text box to match up with the editor area toolbar.
-            marginBottom: '-0.5px',
-            borderBottom: 'none',
           },
           '.MuiDataGrid-columnHeaders': {
             '.MuiDataGrid-columnHeader, .MuiDataGrid-filler, .MuiDataGrid-scrollbarFiller':

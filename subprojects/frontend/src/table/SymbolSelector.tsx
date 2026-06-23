@@ -43,13 +43,11 @@ function SymbolSelector({ graph }: { graph: GraphStore }): React.ReactElement {
     <Autocomplete
       renderInput={(params) => (
         <TextField
-          {...{
-            ...params,
-            InputLabelProps: {
-              ...params.InputLabelProps,
-              // Workaround for type errors.
-              className: params.InputLabelProps.className ?? '',
-              style: params.InputLabelProps.style ?? {},
+          {...params}
+          slotProps={{
+            ...params.slotProps,
+            inputLabel: {
+              ...params.slotProps.inputLabel,
               'aria-placeholder': placeholderText,
             },
           }}
@@ -90,10 +88,7 @@ function SymbolSelector({ graph }: { graph: GraphStore }): React.ReactElement {
       isOptionEqualToValue={(option, value) => option.name === value.name}
       onChange={(_event, value) => graph.setSelectedSymbol(value ?? undefined)}
       sx={(theme) => ({
-        flexBasis: 200,
-        maxWidth: 600,
-        flexGrow: 1,
-        flexShrink: 1,
+        width: '100%',
         '.MuiInput-underline::before': {
           borderColor:
             theme.palette.mode === 'dark'

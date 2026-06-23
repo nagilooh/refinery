@@ -40,7 +40,7 @@ interface HighlightPalette {
   selection: string;
   foldPlaceholder: string;
   activeLintRange: string;
-  occurences: {
+  occurrences: {
     read: string;
     write: string;
   };
@@ -163,8 +163,9 @@ function createResponsiveTheme(
                   (color[0] ?? '').toUpperCase() + color.substring(1);
                 return {
                   ...accumulator,
-                  [`&.MuiButton-text${colorCapitalized}, &.MuiButton-outlined${colorCapitalized}`]:
-                    shadedButtonStyle(theme.palette[color].main),
+                  [`&.MuiButton-color${colorCapitalized}`]: shadedButtonStyle(
+                    theme.palette[color].main,
+                  ),
                 };
               }, {}),
             },
@@ -201,24 +202,25 @@ function createResponsiveTheme(
       MuiToggleButtonGroup: {
         styleOverrides: {
           root: {
-            '&.rounded .MuiToggleButtonGroup-groupedHorizontal': {
-              ':first-of-type': {
-                paddingLeft: 15,
-                borderRadius: '50em 0 0 50em',
+            '&.rounded.MuiToggleButtonGroup-horizontal .MuiToggleButtonGroup-grouped':
+              {
+                '&.MuiToggleButtonGroup-firstButton': {
+                  paddingLeft: 15,
+                  borderRadius: '50em 0 0 50em',
+                },
+                '&.MuiToggleButtonGroup-lastButton': {
+                  paddingRight: 15,
+                  borderRadius: '0 50em 50em 0',
+                },
+                '&.MuiToggleButton-sizeSmall': {
+                  ':first-of-type': { paddingLeft: 9 },
+                  ':last-of-type': { paddingRight: 9 },
+                },
+                '&.MuiToggleButton-sizeLarge': {
+                  ':first-of-type': { paddingLeft: 21 },
+                  ':last-of-type': { paddingRight: 21 },
+                },
               },
-              ':last-of-type': {
-                paddingRight: 15,
-                borderRadius: '0 50em 50em 0',
-              },
-              '&.MuiToggleButton-sizeSmall': {
-                ':first-of-type': { paddingLeft: 9 },
-                ':last-of-type': { paddingRight: 9 },
-              },
-              '&.MuiToggleButton-sizeLarge': {
-                ':first-of-type': { paddingLeft: 21 },
-                ':last-of-type': { paddingRight: 21 },
-              },
-            },
           },
         },
       },
@@ -287,7 +289,7 @@ export const lightTheme = (() => {
           selection: '#c8e4fb',
           foldPlaceholder: alpha(primaryText, 0.08),
           activeLintRange: alpha('#f2a60d', 0.28),
-          occurences: {
+          occurrences: {
             read: alpha(primaryText, 0.16),
             write: alpha(primaryText, 0.16),
           },
@@ -383,7 +385,7 @@ export const darkTheme = (() => {
           selection: '#404859',
           foldPlaceholder: alpha(primaryText, 0.12),
           activeLintRange: alpha('#fbc346', 0.28),
-          occurences: {
+          occurrences: {
             read: alpha(primaryText, 0.14),
             write: alpha(primaryText, 0.14),
           },

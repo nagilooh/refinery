@@ -272,10 +272,10 @@ export default styled('div', {
 
   const matchingStyle: CSSObject = {
     '.cm-problem-read': {
-      background: theme.palette.highlight.occurences.read,
+      background: theme.palette.highlight.occurrences.read,
     },
     '.cm-problem-write': {
-      background: theme.palette.highlight.occurences.write,
+      background: theme.palette.highlight.occurrences.write,
     },
     '.cm-matchingBracket, .cm-nonmatchingBracket': {
       background: 'transparent',
@@ -426,6 +426,9 @@ export default styled('div', {
       },
     },
     '.cm-tooltip.cm-tooltip-hover, .cm-tooltip.cm-tooltip-lint': {
+      /* eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion --
+         Removing this assertion makes the whole enclosing `CSSObject` fail to typecheck.
+       */
       ...((theme.components?.MuiTooltip?.styleOverrides?.tooltip as
         | CSSObject
         | undefined) ?? {}),
@@ -658,6 +661,9 @@ export default styled('div', {
     ...completionIconStyle('attribute', attributeSVG),
     ...completionIconStyle('theory', extensionSVG, { opacity: 0.7 }),
     '.cm-tooltip.cm-completionInfo': {
+      /* eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion --
+         Removing this assertion makes the whole enclosing `CSSObject` fail to typecheck.
+       */
       ...((theme.components?.MuiTooltip?.styleOverrides?.tooltip as
         | CSSObject
         | undefined) ?? {}),
