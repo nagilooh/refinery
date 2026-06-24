@@ -44,7 +44,10 @@ import tools.refinery.store.dse.transition.objectives.Criteria;
 import tools.refinery.store.model.ModelStoreBuilder;
 import tools.refinery.store.model.ModelStoreConfiguration;
 import tools.refinery.store.reasoning.ReasoningAdapter;
+import tools.refinery.store.reasoning.lifting.DnfLifter;
+import tools.refinery.store.reasoning.literal.Concreteness;
 import tools.refinery.store.reasoning.literal.ConcretenessSpecification;
+import tools.refinery.store.reasoning.literal.Modality;
 import tools.refinery.store.reasoning.representation.PartialFunction;
 import tools.refinery.store.reasoning.representation.PartialRelation;
 import tools.refinery.store.reasoning.scope.ScopePropagator;
@@ -812,7 +815,8 @@ public class ModelInitializer {
 						var query = Query.builder(relation.name())
 								.clause(relation.call(CallPolarity.POSITIVE, parameterList))
 								.build();
-						builder.accept(Criteria.whenHasMatch(query));
+						DnfLifter lifter = new DnfLifter();
+						builder.accept(Criteria.whenHasMatch(lifter.lift(Modality.MAY, Concreteness.PARTIAL, query)));
 					});
 		}
 	}

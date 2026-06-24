@@ -5,10 +5,8 @@
  */
 package tools.refinery.store.reasoning.translator;
 
-import org.jetbrains.annotations.Nullable;
 import tools.refinery.logic.AbstractValue;
 import tools.refinery.logic.Constraint;
-import tools.refinery.logic.dnf.AnyQuery;
 import tools.refinery.logic.dnf.FunctionalQuery;
 import tools.refinery.logic.dnf.Query;
 import tools.refinery.logic.dnf.QueryBuilder;
@@ -33,7 +31,11 @@ import tools.refinery.store.reasoning.interpretation.PartialFunctionRewriter;
 import tools.refinery.store.reasoning.interpretation.PartialInterpretation;
 import tools.refinery.store.reasoning.interpretation.QueryBasedFunctionInterpretationFactory;
 import tools.refinery.store.reasoning.interpretation.QueryBasedFunctionRewriter;
-import tools.refinery.store.reasoning.literal.*;
+import tools.refinery.store.reasoning.literal.Concreteness;
+import tools.refinery.store.reasoning.literal.ConcretenessSpecification;
+import tools.refinery.store.reasoning.literal.ModalConstraint;
+import tools.refinery.store.reasoning.literal.Modality;
+import tools.refinery.store.reasoning.literal.ModalitySpecification;
 import tools.refinery.store.reasoning.refinement.ConcreteSymbolRefiner;
 import tools.refinery.store.reasoning.refinement.PartialInterpretationRefiner;
 import tools.refinery.store.reasoning.refinement.StorageRefiner;
@@ -47,7 +49,10 @@ import java.util.function.BiConsumer;
 
 import static tools.refinery.logic.literal.Literals.check;
 import static tools.refinery.logic.literal.Literals.not;
-import static tools.refinery.store.reasoning.literal.PartialLiterals.*;
+import static tools.refinery.store.reasoning.literal.PartialLiterals.candidateMay;
+import static tools.refinery.store.reasoning.literal.PartialLiterals.candidateMust;
+import static tools.refinery.store.reasoning.literal.PartialLiterals.may;
+import static tools.refinery.store.reasoning.literal.PartialLiterals.must;
 
 @SuppressWarnings("UnusedReturnValue")
 public final class PartialFunctionTranslator<A extends AbstractValue<A, C>, C>
@@ -67,11 +72,6 @@ public final class PartialFunctionTranslator<A extends AbstractValue<A, C>, C>
 
 	public PartialFunction<A, C> getPartialFunction() {
 		return partialFunction;
-	}
-
-	@Override
-	public @Nullable AnyQuery getQuery() {
-		return query;
 	}
 
 	@Override

@@ -387,7 +387,7 @@ public class DistinctVersionsTraceConcretizer extends TraceConcretizer {
 			if (refiner instanceof ConcreteRelationRefiner concreteRelationRefiner) {
 				var childSymbols = concreteRelationRefiner.getAbstractionPropagations();
 				for (var childSymbol : childSymbols) {
-					var arity = childSymbol.relation().arity();
+					var arity = childSymbol.partialSymbol().arity();
 					var input = new int[arity];
 					Arrays.fill(input, -1);
 					var argumentMapping = childSymbol.argumentMapping();
@@ -399,7 +399,7 @@ public class DistinctVersionsTraceConcretizer extends TraceConcretizer {
 
 					int nodeCount = reasoningAdapter.getNodeCount();
 					backtrack(nodeCount, input.length, 0, input, new int[arity], tuple -> {
-						Entry<PartialSymbol<?, ?>, Tuple> entry = new SimpleEntry<>(childSymbol.relation(), tuple);
+						Entry<PartialSymbol<?, ?>, Tuple> entry = new SimpleEntry<>(childSymbol.partialSymbol(), tuple);
 						if (symbolsToFix.add(entry)) {
 							newItems.push(entry);
 						}

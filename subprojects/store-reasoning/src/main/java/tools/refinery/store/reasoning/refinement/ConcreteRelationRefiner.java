@@ -5,14 +5,27 @@
  */
 package tools.refinery.store.reasoning.refinement;
 
+import tools.refinery.logic.Constraint;
 import tools.refinery.logic.dnf.Dnf;
 import tools.refinery.logic.dnf.RelationalQuery;
+import tools.refinery.logic.literal.AbstractCallLiteral;
 import tools.refinery.logic.literal.CallLiteral;
-import tools.refinery.logic.literal.ConstantLiteral;
+import tools.refinery.logic.literal.CallPolarity;
+import tools.refinery.logic.literal.Literal;
+import tools.refinery.logic.literal.TermLiteral;
+import tools.refinery.logic.term.AbstractCallTerm;
+import tools.refinery.logic.term.BinaryTerm;
+import tools.refinery.logic.term.ConstantTerm;
+import tools.refinery.logic.term.NodeIdTerm;
+import tools.refinery.logic.term.Term;
+import tools.refinery.logic.term.UnaryTerm;
 import tools.refinery.logic.term.Variable;
 import tools.refinery.logic.term.truthvalue.TruthValue;
 import tools.refinery.store.model.Interpretation;
+import tools.refinery.store.query.view.AnySymbolView;
 import tools.refinery.store.reasoning.ReasoningAdapter;
+import tools.refinery.store.reasoning.literal.ModalConstraint;
+import tools.refinery.store.reasoning.literal.PartialFunctionCallTerm;
 import tools.refinery.store.reasoning.representation.PartialRelation;
 import tools.refinery.store.reasoning.representation.PartialSymbol;
 import tools.refinery.store.reasoning.translator.RoundingMode;
@@ -20,6 +33,7 @@ import tools.refinery.store.representation.Symbol;
 import tools.refinery.store.tuple.Tuple;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -91,7 +105,7 @@ public class ConcreteRelationRefiner extends
 	@Override
 	public void afterCreate() {
 		for (var abstractionPropagation : abstractionPropagations) {
-			var refiner = getAdapter().getRefiner(abstractionPropagation.relation());
+			var refiner = getAdapter().getRefiner(abstractionPropagation.partialSymbol());
 			var argumentMapping = abstractionPropagation.argumentMapping();
 			refiner.addAbstractionListener((key, _, _) -> {
 				int[] fixedArguments = new int[argumentMapping.length];
@@ -132,8 +146,7 @@ public class ConcreteRelationRefiner extends
 	}
 
 	protected boolean notifyRefinementListeners(Tuple key, TruthValue mergedValue) {
-		for (int i = 0; i < refinementPropagations.length; i++) {
-			var refinementPropagation = refinementPropagations[i];
+		for (var refinementPropagation : refinementPropagations) {
 			if (mergedValue == refinementPropagation.refineOnValue) {
 				var refiner = getAdapter().getRefiner(refinementPropagation.relation);
 				var projectedKey = key.map(refinementPropagation.projection);
@@ -177,7 +190,7 @@ public class ConcreteRelationRefiner extends
 		for (int i = 0; i < dnf.arity(); ++i) {
 			projection.put(parameters.get(i).getVariable(), i);
 		}
-		collectValuePropagators(partialSymbol, query.getDnf(), projection, true,
+		collectPropagations(partialSymbol.arity(), query.getDnf(), projection, true,
 				abstractionPropagations, refinementPropagations);
 	}
 
@@ -206,75 +219,154 @@ public class ConcreteRelationRefiner extends
 	 *                             variables
 	 * @param isProjectionPositive the polarity of the projection
 	 */
-	protected static void collectValuePropagators(PartialSymbol<TruthValue, Boolean> partialSymbol, Dnf dnf,
-	                                              Map<Variable, Integer> projection,
-	                                              Boolean isProjectionPositive,
-	                                              List<AbstractionPropagation> abstractionPropagations,
-	                                              List<RefinementPropagation> refinementPropagations) {
+	protected static void collectPropagations(int arity, Dnf dnf,
+	                                          Map<Variable, Integer> projection,
+	                                          Boolean isProjectionPositive,
+	                                          List<AbstractionPropagation> abstractionPropagations,
+	                                          List<RefinementPropagation> refinementPropagations) {
 		for (var clause : dnf.getClauses()) {
 			for (var literal : clause.literals()) {
 				switch (literal) {
-				case CallLiteral callLiteral -> {
-					var arguments = callLiteral.getArguments();
+				case AbstractCallLiteral abstractCallLiteral -> {
+					var arguments = abstractCallLiteral.getArguments();
+					var polarity = abstractCallLiteral instanceof CallLiteral callLiteral ?
+							callLiteral.getPolarity() : CallPolarity.POSITIVE;
 
-					switch (callLiteral.getTarget()) {
+					switch (abstractCallLiteral.getTarget()) {
 					case PartialRelation relation -> {
 						// Join derived value if base value is abstracted
-						int[] argumentMapping = new int[partialSymbol.arity()];
-						for (int i = 0; i < partialSymbol.arity(); ++i) {
-							argumentMapping[i] = -1;
-						}
-						for (var entry : projection.entrySet()) {
-							var argumentIndex = arguments.indexOf(entry.getKey());
-							if (argumentIndex != -1) {
-								argumentMapping[entry.getValue()] = argumentIndex;
-							}
-						}
-
+						var argumentMapping = getArgumentMapping(arity, projection, arguments);
 						abstractionPropagations.add(new AbstractionPropagation(relation, argumentMapping));
 
 						if (isProjectionPositive != null) {
 							// Merge literal true if the dnf consists of a single clause when the dnf is refined to true
 							if (dnf.getClauses().size() == 1) {
 								var refineWhenToValue = isProjectionPositive ? TRUE : FALSE;
-								var mergedValue = callLiteral.getPolarity().isPositive() ? TRUE : FALSE;
+								var mergedValue = polarity.isPositive() ? TRUE : FALSE;
 								refineIfPossible(refinementPropagations, relation, projection, arguments, refineWhenToValue, mergedValue);
 							}
 
 							// Merge clause false if it consists of a single literal when the dnf is refined to false
 							if (clause.literals().size() == 1) {
 								var refineWhenToValue = isProjectionPositive ? FALSE : TRUE;
-								var mergedValue = callLiteral.getPolarity().isPositive() ? FALSE : TRUE;
+								var mergedValue = polarity.isPositive() ? FALSE : TRUE;
 								refineIfPossible(refinementPropagations, relation, projection, arguments, refineWhenToValue, mergedValue);
 							}
 						}
 					}
 					case Dnf targetDnf -> {
-						var updatedProjection = new LinkedHashMap<Variable, Integer>();
-						var parameters = targetDnf.getSymbolicParameters();
-						for (int i = 0; i < targetDnf.arity(); ++i) {
-							var originalIndex = projection.get(arguments.get(i));
-							if (originalIndex != null) {
-								updatedProjection.put(parameters.get(i).getVariable(), originalIndex);
-							}
-						}
-						Boolean isPositive = isProjectionPositive == null ? null : switch (callLiteral.getPolarity()) {
+						var updatedProjection = updateProjection(projection, arguments, targetDnf);
+						Boolean isPositive = isProjectionPositive == null ? null : switch (polarity) {
 							case POSITIVE -> isProjectionPositive;
 							case NEGATIVE -> !isProjectionPositive;
 							case TRANSITIVE -> null;
 						};
-						collectValuePropagators(partialSymbol, targetDnf, updatedProjection, isPositive,
+						collectPropagations(arity, targetDnf, updatedProjection, isPositive,
 								abstractionPropagations, refinementPropagations);
+					}
+					case AnySymbolView ignored -> {
 					}
 					default -> throw new UnsupportedOperationException("Unsupported call literal target.");
 					}
 				}
-				case ConstantLiteral ignored -> {
+				case TermLiteral<?> termLiteral ->
+						collectPropagations(termLiteral.getTerm(), arity, projection, abstractionPropagations);
+				default -> {
 				}
-				default -> throw new UnsupportedOperationException("Unsupported literal in derived relation.");
 				}
 			}
 		}
+	}
+
+	private static void collectPropagations(Term<?> term, int arity, Map<Variable, Integer> projection,
+	                                        List<AbstractionPropagation> abstractionPropagations) {
+		switch (term) {
+		case PartialFunctionCallTerm<?, ?> partialFunctionCallTerm -> {
+			var arguments = partialFunctionCallTerm.getArguments();
+			var argumentMapping = getArgumentMapping(arity, projection, arguments);
+			var abstractionPropagation = new AbstractionPropagation(partialFunctionCallTerm.getPartialFunction(), argumentMapping);
+			abstractionPropagations.add(abstractionPropagation);
+		}
+		case UnaryTerm<?, ?> unaryTerm ->
+				collectPropagations(unaryTerm.getBody(), arity, projection, abstractionPropagations);
+		case BinaryTerm<?, ?, ?> binaryTerm -> {
+			collectPropagations(binaryTerm.getLeft(), arity, projection, abstractionPropagations);
+			collectPropagations(binaryTerm.getRight(), arity, projection, abstractionPropagations);
+		}
+		case AbstractCallTerm<?> abstractCallTerm -> {
+			var target = abstractCallTerm.getTarget();
+			var arguments = abstractCallTerm.getArguments();
+			collectPropagations(target, arity, projection, arguments, abstractionPropagations);
+		}
+		case ConstantTerm<?> ignored -> {
+		}
+		case NodeIdTerm ignored -> {
+		}
+		default -> throw new UnsupportedOperationException("Unsupported term.");
+		}
+	}
+
+	private static void collectPropagations(Constraint constraint, int arity, Map<Variable, Integer> projection,
+	                                        List<Variable> arguments,
+	                                        List<AbstractionPropagation> abstractionPropagations) {
+		switch (constraint) {
+		case PartialRelation relation -> {
+			var argumentMapping = getArgumentMapping(arity, projection, arguments);
+			abstractionPropagations.add(new AbstractionPropagation(relation, argumentMapping));
+		}
+		case Dnf dnf -> {
+			var updatedProjection = updateProjection(projection, arguments, dnf);
+			for (var clause : dnf.getClauses()) {
+				for (var literal : clause.literals()) {
+					collectPropagations(literal, arity, updatedProjection, abstractionPropagations);
+				}
+			}
+		}
+		case ModalConstraint modalConstraint ->
+				collectPropagations(modalConstraint.constraint(), arity, projection, arguments, abstractionPropagations);
+		case AnySymbolView ignored -> {
+		}
+		default -> throw new UnsupportedOperationException("Unsupported constraint.");
+		}
+	}
+
+	private static void collectPropagations(Literal literal, int arity, Map<Variable, Integer> projection,
+	                                        List<AbstractionPropagation> abstractionPropagations) {
+		switch (literal) {
+		case AbstractCallLiteral abstractCallLiteral ->
+				collectPropagations(abstractCallLiteral.getTarget(), arity, projection,
+						abstractCallLiteral.getArguments(), abstractionPropagations);
+		case TermLiteral<?> termLiteral ->
+				collectPropagations(termLiteral.getTerm(), arity, projection, abstractionPropagations);
+		default -> {
+		}
+		}
+	}
+
+	private static int[] getArgumentMapping(int arity, Map<Variable, Integer> projection,
+	                                        List<? extends Variable> arguments) {
+		int[] argumentMapping = new int[arity];
+		Arrays.fill(argumentMapping, -1);
+		for (var entry : projection.entrySet()) {
+			var argumentIndex = arguments.indexOf(entry.getKey());
+			if (argumentIndex != -1) {
+				argumentMapping[entry.getValue()] = argumentIndex;
+			}
+		}
+		return argumentMapping;
+	}
+
+	private static Map<Variable, Integer> updateProjection(Map<Variable, Integer> projection,
+	                                                       List<Variable> arguments, Dnf dnf) {
+		var updatedProjection = new LinkedHashMap<Variable, Integer>();
+		var parameters = dnf.getSymbolicParameters();
+		for (int i = 0; i < dnf.arity(); ++i) {
+			var originalIndex = projection.get(arguments.get(i));
+			if (originalIndex != null) {
+				updatedProjection.put(parameters.get(i).getVariable(), originalIndex);
+			}
+		}
+		return updatedProjection;
 	}
 
 	private boolean joinAll(int[] argumentMapping, Function<Tuple, Boolean> joinAction) {
@@ -325,7 +417,7 @@ public class ConcreteRelationRefiner extends
 	private static boolean backtrack(int n, int k, int depth,
 	                                 int[] fixedArr,
 	                                 int[] current,
-	                                 Function<Tuple, Boolean>  consumer) {
+	                                 Function<Tuple, Boolean> consumer) {
 
 		if (depth == k) {
 			return consumer.apply(Tuple.of(current));
@@ -366,7 +458,7 @@ public class ConcreteRelationRefiner extends
 		}
 	}
 
-	public record AbstractionPropagation(PartialRelation relation, int[] argumentMapping) {
+	public record AbstractionPropagation(PartialSymbol<?, ?> partialSymbol, int[] argumentMapping) {
 	}
 
 	protected record RefinementPropagation(PartialRelation relation, TruthValue refineOnValue, int[] projection,
