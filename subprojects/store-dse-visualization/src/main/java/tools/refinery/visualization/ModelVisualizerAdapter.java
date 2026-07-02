@@ -11,6 +11,7 @@ import tools.refinery.store.representation.wrapper.SymbolWrapper;
 import tools.refinery.visualization.internal.ModelVisualizerBuilderImpl;
 import tools.refinery.visualization.statespace.VisualizationStore;
 
+import java.util.List;
 import java.util.Map;
 
 public interface ModelVisualizerAdapter extends ModelAdapter {
@@ -29,6 +30,11 @@ public interface ModelVisualizerAdapter extends ModelAdapter {
 		visualize(visualizationStore, subPath, name, null);
 	}
 
+	default void visualize(VisualizationStore visualizationStore, String subPath, String name,
+	               Map<SymbolWrapper, InterpretationWrapper<?>> interpretations) {
+		visualize(visualizationStore, subPath, name, interpretations, List.of());
+	}
+
 	void visualize(VisualizationStore visualizationStore, String subPath, String name,
-				   Map<SymbolWrapper, InterpretationWrapper<?>> interpretations);
+	               Map<SymbolWrapper, InterpretationWrapper<?>> interpretations, List<String> hiddenRelations);
 }

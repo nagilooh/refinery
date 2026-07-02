@@ -6,14 +6,15 @@
 package tools.refinery.visualization.statespace;
 
 import tools.refinery.store.map.Version;
+import tools.refinery.store.tuple.Tuple;
 
 import java.util.Map;
 
 public interface VisualizationStore {
 	void addState(Version state, String label, Integer stateCode);
 	void addSolution(Version state);
-	void addTransition(Version from, Version to, String label);
-	void addTransition(Version from, int to, String label);
+	void addTransition(Version from, Version to, String name, Tuple activation);
+	void addTransition(Version from, int to, String name, Tuple activation);
 	StringBuilder getDesignSpaceStringBuilder(boolean includeTransitionsToAlreadyVisitedStates);
 	Map<Version, Integer> getStates();
 }

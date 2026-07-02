@@ -6,10 +6,12 @@
 package tools.refinery.visualization.statespace.internal;
 
 import tools.refinery.store.map.Version;
+import tools.refinery.store.tuple.Tuple;
 import tools.refinery.visualization.statespace.VisualizationStore;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
 
 public class VisualizationStoreImpl implements VisualizationStore {
 
@@ -19,6 +21,29 @@ public class VisualizationStoreImpl implements VisualizationStore {
 	private Integer numberOfStates = 0;
 	private final StringBuilder designSpaceBuilder = new StringBuilder();
 	private final StringBuilder transitionsToAlreadyVisitedStatesBuilder = new StringBuilder();
+	private final Function<Integer, String> nodeNameProvider;
+
+	public VisualizationStoreImpl(Function<Integer, String> nodeNameProvider) {
+		this.nodeNameProvider = nodeNameProvider;
+	}
+
+	private String getLabel(String name, Tuple activation) {
+		if (nodeNameProvider == null) {
+			return name + " " + activation;
+		}
+
+		var builder = new StringBuilder();
+		builder.append(name);
+		builder.append(" [");
+		for (int i = 0; i < activation.getSize(); i++) {
+			builder.append(nodeNameProvider.apply(activation.get(i)));
+			if (i < activation.getSize() - 1) {
+				builder.append(", ");
+			}
+		}
+		builder.append("]");
+		return builder.toString();
+	}
 
 	@Override
 	public synchronized void addState(Version state, String label, Integer stateCode) {
@@ -38,12 +63,14 @@ public class VisualizationStoreImpl implements VisualizationStore {
 	}
 
 	@Override
-	public synchronized void addTransition(Version from, Version to, String label) {
+	public synchronized void addTransition(Version from, Version to, String name, Tuple activation) {
+		var label = getLabel(name, activation);
 		addTransition(designSpaceBuilder, from, to, label, "style=solid");
 	}
 
 	@Override
-	public synchronized void addTransition(Version from, int to, String label) {
+	public synchronized void addTransition(Version from, int to, String name, Tuple activation) {
+		var label = getLabel(name, activation);
 		var toVersion = stateCodes.entrySet().stream().filter(e -> e.getValue() == to).findAny().get().getKey();
 		addTransition(transitionsToAlreadyVisitedStatesBuilder, from, toVersion, label, "style=dashed, " +
 				"color=\"#00000080\", fontcolor=\"#00000080\"");

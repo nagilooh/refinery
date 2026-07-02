@@ -11,23 +11,27 @@ import tools.refinery.store.model.ModelStore;
 import tools.refinery.visualization.ModelVisualizerStoreAdapter;
 
 import java.util.Set;
+import java.util.function.Function;
 
 public class ModelVisualizerStoreAdapterImpl implements ModelVisualizerStoreAdapter {
 	private final ModelStore store;
 	private final String dotBinaryPath;
 	private final String outputPath;
+	private final Function<Integer, String> nodeNameProvider;
 	private final boolean renderDesignSpace;
 	private final boolean renderStates;
 	private final boolean renderTransitionsToAlreadyVisitedStates;
 	private final Set<FileFormat> formats;
 
 	public ModelVisualizerStoreAdapterImpl(ModelStore store, String dotBinaryPath, String outputPath,
-	                                       Set<FileFormat> formats, boolean renderDesignSpace, boolean renderStates,
+	                                       Set<FileFormat> formats, Function<Integer, String> nodeNameProvider,
+										   boolean renderDesignSpace, boolean renderStates,
 	                                       boolean renderTransitionsToAlreadyVisitedStates) {
 		this.store = store;
 		this.dotBinaryPath = dotBinaryPath;
 		this.outputPath = outputPath;
 		this.formats = formats;
+		this.nodeNameProvider = nodeNameProvider;
 		this.renderDesignSpace = renderDesignSpace;
 		this.renderStates = renderStates;
 		this.renderTransitionsToAlreadyVisitedStates = renderTransitionsToAlreadyVisitedStates;
@@ -70,5 +74,10 @@ public class ModelVisualizerStoreAdapterImpl implements ModelVisualizerStoreAdap
 	@Override
 	public Set<FileFormat> getFormats() {
 		return formats;
+	}
+
+	@Override
+	public Function<Integer, String> getNodeNameProvider() {
+		return nodeNameProvider;
 	}
 }

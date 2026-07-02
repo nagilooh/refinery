@@ -163,12 +163,13 @@ public class TransitionSystemExplorer {
 		var submitResult = submit(transition);
 
 		if (isVisualizationEnabled) {
-			var label = visitResult.transformationName() + " " + visitResult.activationTuple();
 			if (submitResult.newState() != null) {
 				var newVersion = submitResult.newState();
-				visualizationStore.addTransition(oldState.version(), newVersion.version(), label);
+				visualizationStore.addTransition(oldState.version(), newVersion.version(),
+						visitResult.transformationName(), visitResult.activationTuple());
 			} else {
-				visualizationStore.addTransition(oldState.version(), stateCoderAdapter.calculateModelCode(), label);
+				visualizationStore.addTransition(oldState.version(), stateCoderAdapter.calculateModelCode(),
+						visitResult.transformationName(), visitResult.activationTuple());
 			}
 		}
 		return new RandomVisitResult(submitResult, visitResult.mayHaveMore());

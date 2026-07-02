@@ -38,7 +38,7 @@ public class TransitionSystemStoreManager {
 
 		var storeAdapter = modelStore.getAdapter(TransitionSystemStoreAdapter.class);
 		this.objectiveStore = new ObjectivePriorityQueueImpl<>(Comparator.comparingInt(State::depth).reversed());
-		BiFunction<Transition.Builder, Integer, Double> weightProvider = (rule, unvisited) -> unvisited == 0 ? 0.0 : 1.0;
+		BiFunction<Transition.Builder, Integer, Double> weightProvider = (_, unvisited) -> unvisited == 0 ? 0.0 : 1.0;
 		Consumer<Version> whenAllActivationsVisited = x -> objectiveStore.removeIf(s -> x.equals(s.version()));
 		this.activationStore = new ActivationStoreImpl<>(storeAdapter.getTransitions(), weightProvider,
 				whenAllActivationsVisited);
@@ -50,9 +50,10 @@ public class TransitionSystemStoreManager {
 			}
 		};
 
-		if (modelStore.tryGetAdapter(ModelVisualizerStoreAdapter.class).isPresent()) {
-			this.visualizationStore = new VisualizationStoreImpl();
-			this.solutionVisualizationStore = new VisualizationStoreImpl();
+		var visualizerAdapter = modelStore.tryGetAdapter(ModelVisualizerStoreAdapter.class);
+		if (visualizerAdapter.isPresent()) {
+			this.visualizationStore = new VisualizationStoreImpl(visualizerAdapter.get().getNodeNameProvider());
+			this.solutionVisualizationStore = new VisualizationStoreImpl(visualizerAdapter.get().getNodeNameProvider());
 		} else {
 			this.visualizationStore = null;
 			this.solutionVisualizationStore = null;
@@ -92,8 +93,8 @@ public class TransitionSystemStoreManager {
 				}
 				if (i > 0) {
 					var transition = solution.transitions().get(i - 1);
-					var label = transition.transition().toString() + " " + transition.activation();
-					solutionVisualizationStore.addTransition(states.get(i - 1).version(), state, label);
+					solutionVisualizationStore.addTransition(states.get(i - 1).version(), state,
+							transition.transition().toString(),	transition.activation());
 				}
 			}
 		}

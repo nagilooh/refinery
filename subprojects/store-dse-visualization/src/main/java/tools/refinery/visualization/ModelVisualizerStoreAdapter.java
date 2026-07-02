@@ -9,6 +9,7 @@ import tools.refinery.store.adapter.ModelStoreAdapter;
 import tools.refinery.visualization.internal.FileFormat;
 
 import java.util.Set;
+import java.util.function.Function;
 
 public interface ModelVisualizerStoreAdapter extends ModelStoreAdapter {
 
@@ -21,4 +22,6 @@ public interface ModelVisualizerStoreAdapter extends ModelStoreAdapter {
 	boolean isRenderTransitionsToAlreadyVisitedStates();
 
 	Set<FileFormat> getFormats();
+
+	Function<Integer, String> getNodeNameProvider();
 }

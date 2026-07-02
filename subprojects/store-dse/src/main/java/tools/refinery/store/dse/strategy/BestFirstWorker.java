@@ -193,12 +193,13 @@ public class BestFirstWorker {
 		}
 		var submitResult = submit();
 		if (isVisualizationEnabled) {
-			var label = visitResult.transformationName() + " " + visitResult.activationTuple();
 			if (submitResult.newVersion() != null) {
 				var newVersion = submitResult.newVersion().version();
-				visualizationStore.addTransition(oldVersion, newVersion, label);
+				visualizationStore.addTransition(oldVersion, newVersion,
+						visitResult.transformationName(), visitResult.activationTuple());
 			} else {
-				visualizationStore.addTransition(oldVersion, stateCoderAdapter.calculateModelCode(), label);
+				visualizationStore.addTransition(oldVersion, stateCoderAdapter.calculateModelCode(),
+						visitResult.transformationName(), visitResult.activationTuple());
 			}
 		}
 		return new RandomVisitResult(submitResult, visitResult.mayHaveMore());

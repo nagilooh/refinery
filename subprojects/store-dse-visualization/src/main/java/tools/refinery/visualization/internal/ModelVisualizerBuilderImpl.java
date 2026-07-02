@@ -11,12 +11,14 @@ import tools.refinery.visualization.ModelVisualizerBuilder;
 
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.function.Function;
 
 public class ModelVisualizerBuilderImpl
 		extends AbstractModelAdapterBuilder<ModelVisualizerStoreAdapterImpl>
 		implements ModelVisualizerBuilder {
 	private String dotBinaryPath = "dot";
 	private String outputPath;
+	private Function<Integer, String> nodeNameProvider;
 	private boolean saveDesignSpace = false;
 	private boolean saveStates = false;
 	private boolean saveTransitionsToAlreadyVisitedStates = false;
@@ -24,8 +26,8 @@ public class ModelVisualizerBuilderImpl
 
 	@Override
 	protected ModelVisualizerStoreAdapterImpl doBuild(ModelStore store) {
-		return new ModelVisualizerStoreAdapterImpl(store, dotBinaryPath, outputPath, formats, saveDesignSpace,
-				saveStates, saveTransitionsToAlreadyVisitedStates);
+		return new ModelVisualizerStoreAdapterImpl(store, dotBinaryPath, outputPath, formats, nodeNameProvider,
+				saveDesignSpace, saveStates, saveTransitionsToAlreadyVisitedStates);
 	}
 
 	@Override
@@ -46,6 +48,13 @@ public class ModelVisualizerBuilderImpl
 	public ModelVisualizerBuilder withFormat(FileFormat format) {
 		checkNotConfigured();
 		this.formats.add(format);
+		return this;
+	}
+
+	@Override
+	public ModelVisualizerBuilder withTrace(Function<Integer, String> nodeNameProvider) {
+		checkNotConfigured();
+		this.nodeNameProvider = nodeNameProvider;
 		return this;
 	}
 

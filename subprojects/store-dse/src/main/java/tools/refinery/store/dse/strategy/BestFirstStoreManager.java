@@ -54,11 +54,9 @@ public class BestFirstStoreManager {
 			}
 		};
 
-		if (modelStore.tryGetAdapter(ModelVisualizerStoreAdapter.class).isPresent()) {
-			visualizationStore = new VisualizationStoreImpl();
-		} else {
-			visualizationStore = null;
-		}
+		visualizationStore = modelStore.tryGetAdapter(ModelVisualizerStoreAdapter.class)
+				.map(adapter -> new VisualizationStoreImpl(adapter.getNodeNameProvider()))
+				.orElse(null);
 	}
 
 	public ModelStore getModelStore() {

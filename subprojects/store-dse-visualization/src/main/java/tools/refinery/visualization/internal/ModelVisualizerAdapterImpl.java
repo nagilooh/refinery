@@ -30,9 +30,11 @@ import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
@@ -42,6 +44,7 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 	private final ModelVisualizerStoreAdapterImpl storeAdapter;
 	private final String outputPath;
 	private final Set<FileFormat> formats;
+	private final Function<Integer, String> nodeNameProvider;
 	private final boolean renderDesignSpace;
 	private final boolean renderStates;
 	private final boolean renderTransitionsToAlreadyVisitedStates;
@@ -85,6 +88,8 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 		if (formats.isEmpty()) {
 			formats.add(FileFormat.SVG);
 		}
+		var nodeNameProvider = storeAdapter.getNodeNameProvider();
+		this.nodeNameProvider = nodeNameProvider == null ? Object::toString : nodeNameProvider;
 		this.renderDesignSpace = storeAdapter.isRenderDesignSpace();
 		this.renderStates = storeAdapter.isRenderStates();
 		this.renderTransitionsToAlreadyVisitedStates = storeAdapter.isRenderTransitionsToAlreadyVisitedStates();
@@ -129,7 +134,7 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 		return storeAdapter;
 	}
 
-	private String createDotForCurrentModelState() {
+	private String createDotForCurrentModelState(List<String> hiddenRelations) {
 
 		var unaryTupleToInterpretationsMap = new HashMap<Tuple, LinkedHashSet<InterpretationWrapper<?>>>();
 
@@ -153,6 +158,9 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 
 		for (var entry : allInterpretations.entrySet()) {
 			var symbol = entry.getKey();
+			if (hiddenRelations.contains(symbol.name())) {
+				continue;
+			}
 			var arity = symbol.arity();
 			var cursor = entry.getValue().getAll();
 			if (arity == 1) {
@@ -191,7 +199,7 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 
 		var key = entry.getKey();
 		var id = key.get(0);
-		var mainLabel = String.valueOf(id);
+		var mainLabel = nodeNameProvider.apply(id);
 		var interpretations = entry.getValue();
 		var backgroundColor = toBackgroundColorString(averageColor(interpretations));
 
@@ -292,10 +300,10 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 		};
 	}
 
-	private String createDotForModelState(Version version) {
+	private String createDotForModelState(Version version, List<String> hiddenRelations) {
 		var currentVersion = model.getState();
 		model.restore(version);
-		var graph = createDotForCurrentModelState();
+		var graph = createDotForCurrentModelState(hiddenRelations);
 		model.restore(currentVersion);
 		return graph;
 	}
@@ -338,22 +346,22 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 		return designSpaceBuilder.toString();
 	}
 
-	private boolean saveDesignSpace(String path) {
+	private boolean saveDesignSpace(String path, List<String> hiddenRelations) {
 		saveDot(buildDesignSpaceDot(), path + "/designSpace.dot");
 		for (var entry : states.entrySet()) {
-			saveDot(createDotForModelState(entry.getKey()), path + "/" + entry.getValue() + ".dot");
+			saveDot(createDotForModelState(entry.getKey(), hiddenRelations), path + "/" + entry.getValue() + ".dot");
 		}
 		return true;
 	}
 
-	private void renderDesignSpace(String subPath, String name, Set<FileFormat> formats) {
+	private void renderDesignSpace(String subPath, String name, Set<FileFormat> formats, List<String> hiddenRelations) {
 		var path = subPath == null ? outputPath : outputPath + "/" + subPath;
 		File filePath = new File(path);
 		filePath.mkdirs();
 		if (renderStates) {
 			for (var entry : states.entrySet()) {
 				var stateId = entry.getValue();
-				var stateDot = createDotForModelState(entry.getKey());
+				var stateDot = createDotForModelState(entry.getKey(), hiddenRelations);
 				for (var format : formats) {
 					if (format == FileFormat.DOT) {
 						saveDot(stateDot, path + "/" + stateId + ".dot");
@@ -378,10 +386,10 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 
 	@Override
 	public void visualize(VisualizationStore visualizationStore, String subPath, String name, Map<SymbolWrapper,
-			InterpretationWrapper<?>> interpretations) {
+			InterpretationWrapper<?>> interpretations, List<String> hiddenRelations) {
 		reset(interpretations);
 		this.designSpaceBuilder.append(visualizationStore.getDesignSpaceStringBuilder(this.renderTransitionsToAlreadyVisitedStates));
 		this.states.putAll(visualizationStore.getStates());
-		renderDesignSpace(subPath, name, formats);
+		renderDesignSpace(subPath, name, formats, hiddenRelations);
 	}
 }
