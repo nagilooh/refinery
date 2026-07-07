@@ -11,9 +11,9 @@ import clsx from 'clsx';
 import styles from './index.module.css';
 
 import Features from '@site/src/components/Features';
+import Publication from '@site/src/components/Publications/Publication';
 import UseCases from '@site/src/components/UseCases';
 import Video from '@site/src/components/Video';
-import Publication from '@site/src/components/Publications/Publication';
 
 function Hero() {
   return (

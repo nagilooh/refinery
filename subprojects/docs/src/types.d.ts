@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016, Jeremy Stucki
- * Copyright (c) 2024 The Refinery Authors
+ * Copyright (c) 2024-2026 The Refinery Authors
  *
  * SPDX-License-Identifier: BSD-3-Clause AND EPL-2.0
  *
@@ -37,3 +37,6 @@ declare module '*&rl' {
   const src: ResponsiveImageOutput;
   export default src;
 }
+
+declare module '@citation-js/core';
+declare module 'bibtex-parse-js';

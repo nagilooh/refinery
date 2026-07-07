@@ -5,14 +5,35 @@
  */
 
 import Link from '@docusaurus/Link';
-import React from 'react';
-import { useEffect, useId, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 
 import styles from './Publication.module.css';
 
 const specialAbbreviations: Record<string, string> = {
-  'Csanád': 'Cs.',
+  Csanád: 'Cs.',
 };
+
+interface PublicationLink {
+  label: string;
+  url: string;
+}
+
+interface PublicationProps {
+  authors?: { given: string; family: string }[];
+  title?: string;
+  venue?: string;
+  year?: number;
+  doi?: string;
+  pdf?: string;
+  links?: PublicationLink[];
+  abstract?: string;
+  bibtex?: string;
+  children?: React.ReactNode;
+  newLineBeforeLinks?: boolean;
+  video?: string;
+  slides?: string;
+  link?: string;
+}
 
 export default function Publication({
   authors,
@@ -20,32 +41,27 @@ export default function Publication({
   venue,
   year,
   doi,
+  pdf,
   links,
   abstract,
   bibtex,
   children,
   newLineBeforeLinks = true,
-}: {
-  authors?: { given: string; family: string }[];
-  title?: string;
-  venue?: string;
-  year?: number;
-  doi?: string;
-  links?: { label: string; url: string }[];
-  abstract?: string;
-  bibtex?: string;
-  children?: React.ReactNode;
-  newLineBeforeLinks?: boolean;
-}) {
+  video,
+  slides,
+  link,
+}: PublicationProps) {
   const [openSections, setOpenSections] = useState({
     bibtex: false,
     abstract: false,
   });
-  const [copiedSection, setCopiedSection] = useState<'bibtex' | 'abstract' | null>(null);
+  const [copiedSection, setCopiedSection] = useState<
+    'bibtex' | 'abstract' | null
+  >(null);
   const bibtexId = useId();
   const abstractId = useId();
   const copiedTimeoutRef = useRef<number | null>(null);
-  const doiLink = doi ? `https://doi.org/${doi}` : undefined;
+  const doiLink = doi ? `https://doi.org/${doi}` : '';
 
   useEffect(() => {
     return () => {
@@ -76,55 +92,80 @@ export default function Publication({
     }, 1500);
   }
 
+  const hasLinks =
+    !!doi ||
+    (links?.length ?? 0) > 0 ||
+    !!link ||
+    !!pdf ||
+    !!slides ||
+    !!video ||
+    !!abstract ||
+    !!bibtex;
+
   return (
     <li className={styles['entry']}>
       <div className={styles['summary']}>
         {children}
-        {authors && (
-          <>
-            {authors.map(abbreviateAuthor).join(', ')}:
-          </>
-        )}
+        {authors && <>{authors.map(abbreviateAuthor).join(', ')}:</>}
         {title && (
           <>
             {' '}
             <em>{title}.</em>
           </>
         )}
-        {venue && (
-          <>
-            {' '}
-            {venue}
-          </>
-        )}
-        {year && (
-          <>
-            {' '}
-            ({year})
-          </>
-        )}
-        {newLineBeforeLinks && (doi || links || abstract || bibtex) && (
+        {venue && <> {venue}</>}
+        {year !== undefined && <> ({year})</>}
+
+        {newLineBeforeLinks && hasLinks && (
           <>
             <br />
           </>
         )}
+
         {doi && (
           <>
             {' '}
             [<Link href={doiLink}>doi</Link>]
           </>
         )}
-        {links && links.map((link) => {
-          if (link.url !== doiLink) {
+
+        {links?.map((item) => {
+          if (item.url !== doiLink) {
             return (
-              <React.Fragment key={link.label}>
+              <React.Fragment key={item.label}>
                 {' '}
-                [<Link href={prepareLink(link.url)}>{link.label}</Link>]
+                [<Link href={prepareLink(item.url)}>{item.label}</Link>]
               </React.Fragment>
             );
           }
           return null;
         })}
+
+        {link && link !== doiLink && (
+          <>
+            {' '}
+            [<Link href={prepareLink(link)}>link</Link>]
+          </>
+        )}
+        {pdf && (
+          <>
+            {' '}
+            [<Link href={prepareLink(pdf)}>pdf</Link>]
+          </>
+        )}
+        {slides && (
+          <>
+            {' '}
+            [<Link href={prepareLink(slides)}>slides</Link>]
+          </>
+        )}
+        {video && (
+          <>
+            {' '}
+            [<Link href={prepareLink(video)}>video</Link>]
+          </>
+        )}
+
         {abstract && (
           <>
             {' '}
@@ -162,6 +203,7 @@ export default function Publication({
           </>
         )}
       </div>
+
       {abstract && (
         <div
           className={`${styles['panel']} ${
@@ -173,7 +215,9 @@ export default function Publication({
           <button
             type="button"
             className={styles['copyButton']}
-            onClick={() => copySection('abstract', abstract)}
+            onClick={() => {
+              void copySection('abstract', abstract);
+            }}
           >
             {copiedSection === 'abstract' ? 'Copied' : 'Copy'}
           </button>
@@ -182,6 +226,7 @@ export default function Publication({
           </div>
         </div>
       )}
+
       {bibtex && (
         <div
           className={`${styles['panel']} ${
@@ -193,12 +238,16 @@ export default function Publication({
           <button
             type="button"
             className={styles['copyButton']}
-            onClick={() => copySection('bibtex', bibtex)}
+            onClick={() => {
+              void copySection('bibtex', bibtex);
+            }}
           >
             {copiedSection === 'bibtex' ? 'Copied' : 'Copy'}
           </button>
           <div className={styles['panel-inner']}>
-            <pre className={`${styles['content']} ${styles['mono']}`}>{bibtex}</pre>
+            <pre className={`${styles['content']} ${styles['mono']}`}>
+              {bibtex}
+            </pre>
           </div>
         </div>
       )}
@@ -207,7 +256,7 @@ export default function Publication({
 }
 
 function prepareLink(url: string): string {
-  if (url.charAt(0) === '/') {
+  if (url.startsWith('/')) {
     return `pathname://${url}`;
   }
   return url;
@@ -217,5 +266,10 @@ function abbreviateAuthor(author: { given: string; family: string }): string {
   if (specialAbbreviations[author.given]) {
     return `${specialAbbreviations[author.given]} ${author.family}`;
   }
+
+  if (author.given.length === 0) {
+    return author.family;
+  }
+
   return `${author.given.charAt(0)}. ${author.family}`;
 }
