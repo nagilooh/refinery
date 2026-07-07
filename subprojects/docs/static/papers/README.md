@@ -1,3 +1,9 @@
+<!--
+  SPDX-FileCopyrightText: 2026 The Refinery Authors <https://refinery.tools/>
+
+  SPDX-License-Identifier: EPL-2.0
+-->
+
 # Publication Administration
 
 There are three *bib* files used for administering publications related to Refinery: one for proper publications, theses, and students' scientific conference (TDK) reports, respectively. To add a new publication, add a new entry to the relevant *bib* file.

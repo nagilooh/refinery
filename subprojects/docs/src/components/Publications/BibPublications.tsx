@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2026 The Refinery Authors
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ */
+
 import { Cite } from '@citation-js/core';
 import '@citation-js/plugin-bibtex';
 import { useState, useEffect } from 'react';

@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2026 The Refinery Authors
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ */
+
 import Link from '@docusaurus/Link';
 import React from 'react';
 import { useEffect, useId, useRef, useState } from 'react';
