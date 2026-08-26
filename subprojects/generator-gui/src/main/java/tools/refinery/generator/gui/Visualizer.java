@@ -1,5 +1,7 @@
 package tools.refinery.generator.gui;
 
+import org.eclipse.collections.api.map.primitive.ObjectIntMap;
+import tools.refinery.language.model.problem.Node;
 import tools.refinery.language.semantics.ProblemTrace;
 import tools.refinery.logic.term.truthvalue.TruthValue;
 import tools.refinery.store.model.Interpretation;
@@ -129,7 +131,7 @@ public class Visualizer {
 					}
 				}
 			}
-			sb.append(drawElement(entry, isActivation));
+			sb.append(drawElement(entry, isActivation, trace));
 		}
 		sb.append("}");
 		return sb.toString();
@@ -137,14 +139,14 @@ public class Visualizer {
 	}
 
 	private static StringBuilder drawElement(Map.Entry<Tuple, LinkedHashSet<PartialInterpretation<?, ?>>> entry,
-											 boolean isActivation) {
+											 boolean isActivation, ProblemTrace trace) {
 		var sb = new StringBuilder();
 
 		var tableStyle =  " CELLSPACING=\"0\" BORDER=\"2\" CELLBORDER=\"0\" CELLPADDING=\"4\" STYLE=\"ROUNDED\"";
 
 		var key = entry.getKey();
 		var id = key.get(0);
-		var mainLabel = String.valueOf(id);
+		var mainLabel = id + ": " + trace.getNodeName(id);
 		var interpretations = entry.getValue();
 		var backgroundColor = "#ffffff";
 		if (isActivation) {

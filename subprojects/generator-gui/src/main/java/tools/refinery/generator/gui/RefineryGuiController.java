@@ -66,9 +66,15 @@ public class RefineryGuiController {
         for (var transformation : dseAdapter.getTransformations()) {
             var activationCursor = transformation.getAllActivationsAsResultSet().getAll();
             while (activationCursor.move()) {
-                activationList.add(new Activation(transformation, activationCursor.getKey()));
-            }
-        }
+				var tuple = activationCursor.getKey();
+				var names = new ArrayList<String>();
+				for (int i = 0; i < tuple.getSize(); i++) {
+					var id = tuple.get(i);
+					names.add(trace.getNodeName(id));
+				}
+				activationList.add(new Activation(transformation, activationCursor.getKey(), names));
+			}
+		}
         appModel.setActivations(activationList);
     }
 }

@@ -27,6 +27,8 @@ public interface ProblemTrace {
 
 	ObjectIntMap<Node> getNodeTrace();
 
+	String getNodeName(int nodeId);
+
 	int getNodeId(Node node);
 
 	int getNodeId(QualifiedName qualifiedName);

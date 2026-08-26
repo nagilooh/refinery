@@ -76,6 +76,17 @@ class ProblemTraceImpl implements ProblemTrace {
 	}
 
 	@Override
+	public String getNodeName(int nodeId) {
+		for (var key : mutableNodeTrace.keySet()) {
+			var entry = Map.entry(key, mutableNodeTrace.get(key));
+			if (entry.getValue() == nodeId) {
+				return semanticsUtils.getNameWithoutRootPrefix(entry.getKey()).orElseGet(() -> String.valueOf(entry.getKey()));
+			}
+		}
+		return String.valueOf(nodeId);
+	}
+
+	@Override
 	public int getNodeId(Node node) {
 		try {
 			return nodeTrace.getOrThrow(node);
