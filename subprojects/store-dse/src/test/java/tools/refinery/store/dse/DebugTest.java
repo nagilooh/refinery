@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2021-2023 The Refinery Authors <https://refinery.tools/>
+ * SPDX-FileCopyrightText: 2021-2026 The Refinery Authors <https://refinery.tools/>
  *
  * SPDX-License-Identifier: EPL-2.0
  */
@@ -20,8 +20,6 @@ import tools.refinery.store.query.view.AnySymbolView;
 import tools.refinery.store.query.view.KeyOnlyView;
 import tools.refinery.store.representation.Symbol;
 import tools.refinery.store.statecoding.StateCoderAdapter;
-import tools.refinery.visualization.ModelVisualizerAdapter;
-import tools.refinery.visualization.internal.FileFormat;
 
 import java.util.List;
 
@@ -63,12 +61,6 @@ class DebugTest {
 		var store = ModelStore.builder()
 				.symbols(classModel, classElement, feature, classes, features)
 				.with(QueryInterpreterAdapter.builder())
-				.with(ModelVisualizerAdapter.builder()
-						.withOutputPath("test_output")
-						.withFormat(FileFormat.DOT)
-						.withFormat(FileFormat.SVG)
-						.saveStates()
-						.saveDesignSpace())
 				.with(StateCoderAdapter.builder())
 				.with(ModificationAdapter.builder())
 				.with(DesignSpaceExplorationAdapter.builder()

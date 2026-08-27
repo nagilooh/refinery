@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 The Refinery Authors <https://refinery.tools/>
+ * SPDX-FileCopyrightText: 2023-2026 The Refinery Authors <https://refinery.tools/>
  *
  * SPDX-License-Identifier: EPL-2.0
  */
@@ -79,14 +79,14 @@ class ModelGenerationTest {
 
 		var storeBuilder = ModelStore.builder()
 				.with(QueryInterpreterAdapter.builder())
-				.with(ModelVisualizerAdapter.builder()
-						.withOutputPath("test_output")
-						.withFormat(FileFormat.DOT)
-						.withFormat(FileFormat.SVG)
-						.saveDesignSpace())
 				.with(PropagationAdapter.builder())
 				.with(StateCoderAdapter.builder())
 				.with(DesignSpaceExplorationAdapter.builder())
+				.with(ModelVisualizerAdapter.builder()
+						.withOutputPath("test_output_snTest")
+						.withFormat(FileFormat.DOT)
+						.withFormat(FileFormat.SVG)
+						.saveDesignSpace())
 				.with(ReasoningAdapter.builder());
 
 		var modelSeed = modelInitializer.createModel(problem, storeBuilder);
@@ -101,7 +101,7 @@ class ModelGenerationTest {
 			bestFirst.startExploration(initialVersion);
 			var resultStore = bestFirst.getSolutionStore();
 			System.out.println("states size: " + resultStore.getSolutions().size());
-//			initialModel.getAdapter(ModelVisualizerAdapter.class).visualize(bestFirst.getVisualizationStore());
+//			initialModel.getAdapter(ModelVisualizerAdapter.class).visualize(store.getAdapter(DesignSpaceExplorationStoreAdapter.class).getStateSpaceStore());
 		}
 	}
 
@@ -213,15 +213,15 @@ class ModelGenerationTest {
 
 		var storeBuilder = ModelStore.builder()
 				.with(QueryInterpreterAdapter.builder())
+				.with(PropagationAdapter.builder())
+				.with(StateCoderAdapter.builder())
+				.with(DesignSpaceExplorationAdapter.builder())
 //				.with(ModelVisualizerAdapter.builder()
-//						.withOutputPath("test_output")
+//						.withOutputPath("test_output_scTest")
 //						.withFormat(FileFormat.DOT)
 //						.withFormat(FileFormat.SVG)
 //						.saveStates()
 //						.saveDesignSpace())
-				.with(PropagationAdapter.builder())
-				.with(StateCoderAdapter.builder())
-				.with(DesignSpaceExplorationAdapter.builder())
 				.with(ReasoningAdapter.builder());
 
 		var modelSeed = modelInitializer.createModel(problem, storeBuilder);
@@ -254,7 +254,7 @@ class ModelGenerationTest {
 			}
 			System.out.println("Model size: " + (max + 1));
 			System.out.println(types);
-//			initialModel.getAdapter(ModelVisualizerAdapter.class).visualize(bestFirst.getVisualizationStore());
+//			model.getAdapter(ModelVisualizerAdapter.class).visualize(store.getAdapter(DesignSpaceExplorationStoreAdapter.class).getStateSpaceStore());
 		}
 	}
 
@@ -282,15 +282,15 @@ class ModelGenerationTest {
 
 		var storeBuilder = ModelStore.builder()
 				.with(QueryInterpreterAdapter.builder())
+				.with(PropagationAdapter.builder())
+				.with(StateCoderAdapter.builder())
+				.with(DesignSpaceExplorationAdapter.builder())
 //				.with(ModelVisualizerAdapter.builder()
-//						.withOutputPath("test_output")
+//						.withOutputPath("test_output_fsTest")
 //						.withFormat(FileFormat.DOT)
 //						.withFormat(FileFormat.SVG)
 //						.saveStates()
 //						.saveDesignSpace())
-				.with(PropagationAdapter.builder())
-				.with(StateCoderAdapter.builder())
-				.with(DesignSpaceExplorationAdapter.builder())
 				.with(ReasoningAdapter.builder());
 
 		var modelSeed = modelInitializer.createModel(problem, storeBuilder);
@@ -323,7 +323,7 @@ class ModelGenerationTest {
 			}
 			System.out.println("Model size: " + (max + 1));
 			System.out.println(types);
-//			initialModel.getAdapter(ModelVisualizerAdapter.class).visualize(bestFirst.getVisualizationStore());
+//			model.getAdapter(ModelVisualizerAdapter.class).visualize(store.getAdapter(DesignSpaceExplorationStoreAdapter.class).getStateSpaceStore());
 		}
 	}
 
