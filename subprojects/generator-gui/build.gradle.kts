@@ -10,6 +10,7 @@ plugins {
 
 dependencies {
 	implementation(project(":refinery-generator"))
+	implementation(project(":refinery-store-dse-visualization"))
 	implementation(libs.jcommander)
 	implementation(libs.slf4j)
 	implementation("com.github.weisj:jsvg:1.3.0")

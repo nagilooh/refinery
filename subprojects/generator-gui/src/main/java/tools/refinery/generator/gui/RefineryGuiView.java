@@ -6,6 +6,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.util.List;
 
 public class RefineryGuiView implements RefineryGuiModel.Listener {
@@ -27,6 +29,13 @@ public class RefineryGuiView implements RefineryGuiModel.Listener {
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         frame.setSize(1000, 800);
         frame.setLocationRelativeTo(null);
+		frame.addWindowListener(new WindowAdapter(){
+			@Override
+			public void windowClosing(WindowEvent e){
+				controller.onClose();
+				System.exit(0);
+			}
+		});
 
         listModel = new DefaultListModel<>();
         list = new JList<>(listModel);

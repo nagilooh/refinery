@@ -4,10 +4,14 @@ import tools.refinery.generator.ModelGenerator;
 import tools.refinery.language.semantics.ProblemTrace;
 import tools.refinery.store.dse.propagation.PropagationAdapter;
 import tools.refinery.store.dse.transition.DesignSpaceExplorationAdapter;
+import tools.refinery.store.map.Version;
 import tools.refinery.store.model.Model;
 import tools.refinery.store.query.ModelQueryAdapter;
 
 import com.github.weisj.jsvg.SVGDocument;
+import tools.refinery.visualization.ModelVisualizerAdapter;
+import tools.refinery.visualization.statespace.VisualizationStore;
+import tools.refinery.visualization.statespace.internal.VisualizationStoreImpl;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,6 +24,9 @@ public class RefineryGuiController {
     private final PropagationAdapter propagationAdapter;
     private final DesignSpaceExplorationAdapter dseAdapter;
     private final ModelQueryAdapter queryEngine;
+	private final ModelVisualizerAdapter stateSpaceVisualizerAdapter;
+	VisualizationStore visualizationStore;
+	private Version currentVersion;
 
     public RefineryGuiController(RefineryGuiModel appModel, ModelGenerator generator) {
         this.appModel = appModel;
@@ -28,12 +35,14 @@ public class RefineryGuiController {
         this.trace = generator.getProblemTrace();
 
         var initial = this.model.commit();
+		this.currentVersion = initial;
         this.model.restore(initial);
 
         this.queryEngine = this.model.getAdapter(ModelQueryAdapter.class);
         this.propagationAdapter = this.model.getAdapter(PropagationAdapter.class);
         this.dseAdapter = this.model.getAdapter(DesignSpaceExplorationAdapter.class);
-
+        this.stateSpaceVisualizerAdapter = this.model.getAdapter(ModelVisualizerAdapter.class);
+		this.visualizationStore = new VisualizationStoreImpl();
         refreshModel(null);
         refreshActivations();
     }
@@ -48,11 +57,19 @@ public class RefineryGuiController {
         refreshActivations();
     }
 
+	public void onClose() {
+		System.out.println("Closing application, generating state space visualization...");
+		this.stateSpaceVisualizerAdapter.visualize(this.visualizationStore);
+	}
+
     private void step(Activation activation) {
+		var lastVersion = this.currentVersion;
         activation.fire();
         propagationAdapter.propagate();
         dseAdapter.checkAccept();
-        model.commit();
+		this.currentVersion = model.commit();
+		visualizationStore.addState(currentVersion, "");
+		visualizationStore.addTransition(lastVersion, this.currentVersion, activation.toString());
         queryEngine.flushChanges();
     }
 
