@@ -17,6 +17,7 @@ public class StateSpaceStoreImpl implements StateSpaceStore {
 
 	private final List<State> states = new ArrayList<>();
 	private final List<StateTransition> transitions = new ArrayList<>();
+	private final List<StateTransition> transitionsToAlreadyVisited = new ArrayList<>();
 
 	@Override
 	public void addState(Version state, int stateCode, boolean isSolution, boolean isError, ObjectiveValue objectiveValue) {
@@ -32,7 +33,7 @@ public class StateSpaceStoreImpl implements StateSpaceStore {
 	public void addTransition(Version from, int toStateCode, ActivationStore.VisitResult visitResult) {
 		var toState = states.stream().filter(s -> s.stateCode() == toStateCode).findFirst();
 		if (toState.isPresent()) {
-			transitions.add(new StateTransition(from, toState.get().version(), transitions.size(), visitResult));
+			transitionsToAlreadyVisited.add(new StateTransition(from, toState.get().version(), transitions.size(), visitResult));
 		} else {
 			throw new IllegalArgumentException("No state with stateCode " + toStateCode + " found.");
 		}
@@ -46,6 +47,11 @@ public class StateSpaceStoreImpl implements StateSpaceStore {
 	@Override
 	public List<StateTransition> getTransitions() {
 		return transitions;
+	}
+
+	@Override
+	public List<StateTransition> getTransitionsToAlreadyVisited() {
+		return transitionsToAlreadyVisited;
 	}
 
 	@Override

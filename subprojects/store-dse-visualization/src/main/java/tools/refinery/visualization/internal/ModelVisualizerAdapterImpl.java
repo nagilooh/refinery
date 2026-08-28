@@ -6,6 +6,8 @@
 package tools.refinery.visualization.internal;
 
 import tools.refinery.logic.term.truthvalue.TruthValue;
+import tools.refinery.store.dse.transition.DesignSpaceExplorationAdapter;
+import tools.refinery.store.dse.transition.Transformation;
 import tools.refinery.store.dse.transition.statespace.StateSpaceStore;
 import tools.refinery.store.map.Version;
 import tools.refinery.store.model.Interpretation;
@@ -29,6 +31,7 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 	private final boolean renderDesignSpace;
 	private final boolean renderStates;
 	private final StateSpaceStore stateSpaceStore;
+	private final List<Transformation> transformations;
 
 	private static final Map<Object, String> truthValueToDot = Map.of(
 			TruthValue.TRUE, "1",
@@ -60,6 +63,7 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 			allInterpretations.put(symbol, interpretation);
 		}
 		this.stateSpaceStore = storeAdapter.getStateSpaceStore();
+		this.transformations = model.getAdapter(DesignSpaceExplorationAdapter.class).getTransformations();
 	}
 
 	@Override
@@ -272,7 +276,22 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 		return true;
 	}
 
-	private String buildDesignSpaceDot() {
+	private StringBuilder buildDesignSpaceTransitionsDot(List<StateSpaceStore.StateTransition> transitions) {
+		StringBuilder transitionsBuilder = new StringBuilder();
+
+		for (var transition : transitions) {
+			var fromState = this.stateSpaceStore.getStateId(transition.from());
+			var toState = this.stateSpaceStore.getStateId(transition.to());
+			var visitResult = transition.visitResult();
+			var label = transformations.get(visitResult.transformation()).getDefinition().rule().getName() +
+							", " + visitResult.activation();
+			transitionsBuilder.append(fromState).append(" -> ").append(toState)
+					.append(" [label=\"").append(transition.id()).append(": ").append(label).append("\"]\n");
+		}
+		return transitionsBuilder;
+	}
+
+	private String buildDesignSpaceDot(boolean renderTransitionsToAlreadyVisitedStates) {
 		StringBuilder designSpaceBuilder = new StringBuilder();
 		designSpaceBuilder.append("digraph designSpace {\n");
 		designSpaceBuilder.append("""
@@ -295,13 +314,11 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 			designSpaceBuilder.append("]\n");
 		}
 
-		for (var transition : this.stateSpaceStore.getTransitions()) {
-			var fromState = this.stateSpaceStore.getStateId(transition.from());
-			var toState = this.stateSpaceStore.getStateId(transition.to());
-			var visitResult = transition.visitResult();
-			var label = "fire: " + visitResult.transformation() + ", " + visitResult.activation();
-			designSpaceBuilder.append(fromState).append(" -> ").append(toState)
-					.append(" [label=\"").append(transition.id()).append(": ").append(label).append("\"]\n");
+		designSpaceBuilder.append(buildDesignSpaceTransitionsDot(this.stateSpaceStore.getTransitions()));
+
+
+		if (renderTransitionsToAlreadyVisitedStates) {
+			designSpaceBuilder.append(buildDesignSpaceTransitionsDot(this.stateSpaceStore.getTransitionsToAlreadyVisited()));
 		}
 
 		designSpaceBuilder.append("}");
@@ -309,7 +326,7 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 	}
 
 	@Override
-	public void visualize(StateSpaceStore stateSpaceStore) {
+	public void visualize(StateSpaceStore stateSpaceStore, boolean renderTransitionsToAlreadyVisitedStates) {
 		File filePath = new File(this.outputPath);
 		filePath.mkdirs();
 
@@ -330,7 +347,7 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 		}
 
 		if (renderDesignSpace) {
-			var designSpaceDot = buildDesignSpaceDot();
+			var designSpaceDot = buildDesignSpaceDot(renderTransitionsToAlreadyVisitedStates);
 			for (var format : this.formats) {
 				if (format == FileFormat.DOT) {
 					saveDot(designSpaceDot, this.outputPath + "/designSpace.dot");
