@@ -1,38 +1,34 @@
 /*
- * SPDX-FileCopyrightText: 2021-2023 The Refinery Authors <https://refinery.tools/>
+ * SPDX-FileCopyrightText: 2021-2026 The Refinery Authors <https://refinery.tools/>
  *
  * SPDX-License-Identifier: EPL-2.0
  */
 package tools.refinery.visualization.internal;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import tools.refinery.logic.term.truthvalue.TruthValue;
+import tools.refinery.store.dse.transition.statespace.StateSpaceStore;
 import tools.refinery.store.map.Version;
 import tools.refinery.store.model.Interpretation;
 import tools.refinery.store.model.Model;
 import tools.refinery.store.representation.AnySymbol;
-import tools.refinery.logic.term.truthvalue.TruthValue;
 import tools.refinery.store.tuple.Tuple;
 import tools.refinery.visualization.ModelVisualizerAdapter;
 import tools.refinery.visualization.ModelVisualizerStoreAdapter;
-import tools.refinery.visualization.statespace.VisualizationStore;
 
 import java.io.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
-	private static final Logger LOG = LoggerFactory.getLogger(ModelVisualizerAdapterImpl.class);
 
 	private final Model model;
 	private final ModelVisualizerStoreAdapterImpl storeAdapter;
 	private final Map<AnySymbol, Interpretation<?>> allInterpretations;
-	private final StringBuilder designSpaceBuilder = new StringBuilder();
-	private final Map<Version, Integer> states = new HashMap<>();
 	private final String outputPath;
 	private final Set<FileFormat> formats;
 	private final boolean renderDesignSpace;
 	private final boolean renderStates;
+	private final StateSpaceStore stateSpaceStore;
 
 	private static final Map<Object, String> truthValueToDot = Map.of(
 			TruthValue.TRUE, "1",
@@ -63,25 +59,17 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 			var interpretation = (Interpretation<?>) model.getInterpretation(symbol);
 			allInterpretations.put(symbol, interpretation);
 		}
-		designSpaceBuilder.append("digraph designSpace {\n");
-		designSpaceBuilder.append("""
-				nodesep=0
-				ranksep=5
-				node[
-				\tstyle=filled
-				\tfillcolor=white
-				]
-				""");
+		this.stateSpaceStore = storeAdapter.getStateSpaceStore();
 	}
 
 	@Override
 	public Model getModel() {
-		return model;
+		return this.model;
 	}
 
 	@Override
 	public ModelVisualizerStoreAdapter getStoreAdapter() {
-		return storeAdapter;
+		return this.storeAdapter;
 	}
 
 	private String createDotForCurrentModelState() {
@@ -260,7 +248,6 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 		try (FileWriter writer = new FileWriter(file)) {
 			writer.write(dot);
 		} catch (IOException e) {
-			LOG.error("Failed to write dot file", e);
 			return false;
 		}
 		return true;
@@ -280,59 +267,78 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 			pwToProcess.write(dot);
 			pwToProcess.close();
 		} catch (IOException e) {
-			LOG.error("Failed to render dot", e);
 			return false;
 		}
 		return true;
 	}
 
 	private String buildDesignSpaceDot() {
+		StringBuilder designSpaceBuilder = new StringBuilder();
+		designSpaceBuilder.append("digraph designSpace {\n");
+		designSpaceBuilder.append("""
+				nodesep=0
+				ranksep=5
+				node[
+				\tstyle=filled
+				\tfillcolor=white
+				]
+				""");
+
+		for (var state : this.stateSpaceStore.getStates()) {
+
+			designSpaceBuilder.append(state.id()).append(" [label = \"").append(state.id()).append(" (");
+			designSpaceBuilder.append(state.objectiveValue());
+			designSpaceBuilder.append(")\"\n").append("URL=\"./").append(state.id()).append(".svg\"");
+			if (state.isSolution()) {
+				designSpaceBuilder.append(" peripheries = 2");
+			}
+			designSpaceBuilder.append("]\n");
+		}
+
+		for (var transition : this.stateSpaceStore.getTransitions()) {
+			var fromState = this.stateSpaceStore.getStateId(transition.from());
+			var toState = this.stateSpaceStore.getStateId(transition.to());
+			var visitResult = transition.visitResult();
+			var label = "fire: " + visitResult.transformation() + ", " + visitResult.activation();
+			designSpaceBuilder.append(fromState).append(" -> ").append(toState)
+					.append(" [label=\"").append(transition.id()).append(": ").append(label).append("\"]\n");
+		}
+
 		designSpaceBuilder.append("}");
 		return designSpaceBuilder.toString();
 	}
 
-	private boolean saveDesignSpace(String path) {
-		saveDot(buildDesignSpaceDot(), path + "/designSpace.dot");
-		for (var entry : states.entrySet()) {
-			saveDot(createDotForModelState(entry.getKey()), path + "/" + entry.getValue() + ".dot");
-		}
-		return true;
-	}
-
-	private void renderDesignSpace(String path, Set<FileFormat> formats) {
-		File filePath = new File(path);
+	@Override
+	public void visualize(StateSpaceStore stateSpaceStore) {
+		File filePath = new File(this.outputPath);
 		filePath.mkdirs();
+
 		if (renderStates) {
-			for (var entry : states.entrySet()) {
-				var stateId = entry.getValue();
-				var stateDot = createDotForModelState(entry.getKey());
-				for (var format : formats) {
+			for (var state : this.stateSpaceStore.getStates()) {
+				var stateId = state.id();
+				var stateVersion = state.version();
+				var stateDot = createDotForModelState(stateVersion);
+				for (var format : this.formats) {
 					if (format == FileFormat.DOT) {
-						saveDot(stateDot, path + "/" + stateId + ".dot");
+						saveDot(stateDot, this.outputPath + "/" + stateId + ".dot");
 					}
 					else {
-						renderDot(stateDot, format, path + "/" + stateId + "." + format.getFormat());
+						renderDot(stateDot, format, this.outputPath + "/" + stateId + "." + format.getFormat());
 					}
 				}
 			}
 		}
+
 		if (renderDesignSpace) {
 			var designSpaceDot = buildDesignSpaceDot();
-			for (var format : formats) {
+			for (var format : this.formats) {
 				if (format == FileFormat.DOT) {
-					saveDot(designSpaceDot, path + "/designSpace.dot");
+					saveDot(designSpaceDot, this.outputPath + "/designSpace.dot");
 				}
 				else {
-					renderDot(designSpaceDot, format, path + "/designSpace." + format.getFormat());
+					renderDot(designSpaceDot, format, this.outputPath + "/designSpace." + format.getFormat());
 				}
 			}
 		}
-	}
-
-	@Override
-	public void visualize(VisualizationStore visualizationStore) {
-		this.designSpaceBuilder.append(visualizationStore.getDesignSpaceStringBuilder());
-		this.states.putAll(visualizationStore.getStates());
-		renderDesignSpace(outputPath, formats);
 	}
 }

@@ -1,11 +1,12 @@
 /*
- * SPDX-FileCopyrightText: 2021-2023 The Refinery Authors <https://refinery.tools/>
+ * SPDX-FileCopyrightText: 2021-2026 The Refinery Authors <https://refinery.tools/>
  *
  * SPDX-License-Identifier: EPL-2.0
  */
 package tools.refinery.visualization.internal;
 
 import tools.refinery.store.adapter.ModelAdapter;
+import tools.refinery.store.dse.transition.statespace.StateSpaceStore;
 import tools.refinery.store.model.Model;
 import tools.refinery.store.model.ModelStore;
 import tools.refinery.visualization.ModelVisualizerStoreAdapter;
@@ -19,10 +20,12 @@ public class ModelVisualizerStoreAdapterImpl implements ModelVisualizerStoreAdap
 	private final boolean renderDesignSpace;
 	private final boolean renderStates;
 	private final Set<FileFormat> formats;
+	private final StateSpaceStore stateSpaceStore;
 
-	public ModelVisualizerStoreAdapterImpl(ModelStore store, String dotBinaryPath, String outputPath,
+	public ModelVisualizerStoreAdapterImpl(ModelStore store, StateSpaceStore stateSpaceStore, String dotBinaryPath, String outputPath,
 										   Set<FileFormat> formats, boolean renderDesignSpace, boolean renderStates) {
 		this.store = store;
+		this.stateSpaceStore = stateSpaceStore;
 		this.dotBinaryPath = dotBinaryPath;
 		this.outputPath = outputPath;
 		this.formats = formats;
@@ -47,6 +50,10 @@ public class ModelVisualizerStoreAdapterImpl implements ModelVisualizerStoreAdap
 	@Override
 	public String getOutputPath() {
 		return outputPath;
+	}
+
+	StateSpaceStore getStateSpaceStore() {
+		return stateSpaceStore;
 	}
 
 	@Override

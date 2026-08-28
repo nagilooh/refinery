@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2021-2023 The Refinery Authors <https://refinery.tools/>
+ * SPDX-FileCopyrightText: 2021-2026 The Refinery Authors <https://refinery.tools/>
  *
  * SPDX-License-Identifier: EPL-2.0
  */
@@ -15,7 +15,6 @@ mavenArtifact {
 
 dependencies {
 	api(project(":refinery-store-query"))
-	implementation(project(":refinery-store-dse-visualization"))
 	implementation(libs.eclipseCollections)
 	runtimeOnly(libs.eclipseCollections.impl)
 	testImplementation(project(":refinery-store-query-interpreter"))
