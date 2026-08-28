@@ -15,5 +15,8 @@ public interface ModelVisualizerAdapter extends ModelAdapter {
 	static ModelVisualizerBuilder builder() {
 		return new ModelVisualizerBuilderImpl();
 	}
-	void visualize(StateSpaceStore stateSpaceStore);
+	default void visualize(StateSpaceStore stateSpaceStore) {
+		visualize(stateSpaceStore, false);
+	}
+	void visualize(StateSpaceStore stateSpaceStore, boolean renderTransitionsToAlreadyVisitedStates);
 }

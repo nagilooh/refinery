@@ -22,5 +22,6 @@ public interface StateSpaceStore {
 	void addTransition(Version from, int to, ActivationStore.VisitResult visitResult);
 	List<State> getStates();
 	List<StateTransition> getTransitions();
+	List<StateTransition> getTransitionsToAlreadyVisited();
 	int getStateId(Version state);
 }
