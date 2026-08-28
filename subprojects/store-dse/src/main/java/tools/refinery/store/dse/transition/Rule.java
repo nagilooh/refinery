@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 The Refinery Authors <https://refinery.tools/>
+ * SPDX-FileCopyrightText: 2023-2026 The Refinery Authors <https://refinery.tools/>
  *
  * SPDX-License-Identifier: EPL-2.0
  */
@@ -30,12 +30,21 @@ public class Rule {
 		this.action = action;
 	}
 
+	@Override
+	public String toString() {
+		return name;
+	}
+
 	public String getName() {
 		return name;
 	}
 
 	public RelationalQuery getPrecondition() {
 		return precondition;
+	}
+
+	public Action getAction() {
+		return action;
 	}
 
 	public List<AnyQuery> getQueries() {
