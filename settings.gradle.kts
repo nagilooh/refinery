@@ -40,6 +40,7 @@ include(
 		"store-reasoning-ibex",
 		"store-reasoning-smt",
 		"store-transition-system",
+		"store-transition-system-examples",
 		"versions",
 )
 

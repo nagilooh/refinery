@@ -1,15 +1,16 @@
 /*
- * SPDX-FileCopyrightText: 2021-2023 The Refinery Authors <https://refinery.tools/>
+ * SPDX-FileCopyrightText: 2021-2026 The Refinery Authors <https://refinery.tools/>
  *
  * SPDX-License-Identifier: EPL-2.0
  */
 package tools.refinery.visualization.internal;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import tools.refinery.logic.term.cardinalityinterval.CardinalityIntervals;
 import tools.refinery.logic.term.intinterval.IntInterval;
 import tools.refinery.logic.term.truthvalue.TruthValue;
+import tools.refinery.store.dse.transition.DesignSpaceExplorationAdapter;
+import tools.refinery.store.dse.transition.Transformation;
+import tools.refinery.store.dse.transition.statespace.StateSpaceStore;
 import tools.refinery.store.map.Version;
 import tools.refinery.store.model.Interpretation;
 import tools.refinery.store.model.Model;
@@ -17,37 +18,30 @@ import tools.refinery.store.model.wrapper.InterpretationInterpretationWrapper;
 import tools.refinery.store.model.wrapper.InterpretationWrapper;
 import tools.refinery.store.representation.wrapper.SymbolSymbolWrapper;
 import tools.refinery.store.representation.wrapper.SymbolWrapper;
+import tools.refinery.store.transition.system.TransitionSystemAdapter;
+import tools.refinery.store.transition.system.statespace.Transition;
 import tools.refinery.store.tuple.Tuple;
 import tools.refinery.visualization.ModelVisualizerAdapter;
 import tools.refinery.visualization.ModelVisualizerStoreAdapter;
-import tools.refinery.visualization.statespace.VisualizationStore;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintWriter;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
+import java.io.*;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
-	private static final Logger LOG = LoggerFactory.getLogger(ModelVisualizerAdapterImpl.class);
 
 	private final Model model;
 	private final ModelVisualizerStoreAdapterImpl storeAdapter;
+	private Map<SymbolWrapper, InterpretationWrapper<?>> allInterpretations;
 	private final String outputPath;
 	private final Set<FileFormat> formats;
 	private final Function<Integer, String> nodeNameProvider;
 	private final boolean renderDesignSpace;
 	private final boolean renderStates;
-	private final boolean renderTransitionsToAlreadyVisitedStates;
+	private final StateSpaceStore stateSpaceStore;
+	private final List<Transformation> transformations;
+	private final List<Transition> transitions;
 
 	@FunctionalInterface
 	private interface SkipVisualizationPredicate {
@@ -66,10 +60,6 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 		}
 		return false;
 	};
-
-	private Map<SymbolWrapper, InterpretationWrapper<?>> allInterpretations;
-	private StringBuilder designSpaceBuilder = new StringBuilder();
-	private Map<Version, Integer> states = new HashMap<>();
 
 	private static final Map<Object, String> truthValueToDot = Map.of(
 			TruthValue.TRUE, "1",
@@ -92,46 +82,38 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 		this.nodeNameProvider = nodeNameProvider == null ? Object::toString : nodeNameProvider;
 		this.renderDesignSpace = storeAdapter.isRenderDesignSpace();
 		this.renderStates = storeAdapter.isRenderStates();
-		this.renderTransitionsToAlreadyVisitedStates = storeAdapter.isRenderTransitionsToAlreadyVisitedStates();
-	}
 
-	private void reset(Map<SymbolWrapper, InterpretationWrapper<?>> interpretations) {
-		states = new HashMap<>();
-		designSpaceBuilder = new StringBuilder();
-		designSpaceBuilder.append("digraph designSpace {\n");
-		designSpaceBuilder.append("""
-				nodesep=0
-				ranksep=1
-				node[
-				\tstyle=filled
-				\tfillcolor=white
-				]
-				""");
-
-		if (interpretations != null) {
-			allInterpretations = interpretations;
-		} else {
-			allInterpretations = new HashMap<>();
-			for (var symbol : storeAdapter.getStore().getSymbols()) {
-				var arity = symbol.arity();
-				if (arity < 1 || arity > 2) {
-					continue;
-				}
-				var interpretation = (Interpretation<?>) model.getInterpretation(symbol);
-				allInterpretations.put(new SymbolSymbolWrapper(symbol),
-						new InterpretationInterpretationWrapper<>(interpretation));
+		this.allInterpretations = new HashMap<>();
+		for (var symbol : storeAdapter.getStore().getSymbols()) {
+			var arity = symbol.arity();
+			if (arity < 1 || arity > 2) {
+				continue;
 			}
+			var interpretation = (Interpretation<?>) model.getInterpretation(symbol);
+			allInterpretations.put(new SymbolSymbolWrapper(symbol),
+					new InterpretationInterpretationWrapper<>(interpretation));
+		}
+		this.stateSpaceStore = storeAdapter.getStateSpaceStore();
+		if (storeAdapter.hasDesignSpaceExploration()) {
+			this.transformations = model.getAdapter(DesignSpaceExplorationAdapter.class).getTransformations();
+		} else {
+			this.transformations = null;
+		}
+		if (storeAdapter.hasTransitionSystem()) {
+			this.transitions = model.getAdapter(TransitionSystemAdapter.class).getTransitions();
+		} else {
+			this.transitions = null;
 		}
 	}
 
 	@Override
 	public Model getModel() {
-		return model;
+		return this.model;
 	}
 
 	@Override
 	public ModelVisualizerStoreAdapter getStoreAdapter() {
-		return storeAdapter;
+		return this.storeAdapter;
 	}
 
 	private String createDotForCurrentModelState(List<String> hiddenRelations) {
@@ -195,7 +177,7 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 	private StringBuilder drawElement(Map.Entry<Tuple, LinkedHashSet<InterpretationWrapper<?>>> entry) {
 		var sb = new StringBuilder();
 
-		var tableStyle = " CELLSPACING=\"0\" BORDER=\"2\" CELLBORDER=\"0\" CELLPADDING=\"4\" STYLE=\"ROUNDED\"";
+		var tableStyle =  " CELLSPACING=\"0\" BORDER=\"2\" CELLBORDER=\"0\" CELLPADDING=\"4\" STYLE=\"ROUNDED\"";
 
 		var key = entry.getKey();
 		var id = key.get(0);
@@ -209,16 +191,16 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 		sb.append("\tlabel=");
 		if (interpretations.isEmpty()) {
 			sb.append("<<TABLE").append(tableStyle).append(">\n\t<TR><TD>").append(mainLabel).append("</TD></TR>");
-		} else {
+		}
+		else {
 			sb.append("<<TABLE").append(tableStyle).append(">\n\t\t<TR><TD COLSPAN=\"3\" BORDER=\"2\" SIDES=\"B\">")
 					.append(mainLabel).append("</TD></TR>\n");
 			for (var interpretation : interpretations) {
 				var rawValue = interpretation.get(key);
 
-				if (rawValue == null || rawValue.equals(TruthValue.FALSE) || rawValue.equals(false) || skippedEntry.shouldSkip(interpretation.getSymbol(), key, rawValue)) {
+				if (rawValue == null || rawValue.equals(TruthValue.FALSE) || rawValue.equals(false)) {
 					continue;
 				}
-
 				var color = "black";
 				if (rawValue.equals(TruthValue.ERROR)) {
 					color = "red";
@@ -252,7 +234,8 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 		var color = "black";
 		if (value.equals(TruthValue.UNKNOWN)) {
 			style = "dotted";
-		} else if (value.equals(TruthValue.ERROR)) {
+		}
+		else if (value.equals(TruthValue.ERROR)) {
 			style = "dashed";
 			color = "red";
 		}
@@ -315,7 +298,6 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 		try (FileWriter writer = new FileWriter(file)) {
 			writer.write(dot);
 		} catch (IOException e) {
-			LOG.error("Failed to write dot file", e);
 			return false;
 		}
 		return true;
@@ -335,61 +317,95 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 			pwToProcess.write(dot);
 			pwToProcess.close();
 		} catch (IOException e) {
-			LOG.error("Failed to render dot", e);
 			return false;
 		}
 		return true;
 	}
 
-	private String buildDesignSpaceDot() {
+	private StringBuilder buildDesignSpaceTransitionsDot(List<StateSpaceStore.StateTransition> transitions) {
+		StringBuilder transitionsBuilder = new StringBuilder();
+
+		for (var transition : transitions) {
+			var fromState = this.stateSpaceStore.getStateId(transition.from());
+			var toState = this.stateSpaceStore.getStateId(transition.to());
+			var visitResult = transition.visitResult();
+			var ruleName = this.transitions != null ? this.transitions.get(visitResult.transformation()).toString() :
+					this.transformations.get(visitResult.transformation()).getDefinition().rule().getName();
+			var label = ruleName + ", " + visitResult.activation();
+			transitionsBuilder.append(fromState).append(" -> ").append(toState)
+					.append(" [label=\"").append(transition.id()).append(": ").append(label).append("\"]\n");
+		}
+		return transitionsBuilder;
+	}
+
+	private String buildDesignSpaceDot(boolean renderTransitionsToAlreadyVisitedStates) {
+		StringBuilder designSpaceBuilder = new StringBuilder();
+		designSpaceBuilder.append("digraph designSpace {\n");
+		designSpaceBuilder.append("""
+				nodesep=0
+				ranksep=5
+				node[
+				\tstyle=filled
+				\tfillcolor=white
+				]
+				""");
+
+		for (var state : this.stateSpaceStore.getStates()) {
+
+			designSpaceBuilder.append(state.id()).append(" [label = \"").append(state.id()).append(" (");
+			designSpaceBuilder.append(state.objectiveValue());
+			designSpaceBuilder.append(")\"\n").append("URL=\"./").append(state.id()).append(".svg\"");
+			if (state.isSolution()) {
+				designSpaceBuilder.append(" peripheries = 2");
+			}
+			designSpaceBuilder.append("]\n");
+		}
+
+		designSpaceBuilder.append(buildDesignSpaceTransitionsDot(this.stateSpaceStore.getTransitions()));
+
+
+		if (renderTransitionsToAlreadyVisitedStates) {
+			designSpaceBuilder.append(buildDesignSpaceTransitionsDot(this.stateSpaceStore.getTransitionsToAlreadyVisited()));
+		}
+
 		designSpaceBuilder.append("}");
 		return designSpaceBuilder.toString();
 	}
 
-	private boolean saveDesignSpace(String path, List<String> hiddenRelations) {
-		saveDot(buildDesignSpaceDot(), path + "/designSpace.dot");
-		for (var entry : states.entrySet()) {
-			saveDot(createDotForModelState(entry.getKey(), hiddenRelations), path + "/" + entry.getValue() + ".dot");
-		}
-		return true;
-	}
-
-	private void renderDesignSpace(String subPath, String name, Set<FileFormat> formats, List<String> hiddenRelations) {
+	@Override
+	public void visualize(StateSpaceStore stateSpaceStore, boolean renderTransitionsToAlreadyVisitedStates, String subPath, String name, Map<SymbolWrapper,
+			InterpretationWrapper<?>> interpretations, List<String> hiddenRelations) {
 		var path = subPath == null ? outputPath : outputPath + "/" + subPath;
 		File filePath = new File(path);
 		filePath.mkdirs();
+
 		if (renderStates) {
-			for (var entry : states.entrySet()) {
-				var stateId = entry.getValue();
-				var stateDot = createDotForModelState(entry.getKey(), hiddenRelations);
-				for (var format : formats) {
+			for (var state : this.stateSpaceStore.getStates()) {
+				var stateId = state.id();
+				var stateVersion = state.version();
+				var stateDot = createDotForModelState(stateVersion, hiddenRelations);
+				for (var format : this.formats) {
 					if (format == FileFormat.DOT) {
 						saveDot(stateDot, path + "/" + stateId + ".dot");
-					} else {
+					}
+					else {
 						renderDot(stateDot, format, path + "/" + stateId + "." + format.getFormat());
 					}
 				}
 			}
 		}
+
 		if (renderDesignSpace) {
-			var designSpaceDot = buildDesignSpaceDot();
-			for (var format : formats) {
+			var designSpaceDot = buildDesignSpaceDot(renderTransitionsToAlreadyVisitedStates);
+			for (var format : this.formats) {
 				var filename = name == null ? "designSpace" : name;
 				if (format == FileFormat.DOT) {
 					saveDot(designSpaceDot, path + "/" + filename + ".dot");
-				} else {
+				}
+				else {
 					renderDot(designSpaceDot, format, path + "/" + filename + "." + format.getFormat());
 				}
 			}
 		}
-	}
-
-	@Override
-	public void visualize(VisualizationStore visualizationStore, String subPath, String name, Map<SymbolWrapper,
-			InterpretationWrapper<?>> interpretations, List<String> hiddenRelations) {
-		reset(interpretations);
-		this.designSpaceBuilder.append(visualizationStore.getDesignSpaceStringBuilder(this.renderTransitionsToAlreadyVisitedStates));
-		this.states.putAll(visualizationStore.getStates());
-		renderDesignSpace(subPath, name, formats, hiddenRelations);
 	}
 }

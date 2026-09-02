@@ -49,7 +49,7 @@ public class ActivationStoreImpl<R, V> implements ActivationStore<V> {
 		if (!hasMore) {
 			actionWhenAllActivationVisited.accept(to);
 		}
-		return new VisitResult(successful[0], hasMore, -1, -1, null, null);
+		return new VisitResult(successful[0], hasMore, -1, -1);
 	}
 
 	public synchronized VisitResult visitActivation(V from, int transformationIndex, int activationIndex) {
@@ -89,7 +89,7 @@ public class ActivationStoreImpl<R, V> implements ActivationStore<V> {
 			actionWhenAllActivationVisited.accept(from);
 		}
 
-		return new VisitResult(successfulVisit, hasMore, transformation, activation, null, null);
+		return new VisitResult(successfulVisit, hasMore, transformation, activation);
 	}
 
 	@Override
@@ -124,7 +124,7 @@ public class ActivationStoreImpl<R, V> implements ActivationStore<V> {
 
 		if (numberOfAllUnvisitedActivations == 0) {
 			this.actionWhenAllActivationVisited.accept(version);
-			return new VisitResult(false, false, -1, -1, null, null);
+			return new VisitResult(false, false, -1, -1);
 		}
 
 		double offset = random.nextDouble(totalWeight);

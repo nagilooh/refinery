@@ -19,9 +19,11 @@ public interface ModelVisualizerStoreAdapter extends ModelStoreAdapter {
 
 	boolean isRenderStates();
 
-	boolean isRenderTransitionsToAlreadyVisitedStates();
-
 	Set<FileFormat> getFormats();
 
 	Function<Integer, String> getNodeNameProvider();
+
+	boolean hasDesignSpaceExploration();
+
+	boolean hasTransitionSystem();
 }

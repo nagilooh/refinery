@@ -1,4 +1,4 @@
-package tools.refinery.store.transition.system;
+package system;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -9,6 +9,7 @@ import tools.refinery.logic.term.truthvalue.TruthValue;
 import tools.refinery.store.dse.modification.ModificationAdapter;
 import tools.refinery.store.dse.propagation.PropagationAdapter;
 import tools.refinery.store.dse.transition.DesignSpaceExplorationAdapter;
+import tools.refinery.store.dse.transition.DesignSpaceExplorationStoreAdapter;
 import tools.refinery.store.dse.transition.Rule;
 import tools.refinery.store.model.ModelStore;
 import tools.refinery.store.query.ModelQueryAdapter;
@@ -21,6 +22,7 @@ import tools.refinery.store.reasoning.translator.PartialRelationTranslator;
 import tools.refinery.store.reasoning.translator.multiobject.MultiObjectTranslator;
 import tools.refinery.store.representation.Symbol;
 import tools.refinery.store.statecoding.StateCoderAdapter;
+import tools.refinery.store.transition.system.TransitionSystemAdapter;
 import tools.refinery.store.transition.system.statespace.TransitionRule;
 import tools.refinery.store.transition.system.strategy.TransitionSystemStoreManager;
 import tools.refinery.store.tuple.Tuple;
@@ -133,13 +135,6 @@ public class ComplexPartialTransitionSystemTest {
 
 	ModelStore store = ModelStore.builder()
 			.with(QueryInterpreterAdapter.builder())
-			.with(ModelVisualizerAdapter.builder()
-					.withOutputPath("test_output")
-					.withFormat(FileFormat.SVG)
-					.saveTransitionsToAlreadyVisitedStates()
-					.saveStates()
-					.saveDesignSpace()
-			)
 			.with(PropagationAdapter.builder()
 					.rule(Rule.of("symmetricFriendship", (builder, p1, p2) -> builder
 							.clause(
@@ -159,6 +154,12 @@ public class ComplexPartialTransitionSystemTest {
 					.transition(estrange)
 					.transition(lonelyMakesFriend)
 					.accept(_ -> () -> false) // full state space exploration
+			)
+			.with(ModelVisualizerAdapter.builder()
+					.withOutputPath("test_output")
+					.withFormat(FileFormat.SVG)
+					.saveStates()
+					.saveDesignSpace()
 			)
 			.with(new MultiObjectTranslator())
 			.with(PartialRelationTranslator.of(person).symbol(personStorage))
@@ -223,7 +224,7 @@ public class ComplexPartialTransitionSystemTest {
 
 			var manager = new TransitionSystemStoreManager(store);
 			manager.startExploration(initialVersion);
-			model.getAdapter(ModelVisualizerAdapter.class).visualize(manager.getVisualizationStore());
+			model.getAdapter(ModelVisualizerAdapter.class).visualize(store.getAdapter(DesignSpaceExplorationStoreAdapter.class).getStateSpaceStore(), true);
 			check.accept(manager);
 		}
 	}

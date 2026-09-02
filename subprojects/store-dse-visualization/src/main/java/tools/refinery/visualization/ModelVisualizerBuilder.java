@@ -17,5 +17,4 @@ public interface ModelVisualizerBuilder extends ModelAdapterBuilder {
 	ModelVisualizerBuilder withTrace(Function<Integer, String> nodeNameProvider);
 	ModelVisualizerBuilder saveDesignSpace();
 	ModelVisualizerBuilder saveStates();
-	ModelVisualizerBuilder saveTransitionsToAlreadyVisitedStates();
 }

@@ -1,4 +1,4 @@
-package tools.refinery.store.transition.system;
+package system;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -9,6 +9,7 @@ import tools.refinery.logic.term.truthvalue.TruthValue;
 import tools.refinery.store.dse.modification.ModificationAdapter;
 import tools.refinery.store.dse.propagation.PropagationAdapter;
 import tools.refinery.store.dse.transition.DesignSpaceExplorationAdapter;
+import tools.refinery.store.dse.transition.DesignSpaceExplorationStoreAdapter;
 import tools.refinery.store.dse.transition.Rule;
 import tools.refinery.store.dse.transition.objectives.Criterion;
 import tools.refinery.store.model.ModelStore;
@@ -29,6 +30,7 @@ import tools.refinery.store.reasoning.translator.predicate.BasePredicateTranslat
 import tools.refinery.store.reasoning.translator.predicate.PredicateTranslator;
 import tools.refinery.store.representation.Symbol;
 import tools.refinery.store.statecoding.StateCoderAdapter;
+import tools.refinery.store.transition.system.TransitionSystemAdapter;
 import tools.refinery.store.transition.system.statespace.TransitionRule;
 import tools.refinery.store.transition.system.strategy.TransitionSystemStoreManager;
 import tools.refinery.store.tuple.Tuple;
@@ -388,13 +390,6 @@ public class BasicModelCheckingTest {
 
 	BiFunction<Criterion, String, ModelStore> store = (criterion, outputDirectory) -> ModelStore.builder()
 			.with(QueryInterpreterAdapter.builder())
-			.with(ModelVisualizerAdapter.builder()
-					.withOutputPath("test_output/basic_model_checking_test/" + outputDirectory)
-					.withFormat(FileFormat.SVG)
-					.saveTransitionsToAlreadyVisitedStates()
-					.saveStates()
-					.saveDesignSpace()
-			)
 			.with(PropagationAdapter.builder())
 			.with(StateCoderAdapter.builder()
 					.individuals(IntStream.range(0, nodeIdCounter).mapToObj(Tuple::of).toList())
@@ -417,6 +412,12 @@ public class BasicModelCheckingTest {
 					.transition(L6_L7)
 					.transition(L6_LE4)
 					.accept(criterion)
+			)
+			.with(ModelVisualizerAdapter.builder()
+					.withOutputPath("test_output/basic_model_checking_test/" + outputDirectory)
+					.withFormat(FileFormat.SVG)
+					.saveStates()
+					.saveDesignSpace()
 			)
 			.with(new MultiObjectTranslator())
 			.with(PartialRelationTranslator.of(environment).symbol(environmentStorage))
@@ -537,9 +538,10 @@ public class BasicModelCheckingTest {
 			var manager = new TransitionSystemStoreManager(store);
 			manager.startExploration(initialVersion);
 			var visualizerAdapter = model.getAdapter(ModelVisualizerAdapter.class);
-			visualizerAdapter.visualize(manager.getVisualizationStore());
+			var stateSpaceStore = store.getAdapter(DesignSpaceExplorationStoreAdapter.class).getStateSpaceStore();
+			visualizerAdapter.visualize(stateSpaceStore, true);
 			if (manager.getSolution() != null) {
-				visualizerAdapter.visualize(manager.getSolutionVisualizationStore(), "trace/symbol", "trace");
+//				visualizerAdapter.visualize(manager.getSolutionStateSpaceStore(), "trace/symbol", "trace");
 
 				Function<Concreteness, Map<SymbolWrapper, InterpretationWrapper<?>>> getPartialInterpretations =
 						(Concreteness concreteness) -> {
@@ -555,10 +557,11 @@ public class BasicModelCheckingTest {
 							return interpretations;
 						};
 
-				visualizerAdapter.visualize(manager.getSolutionVisualizationStore(), "trace/partial", "trace",
-						getPartialInterpretations.apply(Concreteness.PARTIAL));
-				visualizerAdapter.visualize(manager.getSolutionVisualizationStore(), "trace/candidate", "trace",
-						getPartialInterpretations.apply(Concreteness.CANDIDATE));
+//				model.getAdapter(ModelVisualizerAdapter.class).visualize(store.getAdapter(DesignSpaceExplorationStoreAdapter.class).getStateSpaceStore(),
+//						"trace/partial", "trace", getPartialInterpretations.apply(Concreteness.PARTIAL));
+//				model.getAdapter(ModelVisualizerAdapter.class).visualize(store.getAdapter(DesignSpaceExplorationStoreAdapter.class).getStateSpaceStore(),
+//						"trace/candidate", "trace",
+//						getPartialInterpretations.apply(Concreteness.CANDIDATE));
 			}
 			check.accept(manager);
 		}

@@ -45,17 +45,13 @@ public class TransitionSystemActivationStoreWorker {
 						true,
 						result.mayHaveMore(),
 						selectedTransition,
-						selectedActivation,
-						transition.toString(),
-						tuple);
+						selectedActivation);
 			} else {
 				return new ActivationStore.VisitResult(
 						false,
 						result.mayHaveMore(),
 						selectedTransition,
-						selectedActivation,
-						transition.toString(),
-						tuple);
+						selectedActivation);
 			}
 		}
 		return result;

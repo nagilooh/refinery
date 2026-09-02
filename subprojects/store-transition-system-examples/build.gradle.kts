@@ -15,6 +15,8 @@ mavenArtifact {
 dependencies {
 	api(project(":refinery-store-dse"))
 	api(project(":refinery-store-reasoning"))
+	api(project(":refinery-store-transition-system"))
 	testImplementation(testFixtures(project(":refinery-logic")))
+	testImplementation(project(":refinery-store-dse-visualization"))
 	testImplementation(project(":refinery-store-query-interpreter"))
 }
