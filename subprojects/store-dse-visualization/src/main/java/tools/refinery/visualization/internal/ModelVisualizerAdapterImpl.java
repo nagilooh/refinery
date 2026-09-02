@@ -42,6 +42,9 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 			false, "0"
 	);
 
+	private record ActivationReference(Version fromVersion, int transformationIndex, int activationIndex) {
+	}
+
 	public ModelVisualizerAdapterImpl(Model model, ModelVisualizerStoreAdapterImpl storeAdapter) {
 		this.model = model;
 		this.storeAdapter = storeAdapter;
@@ -278,17 +281,51 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 
 	private StringBuilder buildDesignSpaceTransitionsDot(List<StateSpaceStore.StateTransition> transitions) {
 		StringBuilder transitionsBuilder = new StringBuilder();
+		var originalVersion = model.getState();
+		Version restoredVersion = null;
 
-		for (var transition : transitions) {
-			var fromState = this.stateSpaceStore.getStateId(transition.from());
-			var toState = this.stateSpaceStore.getStateId(transition.to());
-			var visitResult = transition.visitResult();
-			var label = transformations.get(visitResult.transformation()).getDefinition().rule().getName() +
-							", " + visitResult.activation();
-			transitionsBuilder.append(fromState).append(" -> ").append(toState)
-					.append(" [label=\"").append(transition.id()).append(": ").append(label).append("\"]\n");
+		try {
+			for (var transition : transitions) {
+				var fromState = this.stateSpaceStore.getStateId(transition.from());
+				var toState = this.stateSpaceStore.getStateId(transition.to());
+				var visitResult = transition.visitResult();
+				var ruleName = this.transformations.get(visitResult.transformation()).getDefinition().rule().getName();
+				var activationReference = new ActivationReference(transition.from(), visitResult.transformation(),
+						visitResult.activation());
+				if (!transition.from().equals(restoredVersion)) {
+					model.restore(transition.from());
+					restoredVersion = transition.from();
+				}
+				var activationTuple = resolveActivationTuple(activationReference);
+				var activationLabel = activationTuple.toString();
+				var label = ruleName + ", " + activationLabel;
+				transitionsBuilder.append(fromState).append(" -> ").append(toState)
+						.append(" [label=\"").append(transition.id()).append(": ").append(label).append("\"]\n");
+			}
+		} finally {
+			model.restore(originalVersion);
 		}
 		return transitionsBuilder;
+	}
+
+	private Tuple resolveActivationTuple(ActivationReference activationReference) {
+		int transformationIndex = activationReference.transformationIndex();
+		int activationIndex = activationReference.activationIndex();
+
+		Tuple activation;
+		if (transformationIndex < 0 || transformationIndex >= this.transformations.size()) {
+			throw new IllegalStateException("Transformation index %d is out of bounds for state %s"
+					.formatted(transformationIndex, activationReference.fromVersion()));
+		}
+		var transformation = this.transformations.get(transformationIndex);
+		int activationCount = transformation.getAllActivationsAsResultSet().size();
+		if (activationIndex < 0 || activationIndex >= activationCount) {
+			throw new IllegalStateException("Activation index %d is out of bounds (size=%d) for transformation %d in state %s"
+					.formatted(activationIndex, activationCount, transformationIndex, activationReference.fromVersion()));
+		}
+		activation = transformation.getActivation(activationIndex);
+
+		return activation;
 	}
 
 	private String buildDesignSpaceDot(boolean renderTransitionsToAlreadyVisitedStates) {
