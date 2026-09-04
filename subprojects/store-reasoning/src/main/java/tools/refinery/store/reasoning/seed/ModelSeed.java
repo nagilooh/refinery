@@ -16,6 +16,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 public class ModelSeed {
 	private final int nodeCount;
@@ -56,6 +57,16 @@ public class ModelSeed {
 
 	public <A extends AbstractValue<A, ?>> Cursor<Tuple, A> getCursor(PartialSymbol<A, ?> partialSymbol) {
 		return getCursor(partialSymbol, partialSymbol.defaultValue());
+	}
+
+	public <A extends AbstractValue<A, ?>> Cursor<Tuple, A> getCursorWithFilterCondition(PartialSymbol<A, ?> partialSymbol,
+																	   Predicate<A> filter) {
+		var majority = getSeed(partialSymbol).majorityValue();
+		if(!filter.test(majority)) {
+			return getCursor(partialSymbol, majority);
+		} else {
+			return getCursor(partialSymbol, partialSymbol.defaultValue());
+		}
 	}
 
 	public static Builder builder(int nodeCount) {
