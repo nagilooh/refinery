@@ -87,7 +87,7 @@ class PredicateRefiner extends ConcreteRelationRefiner {
 	@Override
 	public void afterInitialize(ModelSeed modelSeed) {
 		var predicate = getPartialSymbol();
-		var cursor = modelSeed.getCursor(predicate);
+		var cursor = modelSeed.getCursorWithFilterCondition(predicate, TruthValue::must);
 		while (cursor.move()) {
 			var value = cursor.getValue();
 			if (value.must()) {
