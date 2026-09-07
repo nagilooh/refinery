@@ -1138,7 +1138,8 @@ public class ModelInitializer {
 				problemTrace.putRuleDefinition(ruleDefinition, rule);
 			}
 			case TRANSITION -> {
-				var rule = ruleCompiler.toTransitionRule(name, ruleDefinition);
+				var partialRelation = getPartialRelation(ruleDefinition.getPreconditionPredicate());
+				var rule = ruleCompiler.toTransitionRule(name, ruleDefinition, partialRelation);
 				problemTrace.putRuleDefinition(ruleDefinition, rule.rule());
 				storeBuilder.tryGetAdapter(TransitionSystemBuilder.class)
 						.ifPresent(transitionSystemBuilder -> transitionSystemBuilder.transition(rule));

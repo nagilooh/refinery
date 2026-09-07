@@ -1,4 +1,9 @@
-package tools.refinery.store.transition.system;
+/*
+ * SPDX-FileCopyrightText: 2026 The Refinery Authors <https://refinery.tools/>
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ */
+package system;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -9,6 +14,7 @@ import tools.refinery.logic.term.truthvalue.TruthValue;
 import tools.refinery.store.dse.modification.ModificationAdapter;
 import tools.refinery.store.dse.propagation.PropagationAdapter;
 import tools.refinery.store.dse.transition.DesignSpaceExplorationAdapter;
+import tools.refinery.store.dse.transition.DesignSpaceExplorationStoreAdapter;
 import tools.refinery.store.dse.transition.Rule;
 import tools.refinery.store.dse.transition.objectives.Criterion;
 import tools.refinery.store.model.ModelStore;
@@ -29,6 +35,7 @@ import tools.refinery.store.reasoning.translator.predicate.BasePredicateTranslat
 import tools.refinery.store.reasoning.translator.predicate.PredicateTranslator;
 import tools.refinery.store.representation.Symbol;
 import tools.refinery.store.statecoding.StateCoderAdapter;
+import tools.refinery.store.transition.system.TransitionSystemAdapter;
 import tools.refinery.store.transition.system.statespace.TransitionRule;
 import tools.refinery.store.transition.system.strategy.TransitionSystemStoreManager;
 import tools.refinery.store.tuple.Tuple;
@@ -37,10 +44,7 @@ import tools.refinery.visualization.internal.FileFormat;
 import tools.refinery.store.model.wrapper.InterpretationWrapper;
 import tools.refinery.store.representation.wrapper.SymbolWrapper;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -388,13 +392,6 @@ public class BasicModelCheckingTest {
 
 	BiFunction<Criterion, String, ModelStore> store = (criterion, outputDirectory) -> ModelStore.builder()
 			.with(QueryInterpreterAdapter.builder())
-			.with(ModelVisualizerAdapter.builder()
-					.withOutputPath("test_output/basic_model_checking_test/" + outputDirectory)
-					.withFormat(FileFormat.SVG)
-					.saveTransitionsToAlreadyVisitedStates()
-					.saveStates()
-					.saveDesignSpace()
-			)
 			.with(PropagationAdapter.builder())
 			.with(StateCoderAdapter.builder()
 					.individuals(IntStream.range(0, nodeIdCounter).mapToObj(Tuple::of).toList())
@@ -418,6 +415,12 @@ public class BasicModelCheckingTest {
 					.transition(L6_LE4)
 					.accept(criterion)
 			)
+			.with(ModelVisualizerAdapter.builder()
+					.withOutputPath("test_output/basic_model_checking_test_new/" + outputDirectory)
+					.withFormat(FileFormat.SVG)
+					.saveStates()
+					.saveDesignSpace()
+			)
 			.with(new MultiObjectTranslator())
 			.with(PartialRelationTranslator.of(environment).symbol(environmentStorage))
 			.with(PartialRelationTranslator.of(location).symbol(locationStorage))
@@ -431,6 +434,45 @@ public class BasicModelCheckingTest {
 					new ConcretizationSettings(true, true)))
 			.with(new PredicateTranslator(x_v_y, x_v_y_query, List.of(environment), Set.of(), true, FALSE))
 			.with(new PredicateTranslator(x_v_y_equivalent_with_not_z, x_v_y_equivalent_with_not_z_query, List.of(environment), Set.of(), true, FALSE))
+			.with(new PredicateTranslator(L0_L1_relation, L0_L1.rule().getPrecondition(),
+					Collections.nCopies(L0_L1_relation.arity(), null),
+					Set.of(), true, UNKNOWN))
+			.with(new PredicateTranslator(L1_L2_relation, L1_L2.rule().getPrecondition(),
+					Collections.nCopies(L1_L2_relation.arity(), null),
+					Set.of(), true, UNKNOWN))
+			.with(new PredicateTranslator(L1_L3_relation, L1_L3.rule().getPrecondition(),
+					Collections.nCopies(L1_L3_relation.arity(), null),
+					Set.of(), true, UNKNOWN))
+			.with(new PredicateTranslator(L2_L4_relation, L2_L4.rule().getPrecondition(),
+					Collections.nCopies(L2_L4_relation.arity(), null),
+					Set.of(), true, UNKNOWN))
+			.with(new PredicateTranslator(L2_LE1_relation, L2_LE1.rule().getPrecondition(),
+					Collections.nCopies(L2_LE1_relation.arity(), null),
+					Set.of(), true, UNKNOWN))
+			.with(new PredicateTranslator(L3_L4_relation, L3_L4.rule().getPrecondition(),
+					Collections.nCopies(L3_L4_relation.arity(), null),
+					Set.of(), true, UNKNOWN))
+			.with(new PredicateTranslator(L3_LE2_relation, L3_LE2.rule().getPrecondition(),
+					Collections.nCopies(L3_LE2_relation.arity(), null),
+					Set.of(), true, UNKNOWN))
+			.with(new PredicateTranslator(L0_L5_relation, L0_L5.rule().getPrecondition(),
+					Collections.nCopies(L0_L5_relation.arity(), null),
+					Set.of(), true, UNKNOWN))
+			.with(new PredicateTranslator(L4_L5_relation, L4_L5.rule().getPrecondition(),
+					Collections.nCopies(L4_L5_relation.arity(), null),
+					Set.of(), true, UNKNOWN))
+			.with(new PredicateTranslator(L5_L6_relation, L5_L6.rule().getPrecondition(),
+					Collections.nCopies(L5_L6_relation.arity(), null),
+					Set.of(), true, UNKNOWN))
+			.with(new PredicateTranslator(L5_LE3_relation, L5_LE3.rule().getPrecondition(),
+					Collections.nCopies(L5_LE3_relation.arity(), null),
+					Set.of(), true, UNKNOWN))
+			.with(new PredicateTranslator(L6_L7_relation, L6_L7.rule().getPrecondition(),
+					Collections.nCopies(L6_L7_relation.arity(), null),
+					Set.of(), true, UNKNOWN))
+			.with(new PredicateTranslator(L6_LE4_relation, L6_LE4.rule().getPrecondition(),
+					Collections.nCopies(L6_LE4_relation.arity(), null),
+					Set.of(), true, UNKNOWN))
 			.build();
 
 	ModelSeed seed = ModelSeed.builder(nodeIdCounter)
@@ -537,9 +579,10 @@ public class BasicModelCheckingTest {
 			var manager = new TransitionSystemStoreManager(store);
 			manager.startExploration(initialVersion);
 			var visualizerAdapter = model.getAdapter(ModelVisualizerAdapter.class);
-			visualizerAdapter.visualize(manager.getVisualizationStore());
+			var stateSpaceStore = store.getAdapter(DesignSpaceExplorationStoreAdapter.class).getStateSpaceStore();
+			visualizerAdapter.visualize(stateSpaceStore, true);
 			if (manager.getSolution() != null) {
-				visualizerAdapter.visualize(manager.getSolutionVisualizationStore(), "trace/symbol", "trace");
+//				visualizerAdapter.visualize(manager.getSolutionStateSpaceStore(), "trace/symbol", "trace");
 
 				Function<Concreteness, Map<SymbolWrapper, InterpretationWrapper<?>>> getPartialInterpretations =
 						(Concreteness concreteness) -> {
@@ -555,10 +598,11 @@ public class BasicModelCheckingTest {
 							return interpretations;
 						};
 
-				visualizerAdapter.visualize(manager.getSolutionVisualizationStore(), "trace/partial", "trace",
-						getPartialInterpretations.apply(Concreteness.PARTIAL));
-				visualizerAdapter.visualize(manager.getSolutionVisualizationStore(), "trace/candidate", "trace",
-						getPartialInterpretations.apply(Concreteness.CANDIDATE));
+//				model.getAdapter(ModelVisualizerAdapter.class).visualize(store.getAdapter(DesignSpaceExplorationStoreAdapter.class).getStateSpaceStore(),
+//						"trace/partial", "trace", getPartialInterpretations.apply(Concreteness.PARTIAL));
+//				model.getAdapter(ModelVisualizerAdapter.class).visualize(store.getAdapter(DesignSpaceExplorationStoreAdapter.class).getStateSpaceStore(),
+//						"trace/candidate", "trace",
+//						getPartialInterpretations.apply(Concreteness.CANDIDATE));
 			}
 			check.accept(manager);
 		}
