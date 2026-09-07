@@ -25,7 +25,6 @@ import tools.refinery.logic.term.Variable;
 import tools.refinery.logic.term.truthvalue.TruthValue;
 import tools.refinery.store.dse.transition.DecisionRule;
 import tools.refinery.store.dse.transition.Rule;
-import tools.refinery.store.dse.transition.RuleBuilder;
 import tools.refinery.store.dse.transition.actions.ActionLiteral;
 import tools.refinery.store.dse.transition.actions.ActionLiterals;
 import tools.refinery.store.reasoning.ReasoningAdapter;
@@ -273,7 +272,7 @@ public class RuleCompiler {
 		return ruleBuilder.build();
 	}
 
-	public TransitionRule toTransitionRule(String name, RuleDefinition ruleDefinition) {
+	public TransitionRule toTransitionRule(String name, RuleDefinition ruleDefinition, PartialRelation partialRelation) {
 		var preparedRule = prepareRule(ruleDefinition, true);
 		var nonNewParameters = preparedRule.nonNewParameters();
 		var precondition = preparedRule.buildQuery(name, nonNewParameters, List.of(), queryCompiler);
@@ -292,8 +291,7 @@ public class RuleCompiler {
 		}
 		ruleBuilder.action(actionLiterals);
 		var rule = ruleBuilder.build();
-		var preconditionRelation = new PartialRelation(name + "#precondition", rule.getPrecondition().arity());
-		return new TransitionRule(preconditionRelation, rule);
+		return new TransitionRule(partialRelation, rule);
 	}
 
 	private PreparedRule prepareRule(RuleDefinition ruleDefinition, boolean needsExplicitMultiObjectParameters) {

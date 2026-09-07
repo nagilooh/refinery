@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2021-2023 The Refinery Authors <https://refinery.tools/>
+ * SPDX-FileCopyrightText: 2021-2026 The Refinery Authors <https://refinery.tools/>
  *
  * SPDX-License-Identifier: EPL-2.0
  */
@@ -13,10 +13,12 @@ mavenArtifact {
 }
 
 dependencies {
+	api(project(":refinery-language-semantics"))
 	api(project(":refinery-store-dse"))
 	api(project(":refinery-store-reasoning"))
 	api(project(":refinery-store-transition-system"))
+	api(project(":refinery-store-dse-visualization"))
+	api(project(":refinery-store-query-interpreter"))
 	testImplementation(testFixtures(project(":refinery-logic")))
-	testImplementation(project(":refinery-store-dse-visualization"))
-	testImplementation(project(":refinery-store-query-interpreter"))
+	testImplementation(testFixtures(project(":refinery-language")))
 }

@@ -25,6 +25,7 @@ import tools.refinery.store.reasoning.representation.PartialRelation;
 import tools.refinery.store.reasoning.seed.ModelSeed;
 import tools.refinery.store.reasoning.translator.PartialRelationTranslator;
 import tools.refinery.store.reasoning.translator.multiobject.MultiObjectTranslator;
+import tools.refinery.store.reasoning.translator.predicate.PredicateTranslator;
 import tools.refinery.store.representation.Symbol;
 import tools.refinery.store.statecoding.StateCoderAdapter;
 import tools.refinery.store.transition.system.TransitionSystemAdapter;
@@ -34,7 +35,9 @@ import tools.refinery.store.tuple.Tuple;
 import tools.refinery.visualization.ModelVisualizerAdapter;
 import tools.refinery.visualization.internal.FileFormat;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Consumer;
 
 import static tools.refinery.logic.literal.Literals.not;
@@ -175,6 +178,24 @@ public class ComplexPartialTransitionSystemTest {
 			.with(PartialRelationTranslator.of(friendlyRelation).symbol(friendlySymbol).query(friendly))
 			.with(PartialRelationTranslator.of(hasPetRelation).symbol(hasPetSymbol).query(hasPet))
 			.with(PartialRelationTranslator.of(happyRelation).symbol(happySymbol).query(happy))
+			.with(new PredicateTranslator(becomesLeaderPrecondition, becomesLeader.rule().getPrecondition(),
+					Collections.nCopies(becomesLeaderPrecondition.arity(), null),
+					Set.of(),
+					true,
+					TruthValue.UNKNOWN)
+			)
+			.with(new PredicateTranslator(estrangementPrecondition, estrange.rule().getPrecondition(),
+					Collections.nCopies(estrangementPrecondition.arity(), null),
+					Set.of(),
+					true,
+					TruthValue.UNKNOWN)
+			)
+			.with(new PredicateTranslator(lonelyMakesFriendPrecondition, lonelyMakesFriend.rule().getPrecondition(),
+					Collections.nCopies(lonelyMakesFriendPrecondition.arity(), null),
+					Set.of(),
+					true,
+					TruthValue.UNKNOWN)
+			)
 			.build();
 
 	ModelSeed.Builder seed = ModelSeed.builder(3)
