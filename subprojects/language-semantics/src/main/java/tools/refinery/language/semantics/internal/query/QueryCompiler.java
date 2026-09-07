@@ -66,13 +66,24 @@ public class QueryCompiler {
 		try {
 			var preparedQuery = prepareParameters(predicateDefinition);
 			var builder = Query.builder(name).parameters(preparedQuery.parameters());
-			for (var body : predicateDefinition.getBodies()) {
+			for (var body : getBodies(predicateDefinition)) {
 				buildConjunction(body, preparedQuery.parameterMap(), preparedQuery.commonLiterals(), builder);
 			}
 			return builder.build();
 		} catch (RuntimeException e) {
 			throw TracedException.addTrace(predicateDefinition, e);
 		}
+	}
+
+	public List<Conjunction> getBodies(PredicateDefinition predicateDefinition) {
+		if (ProblemUtil.isPreconditionPredicate(predicateDefinition)) {
+			var ruleDefinition = EcoreUtil2.getContainerOfType(predicateDefinition, RuleDefinition.class);
+			if (ruleDefinition == null) {
+				throw new TracedException(predicateDefinition, "Precondition predicate must be contained in a rule definition.");
+			}
+			return ruleDefinition.getPreconditions();
+		}
+		return predicateDefinition.getBodies();
 	}
 
 	PreparedQuery prepareParameters(ParametricDefinition parametricDefinition) {
