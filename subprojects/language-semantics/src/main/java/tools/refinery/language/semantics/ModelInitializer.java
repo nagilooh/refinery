@@ -767,7 +767,7 @@ public class ModelInitializer {
 			collectPredicateDefinition(predicateDefinition, storeBuilder);
 		} catch (InvalidClauseException e) {
 			int clauseIndex = e.getClauseIndex();
-			var bodies = predicateDefinition.getBodies();
+			var bodies = queryCompiler.getBodies(predicateDefinition);
 			if (clauseIndex < bodies.size()) {
 				throw new TracedException(bodies.get(clauseIndex), e);
 			} else {
