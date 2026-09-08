@@ -20,6 +20,8 @@ dependencies {
 	api(project(":refinery-store-transition-system"))
 	api(libs.eclipseCollections)
 	implementation(project(":refinery-store-reasoning-scope"))
+	implementation(project(":refinery-store-reasoning-smt"))
+	implementation(project(":refinery-store-reasoning-ibex"))
 	runtimeOnly(libs.eclipseCollections.impl)
 	testImplementation(project(":refinery-store-dse-visualization"))
 	testImplementation(project(":refinery-store-query-interpreter"))
