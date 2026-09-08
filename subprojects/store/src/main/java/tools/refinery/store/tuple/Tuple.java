@@ -36,11 +36,19 @@ public sealed interface Tuple extends Comparable<Tuple> permits Tuple0, Tuple1, 
 			return this;
 		}
 		int length = mapping.length;
-		var values = new int[length];
+		int[] values = new int[length];
 		for (int i = 0; i < length; i++) {
 			values[i] = get(mapping[i]);
 		}
 		return Tuple.of(values);
+	}
+
+	static int[] identityProjection(int length) {
+		int[] projection = new int[length];
+		for (int i = 0; i < length; i++) {
+			projection[i] = i;
+		}
+		return projection;
 	}
 
 	static Tuple0 of() {

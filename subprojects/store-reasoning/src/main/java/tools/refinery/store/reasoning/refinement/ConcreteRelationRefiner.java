@@ -28,6 +28,7 @@ import tools.refinery.store.reasoning.literal.ModalConstraint;
 import tools.refinery.store.reasoning.literal.PartialFunctionCallTerm;
 import tools.refinery.store.reasoning.representation.PartialRelation;
 import tools.refinery.store.reasoning.representation.PartialSymbol;
+import tools.refinery.store.reasoning.seed.ModelSeed;
 import tools.refinery.store.reasoning.translator.RoundingMode;
 import tools.refinery.store.representation.Symbol;
 import tools.refinery.store.tuple.Tuple;
@@ -39,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import static tools.refinery.logic.term.truthvalue.TruthValue.FALSE;
 import static tools.refinery.logic.term.truthvalue.TruthValue.TRUE;
@@ -83,7 +85,7 @@ public class ConcreteRelationRefiner extends
 		var mergedValue = concretizationAwareMeet(oldValue, value);
 		if (!Objects.equals(oldValue, mergedValue)) {
 			put(key, mergedValue);
-			return notifyRefinementListeners(key, mergedValue);
+			return notifyRefinementListeners(key, mergedValue, oldValue);
 		}
 		return true;
 	}
@@ -121,6 +123,48 @@ public class ConcreteRelationRefiner extends
 		}
 	}
 
+	@Override
+	public void afterInitialize(ModelSeed modelSeed) {
+		if (refinementPropagations.length == 0) {
+			return;
+		}
+
+		var relation = getPartialSymbol();
+		var cursor = modelSeed.getCursor(relation);
+		while (cursor.move()) {
+			var key = cursor.getKey();
+			var value = cursor.getValue();
+			for (var refinementPropagation : refinementPropagations) {
+				if (refinementPropagation.refineIfValue.test(value)) {
+					var refiner = getAdapter().getRefiner(refinementPropagation.relation);
+					if (refiner != null) {
+						var projectedKey = key.map(refinementPropagation.projection);
+						if (!refiner.merge(projectedKey, refinementPropagation.valueToMerge)) {
+							throw new IllegalArgumentException(
+									"Failed to merge type constraints of relation %s for key %s".formatted(relation, key));
+						}
+					}
+				}
+			}
+		}
+	}
+
+	protected boolean notifyRefinementListeners(Tuple key, TruthValue mergedValue, TruthValue oldValue) {
+		for (var refinementPropagation : refinementPropagations) {
+			var pred = refinementPropagation.refineIfValue;
+			if (pred.test(mergedValue) && !pred.test(oldValue)) {
+				var refiner = getAdapter().getRefiner(refinementPropagation.relation);
+				if (refiner != null) {
+					var projectedKey = key.map(refinementPropagation.projection);
+					if (!refiner.merge(projectedKey, refinementPropagation.valueToMerge)) {
+						return false;
+					}
+				}
+			}
+		}
+		return true;
+	}
+
 	protected TruthValue concretizationAwareMeet(TruthValue currentValue, TruthValue value) {
 		return forbiddenByConcretization(currentValue, value) ? TruthValue.ERROR : currentValue.meet(value);
 	}
@@ -143,19 +187,6 @@ public class ConcreteRelationRefiner extends
 
 	protected TruthValue put(Tuple key, TruthValue value) {
 		return interpretation.put(key, value);
-	}
-
-	protected boolean notifyRefinementListeners(Tuple key, TruthValue mergedValue) {
-		for (var refinementPropagation : refinementPropagations) {
-			if (mergedValue == refinementPropagation.refineOnValue) {
-				var refiner = getAdapter().getRefiner(refinementPropagation.relation);
-				var projectedKey = key.map(refinementPropagation.projection);
-				if (!refiner.merge(projectedKey, refinementPropagation.mergedValue)) {
-					return false;
-				}
-			}
-		}
-		return true;
 	}
 
 	public AbstractionPropagation[] getAbstractionPropagations() {
@@ -241,14 +272,16 @@ public class ConcreteRelationRefiner extends
 						if (isProjectionPositive != null) {
 							// Merge literal true if the dnf consists of a single clause when the dnf is refined to true
 							if (dnf.getClauses().size() == 1) {
-								var refineWhenToValue = isProjectionPositive ? TRUE : FALSE;
+								Predicate<TruthValue> refineWhenToValue =
+										isProjectionPositive ? TruthValue::must : t -> !t.may();
 								var mergedValue = polarity.isPositive() ? TRUE : FALSE;
 								refineIfPossible(refinementPropagations, relation, projection, arguments, refineWhenToValue, mergedValue);
 							}
 
 							// Merge clause false if it consists of a single literal when the dnf is refined to false
 							if (clause.literals().size() == 1) {
-								var refineWhenToValue = isProjectionPositive ? FALSE : TRUE;
+								Predicate<TruthValue> refineWhenToValue =
+										isProjectionPositive ? t -> !t.may() : TruthValue::must;
 								var mergedValue = polarity.isPositive() ? FALSE : TRUE;
 								refineIfPossible(refinementPropagations, relation, projection, arguments, refineWhenToValue, mergedValue);
 							}
@@ -440,7 +473,7 @@ public class ConcreteRelationRefiner extends
 
 	private static void refineIfPossible(List<RefinementPropagation> refinementPropagations,
 	                                     PartialRelation relation, Map<Variable, Integer> projection,
-	                                     List<Variable> arguments, TruthValue refineOnValue,
+	                                     List<Variable> arguments, Predicate<TruthValue> refineIfValue,
 	                                     TruthValue mergedValue) {
 		boolean anyExistentiallyQuantified = false;
 		int[] callProjection = new int[relation.arity()];
@@ -454,14 +487,14 @@ public class ConcreteRelationRefiner extends
 		}
 
 		if (!anyExistentiallyQuantified) {
-			refinementPropagations.add(new RefinementPropagation(relation, refineOnValue, callProjection, mergedValue));
+			refinementPropagations.add(new RefinementPropagation(relation, refineIfValue, callProjection, mergedValue));
 		}
 	}
 
 	public record AbstractionPropagation(PartialSymbol<?, ?> partialSymbol, int[] argumentMapping) {
 	}
 
-	protected record RefinementPropagation(PartialRelation relation, TruthValue refineOnValue, int[] projection,
-	                                       TruthValue mergedValue) {
+	public record RefinementPropagation(PartialRelation relation, Predicate<TruthValue> refineIfValue,
+										   int[] projection, TruthValue valueToMerge) {
 	}
 }

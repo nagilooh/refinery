@@ -54,12 +54,12 @@ class UndirectedCrossReferenceRefiner extends ConcreteRelationRefiner {
 					return false;
 				}
 
-				if (!(notifyRefinementListeners(key, mergedValue) &&
-						notifyRefinementListeners(oppositeKey, mergedValue))) {
+				if (!(notifyRefinementListeners(key, mergedValue, oldValue) &&
+						notifyRefinementListeners(oppositeKey, mergedValue, oldValue))) {
 					return false;
 				}
 			} else {
-				if (!notifyRefinementListeners(key, mergedValue)) {
+				if (!notifyRefinementListeners(key, mergedValue, oldValue)) {
 					return false;
 				}
 			}
