@@ -43,6 +43,25 @@ public sealed interface Tuple extends Comparable<Tuple> permits Tuple0, Tuple1, 
 		return Tuple.of(values);
 	}
 
+	default Tuple map(int @Nullable [] mapping, int[] defaults) {
+		if (mapping == null) {
+			return this;
+		}
+		int length = mapping.length;
+		if (defaults.length != length) {
+			throw new IllegalArgumentException("Projection mapping and defaults have different sizes.");
+		}
+		int[] values = new int[length];
+		for (int i = 0; i < length; i++) {
+			if (mapping[i] == -1) {
+				values[i] = defaults[i];
+			} else {
+				values[i] = get(mapping[i]);
+			}
+		}
+		return Tuple.of(values);
+	}
+
 	static int[] identityProjection(int length) {
 		int[] projection = new int[length];
 		for (int i = 0; i < length; i++) {

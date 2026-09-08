@@ -21,7 +21,9 @@ public class MutableRelationCollector {
 	private ActionTargetCollector actionTargetCollector;
 
 	public boolean isMutable(Relation relation) {
-		return mutablePredicates.contains(relation);
+		return true;
+		// TODO do it properly
+		//return mutablePredicates.contains(relation);
 	}
 
 	public void collectMutableRelations(Collection<Problem> problems) {

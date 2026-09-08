@@ -11,6 +11,7 @@ import tools.refinery.logic.dnf.RelationalQuery;
 import tools.refinery.logic.literal.AbstractCallLiteral;
 import tools.refinery.logic.literal.CallLiteral;
 import tools.refinery.logic.literal.CallPolarity;
+import tools.refinery.logic.literal.ConstantLiteral;
 import tools.refinery.logic.literal.Literal;
 import tools.refinery.logic.literal.TermLiteral;
 import tools.refinery.logic.term.AbstractCallTerm;
@@ -129,6 +130,10 @@ public class ConcreteRelationRefiner extends
 			return;
 		}
 
+		for (var refinementPropagation : refinementPropagations) {
+			refinementPropagation.refiner = getAdapter().getRefiner(refinementPropagation.relation);
+		}
+
 		var relation = getPartialSymbol();
 		var cursor = modelSeed.getCursorWithFilterCondition(relation, value -> {
 			for (var refinementPropagation : refinementPropagations) {
@@ -143,13 +148,10 @@ public class ConcreteRelationRefiner extends
 			var value = cursor.getValue();
 			for (var refinementPropagation : refinementPropagations) {
 				if (refinementPropagation.refineIfValue.test(value)) {
-					var refiner = getAdapter().getRefiner(refinementPropagation.relation);
-					if (refiner != null) {
-						var projectedKey = key.map(refinementPropagation.projection);
-						if (!refiner.merge(projectedKey, refinementPropagation.valueToMerge)) {
-							throw new IllegalArgumentException(
-									"Failed to merge type constraints of relation %s for key %s".formatted(relation, key));
-						}
+					var projectedKey = key.map(refinementPropagation.projection, refinementPropagation.constants);
+					if (!refinementPropagation.refiner.merge(projectedKey, refinementPropagation.valueToMerge)) {
+						throw new IllegalArgumentException(
+								"Failed to merge type constraints of relation %s for key %s".formatted(relation, key));
 					}
 				}
 			}
@@ -162,7 +164,7 @@ public class ConcreteRelationRefiner extends
 			if (pred.test(mergedValue) && !pred.test(oldValue)) {
 				var refiner = getAdapter().getRefiner(refinementPropagation.relation);
 				if (refiner != null) {
-					var projectedKey = key.map(refinementPropagation.projection);
+					var projectedKey = key.map(refinementPropagation.projection, refinementPropagation.constants);
 					if (!refiner.merge(projectedKey, refinementPropagation.valueToMerge)) {
 						return false;
 					}
@@ -263,8 +265,11 @@ public class ConcreteRelationRefiner extends
 											  List<AbstractionPropagation> abstractionPropagations,
 											  List<RefinementPropagation> refinementPropagations) {
 		for (var clause : dnf.getClauses()) {
+			var clauseConstants = new LinkedHashMap<Variable, Integer>();
 			for (var literal : clause.literals()) {
 				switch (literal) {
+				case ConstantLiteral constantLiteral ->
+						clauseConstants.put(constantLiteral.getVariable(), constantLiteral.getNodeId());
 				case AbstractCallLiteral abstractCallLiteral -> {
 					var arguments = abstractCallLiteral.getArguments();
 					var polarity = abstractCallLiteral instanceof CallLiteral callLiteral ?
@@ -282,7 +287,8 @@ public class ConcreteRelationRefiner extends
 								Predicate<TruthValue> refineWhenToValue =
 										isProjectionPositive ? TruthValue::must : t -> !t.may();
 								var mergedValue = polarity.isPositive() ? TRUE : FALSE;
-								refineIfPossible(refinementPropagations, relation, projection, arguments, refineWhenToValue, mergedValue);
+								refineIfPossible(refinementPropagations, relation, projection,
+										clauseConstants, arguments,	refineWhenToValue, mergedValue);
 							}
 
 							// Merge clause false if it consists of a single literal when the dnf is refined to false
@@ -290,7 +296,8 @@ public class ConcreteRelationRefiner extends
 								Predicate<TruthValue> refineWhenToValue =
 										isProjectionPositive ? t -> !t.may() : TruthValue::must;
 								var mergedValue = polarity.isPositive() ? FALSE : TRUE;
-								refineIfPossible(refinementPropagations, relation, projection, arguments, refineWhenToValue, mergedValue);
+								refineIfPossible(refinementPropagations, relation, projection,
+										clauseConstants, arguments,	refineWhenToValue, mergedValue);
 							}
 						}
 					}
@@ -480,28 +487,50 @@ public class ConcreteRelationRefiner extends
 
 	private static void refineIfPossible(List<RefinementPropagation> refinementPropagations,
 										 PartialRelation relation, Map<Variable, Integer> projection,
-										 List<Variable> arguments, Predicate<TruthValue> refineIfValue,
-										 TruthValue mergedValue) {
-		boolean anyExistentiallyQuantified = false;
+										 Map<Variable, Integer> constants, List<Variable> arguments,
+										 Predicate<TruthValue> refineIfValue, TruthValue mergedValue) {
 		int[] callProjection = new int[relation.arity()];
+		int[] constantNodeIds = new int[relation.arity()];
 		for (int i = 0; i < relation.arity(); ++i) {
-			Integer originalIndex = projection.get(arguments.get(i));
-			if (originalIndex == null) {
-				anyExistentiallyQuantified = true;
-				break;
+			var argument = arguments.get(i);
+
+			var constantNodeId = constants.get(argument);
+			if (constantNodeId != null) {
+				callProjection[i] = -1;
+				constantNodeIds[i] = constantNodeId;
+			} else {
+				Integer originalIndex = projection.get(arguments.get(i));
+				if (originalIndex == null) {
+					return; // variable is existentially quantified
+				}
+				callProjection[i] = originalIndex;
+				constantNodeIds[i] = -1;
 			}
-			callProjection[i] = originalIndex;
 		}
 
-		if (!anyExistentiallyQuantified) {
-			refinementPropagations.add(new RefinementPropagation(relation, refineIfValue, callProjection, mergedValue));
-		}
+		refinementPropagations.add(
+				new RefinementPropagation(relation, refineIfValue, callProjection, constantNodeIds, mergedValue));
 	}
 
 	public record AbstractionPropagation(PartialSymbol<?, ?> partialSymbol, int[] argumentMapping) {
 	}
 
-	public record RefinementPropagation(PartialRelation relation, Predicate<TruthValue> refineIfValue,
-										int[] projection, TruthValue valueToMerge) {
+	public static final class RefinementPropagation {
+		final PartialRelation relation;
+		final Predicate<TruthValue> refineIfValue;
+		final int[] projection;
+		final int[] constants;
+		final TruthValue valueToMerge;
+
+		PartialInterpretationRefiner<TruthValue, Boolean> refiner;
+
+		public RefinementPropagation(PartialRelation relation, Predicate<TruthValue> refineIfValue,
+									 int[] projection, int[] constants, TruthValue valueToMerge) {
+			this.relation = relation;
+			this.refineIfValue = refineIfValue;
+			this.projection = projection;
+			this.constants = constants;
+			this.valueToMerge = valueToMerge;
+		}
 	}
 }

@@ -51,11 +51,13 @@ class PredicateRefiner extends ConcreteRelationRefiner {
 		for (int i = 0; i < arity; i++) {
 			var parameterType = parameterTypes.get(i);
 			if (parameterType != null) {
-				result.add(new RefinementPropagation(parameterType, TruthValue::must, new int[]{i}, TRUE));
+				result.add(new RefinementPropagation(parameterType, TruthValue::must, new int[]{i},
+						new int[]{-1}, TRUE));
 			}
 		}
 		for (var superType : supertypes) {
-			result.add(new RefinementPropagation(superType, TruthValue::must, Tuple.identityProjection(arity), TRUE));
+			result.add(new RefinementPropagation(superType, TruthValue::must, Tuple.identityProjection(arity),
+					new int[]{-1}, TRUE));
 		}
 		return result;
 	}
