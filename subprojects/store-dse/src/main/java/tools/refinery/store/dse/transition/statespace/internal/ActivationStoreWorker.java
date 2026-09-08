@@ -42,17 +42,13 @@ public class ActivationStoreWorker<V> {
 				return new ActivationStore.VisitResult(
 						true, result.mayHaveMore(),
 						selectedTransformation,
-						selectedActivation,
-						transformation.getDefinition().rule().getName(),
-						tuple);
+						selectedActivation);
 			} else {
 				return new ActivationStore.VisitResult(
 						false,
 						result.mayHaveMore(),
 						selectedTransformation,
-						selectedActivation,
-						transformation.getDefinition().rule().getName(),
-						tuple);
+						selectedActivation);
 			}
 		}
 		return result;

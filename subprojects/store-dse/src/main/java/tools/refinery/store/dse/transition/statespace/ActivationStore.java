@@ -5,13 +5,10 @@
  */
 package tools.refinery.store.dse.transition.statespace;
 
-import tools.refinery.store.tuple.Tuple;
-
 import java.util.Random;
 
 public interface ActivationStore<V> {
-	record VisitResult(boolean successfulVisit, boolean mayHaveMore, int transformation, int activation,
-					   String transformationName, Tuple activationTuple) {
+	record VisitResult(boolean successfulVisit, boolean mayHaveMore, int transformation, int activation) {
 	}
 
 	// The return value of this method is only useful for exploration strategies that want to synchronise multiple

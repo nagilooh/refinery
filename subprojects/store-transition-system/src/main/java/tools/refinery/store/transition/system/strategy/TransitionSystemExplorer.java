@@ -1,7 +1,13 @@
+/*
+ * SPDX-FileCopyrightText: 2026 The Refinery Authors <https://refinery.tools/>
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ */
 package tools.refinery.store.transition.system.strategy;
 
 import tools.refinery.store.dse.propagation.PropagationAdapter;
 import tools.refinery.store.dse.transition.DesignSpaceExplorationAdapter;
+import tools.refinery.store.dse.transition.statespace.StateSpaceStore;
 import tools.refinery.store.map.Version;
 import tools.refinery.store.model.Model;
 import tools.refinery.store.query.ModelQueryAdapter;
@@ -12,7 +18,6 @@ import tools.refinery.store.transition.system.statespace.State;
 import tools.refinery.store.transition.system.statespace.Trace;
 import tools.refinery.store.transition.system.statespace.internal.TransitionSystemActivationStoreWorker;
 import tools.refinery.store.transition.system.strategy.concretizer.internal.DistinctVersionsTraceConcretizer;
-import tools.refinery.visualization.statespace.VisualizationStore;
 
 import java.util.Random;
 
@@ -28,7 +33,7 @@ public class TransitionSystemExplorer {
 	private final ModelQueryAdapter queryAdapter;
 	private final PropagationAdapter propagationAdapter;
 	private final TransitionSystemActivationStoreWorker activationStoreWorker;
-	private final VisualizationStore visualizationStore;
+	private final StateSpaceStore stateSpaceStore;
 	private final boolean isVisualizationEnabled;
 
 	protected State last = null;
@@ -45,8 +50,8 @@ public class TransitionSystemExplorer {
 		propagationAdapter = model.tryGetAdapter(PropagationAdapter.class).orElse(null);
 		activationStoreWorker = new TransitionSystemActivationStoreWorker(storeManager.getActivationStore(),
 				transitionSystemAdapter.getTransitions());
-		visualizationStore = storeManager.getVisualizationStore();
-		isVisualizationEnabled = visualizationStore != null;
+		stateSpaceStore = explorationAdapter.getStateSpaceStore();
+		isVisualizationEnabled = stateSpaceStore != null;
 	}
 
 	public void explore() {
@@ -124,10 +129,7 @@ public class TransitionSystemExplorer {
 		}
 
 		if (isVisualizationEnabled) {
-			visualizationStore.addState(version, "", stateCoderAdapter.calculateModelCode());
-			if (accepted) {
-				visualizationStore.addSolution(version);
-			}
+			stateSpaceStore.addState(version, stateCoderAdapter.calculateModelCode(), accepted, false);
 		}
 
 		return new SubmitResult(true, accepted, last);
@@ -165,11 +167,9 @@ public class TransitionSystemExplorer {
 		if (isVisualizationEnabled) {
 			if (submitResult.newState() != null) {
 				var newVersion = submitResult.newState();
-				visualizationStore.addTransition(oldState.version(), newVersion.version(),
-						visitResult.transformationName(), visitResult.activationTuple());
+				stateSpaceStore.addTransition(oldState.version(), newVersion.version(), visitResult);
 			} else {
-				visualizationStore.addTransition(oldState.version(), stateCoderAdapter.calculateModelCode(),
-						visitResult.transformationName(), visitResult.activationTuple());
+				stateSpaceStore.addTransition(oldState.version(), stateCoderAdapter.calculateModelCode(), visitResult);
 			}
 		}
 		return new RandomVisitResult(submitResult, visitResult.mayHaveMore());

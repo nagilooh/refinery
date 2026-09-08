@@ -1,12 +1,17 @@
 /*
- * SPDX-FileCopyrightText: 2021-2023 The Refinery Authors <https://refinery.tools/>
+ * SPDX-FileCopyrightText: 2021-2026 The Refinery Authors <https://refinery.tools/>
  *
  * SPDX-License-Identifier: EPL-2.0
  */
 package tools.refinery.visualization.internal;
 
 import tools.refinery.store.adapter.AbstractModelAdapterBuilder;
+import tools.refinery.store.dse.transition.DesignSpaceExplorationBuilder;
+import tools.refinery.store.dse.transition.statespace.StateSpaceStore;
+import tools.refinery.store.dse.transition.statespace.internal.StateSpaceStoreImpl;
 import tools.refinery.store.model.ModelStore;
+import tools.refinery.store.model.ModelStoreBuilder;
+import tools.refinery.store.transition.system.TransitionSystemBuilder;
 import tools.refinery.visualization.ModelVisualizerBuilder;
 
 import java.util.LinkedHashSet;
@@ -21,13 +26,15 @@ public class ModelVisualizerBuilderImpl
 	private Function<Integer, String> nodeNameProvider;
 	private boolean saveDesignSpace = false;
 	private boolean saveStates = false;
-	private boolean saveTransitionsToAlreadyVisitedStates = false;
 	private final Set<FileFormat> formats = new LinkedHashSet<>();
+	private final StateSpaceStore stateSpaceStore = new StateSpaceStoreImpl();
+	private boolean hasDse;
+	private boolean hasTs;
 
 	@Override
 	protected ModelVisualizerStoreAdapterImpl doBuild(ModelStore store) {
-		return new ModelVisualizerStoreAdapterImpl(store, dotBinaryPath, outputPath, formats, nodeNameProvider,
-				saveDesignSpace, saveStates, saveTransitionsToAlreadyVisitedStates);
+		return new ModelVisualizerStoreAdapterImpl(store, stateSpaceStore, dotBinaryPath, outputPath, formats,
+				nodeNameProvider, saveDesignSpace, saveStates, hasDse, hasTs);
 	}
 
 	@Override
@@ -73,9 +80,19 @@ public class ModelVisualizerBuilderImpl
 	}
 
 	@Override
-	public ModelVisualizerBuilder saveTransitionsToAlreadyVisitedStates() {
-		checkNotConfigured();
-		this.saveTransitionsToAlreadyVisitedStates = true;
-		return this;
+	protected void doConfigure(ModelStoreBuilder storeBuilder) {
+		if (outputPath == null || outputPath.isEmpty()) {
+			throw new IllegalStateException("Output path must be set for ModelVisualizerAdapter");
+		}
+		var dseAdapterOptional = storeBuilder.tryGetAdapter(DesignSpaceExplorationBuilder.class);
+		var tsAdapterOptional = storeBuilder.tryGetAdapter(TransitionSystemBuilder.class);
+		hasDse = dseAdapterOptional.isPresent();
+		hasTs = tsAdapterOptional.isPresent();
+		if (!hasDse && !hasTs) {
+			throw new IllegalStateException(
+					"ModelVisualizerAdapter requires either DesignSpaceExplorationBuilder or TransitionSystemBuilder to be present");
+		}
+		dseAdapterOptional.ifPresent(dseBuilder -> dseBuilder.with(stateSpaceStore));
+		tsAdapterOptional.ifPresent(tsBuilder -> tsBuilder.with(stateSpaceStore));
 	}
 }

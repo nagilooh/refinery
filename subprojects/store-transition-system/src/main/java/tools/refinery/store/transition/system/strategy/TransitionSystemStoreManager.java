@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2026 The Refinery Authors <https://refinery.tools/>
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ */
 package tools.refinery.store.transition.system.strategy;
 
 import tools.refinery.store.dse.transition.VersionWithObjectiveValue;
@@ -14,12 +19,8 @@ import tools.refinery.store.transition.system.TransitionSystemStoreAdapter;
 import tools.refinery.store.transition.system.statespace.State;
 import tools.refinery.store.transition.system.statespace.Trace;
 import tools.refinery.store.transition.system.statespace.Transition;
-import tools.refinery.visualization.ModelVisualizerStoreAdapter;
-import tools.refinery.visualization.statespace.VisualizationStore;
-import tools.refinery.visualization.statespace.internal.VisualizationStoreImpl;
 
 import java.util.Comparator;
-import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
@@ -28,8 +29,6 @@ public class TransitionSystemStoreManager {
 	private final ModelStore modelStore;
 	private final ActivationStore<Version> activationStore;
 	private final EquivalenceClassStore equivalenceClassStore;
-	private final VisualizationStore visualizationStore;
-	private final VisualizationStore solutionVisualizationStore;
 	private final ObjectivePriorityQueue<State> objectiveStore;
 	Trace solution;
 
@@ -49,15 +48,6 @@ public class TransitionSystemStoreManager {
 						"symmetries!");
 			}
 		};
-
-		var visualizerAdapter = modelStore.tryGetAdapter(ModelVisualizerStoreAdapter.class);
-		if (visualizerAdapter.isPresent()) {
-			this.visualizationStore = new VisualizationStoreImpl(visualizerAdapter.get().getNodeNameProvider());
-			this.solutionVisualizationStore = new VisualizationStoreImpl(visualizerAdapter.get().getNodeNameProvider());
-		} else {
-			this.visualizationStore = null;
-			this.solutionVisualizationStore = null;
-		}
 	}
 
 	public ActivationStore<Version> getActivationStore() {
@@ -68,36 +58,12 @@ public class TransitionSystemStoreManager {
 		return equivalenceClassStore;
 	}
 
-	public VisualizationStore getVisualizationStore() {
-		return visualizationStore;
-	}
-
-	public VisualizationStore getSolutionVisualizationStore() {
-		return solutionVisualizationStore;
-	}
-
 	public ObjectivePriorityQueue<State> getObjectiveStore() {
 		return objectiveStore;
 	}
 
 	public void setSolution(Trace solution) {
 		this.solution = solution;
-
-		if (solutionVisualizationStore != null) {
-			List<State> states = solution.states();
-			for (int i = 0; i < states.size(); i++) {
-				var state = states.get(i).version();
-				solutionVisualizationStore.addState(state, "", null);
-				if (i == states.size() - 1) {
-					solutionVisualizationStore.addSolution(state);
-				}
-				if (i > 0) {
-					var transition = solution.transitions().get(i - 1);
-					solutionVisualizationStore.addTransition(states.get(i - 1).version(), state,
-							transition.transition().toString(),	transition.activation());
-				}
-			}
-		}
 	}
 
 	public Trace getSolution() {

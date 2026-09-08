@@ -1,4 +1,9 @@
-package tools.refinery.store.transition.system;
+/*
+ * SPDX-FileCopyrightText: 2026 The Refinery Authors <https://refinery.tools/>
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ */
+package system;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -11,6 +16,7 @@ import tools.refinery.logic.term.truthvalue.TruthValue;
 import tools.refinery.store.dse.modification.ModificationAdapter;
 import tools.refinery.store.dse.propagation.PropagationAdapter;
 import tools.refinery.store.dse.strategy.BestFirstStoreManager;
+import tools.refinery.store.dse.transition.DesignSpaceExplorationStoreAdapter;
 import tools.refinery.store.dse.transition.Rule;
 import tools.refinery.store.dse.transition.objectives.Criteria;
 import tools.refinery.store.dse.transition.objectives.Criterion;
@@ -106,12 +112,6 @@ public class SimplePartialTransitionSystemTest {
 
 	ModelStore store = ModelStore.builder()
 			.with(QueryInterpreterAdapter.builder())
-			.with(ModelVisualizerAdapter.builder()
-					.withOutputPath("test_output")
-					.withFormat(FileFormat.SVG)
-					.saveStates()
-					.saveDesignSpace()
-			)
 			.with(PropagationAdapter.builder()
 					.rule(Rule.of("symmetricFriendship", (builder, p1, p2) -> builder
 							.clause(
@@ -129,6 +129,12 @@ public class SimplePartialTransitionSystemTest {
 							.transition(estrange)
 							.accept(target)
 //							.accept(model -> () -> false) // full state space exploration
+			)
+			.with(ModelVisualizerAdapter.builder()
+					.withOutputPath("test_output")
+					.withFormat(FileFormat.SVG)
+					.saveStates()
+					.saveDesignSpace()
 			)
 			.with(ReasoningAdapter.builder())
 			.with(new MultiObjectTranslator())
@@ -193,7 +199,7 @@ public class SimplePartialTransitionSystemTest {
 
 			var bestFirst = new BestFirstStoreManager(store, 1);
 			bestFirst.startExploration(initialVersion);
-			model.getAdapter(ModelVisualizerAdapter.class).visualize(bestFirst.getVisualizationStore());
+			model.getAdapter(ModelVisualizerAdapter.class).visualize(store.getAdapter(DesignSpaceExplorationStoreAdapter.class).getStateSpaceStore(), true);
 			check.accept(bestFirst);
 		}
 	}

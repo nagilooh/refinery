@@ -1,9 +1,13 @@
+/*
+ * SPDX-FileCopyrightText: 2026 The Refinery Authors <https://refinery.tools/>
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ */
 package tools.refinery.store.transition.system.internal;
 
 import tools.refinery.store.adapter.AbstractModelAdapterBuilder;
-import tools.refinery.store.dse.propagation.PropagationBuilder;
-import tools.refinery.store.dse.transition.ExclusionPropagator;
 import tools.refinery.store.dse.transition.objectives.Criterion;
+import tools.refinery.store.dse.transition.statespace.StateSpaceStore;
 import tools.refinery.store.model.ModelStore;
 import tools.refinery.store.model.ModelStoreBuilder;
 import tools.refinery.store.query.ModelQueryBuilder;
@@ -18,6 +22,7 @@ public class TransitionSystemBuilderImpl extends AbstractModelAdapterBuilder<Tra
 
 	private final LinkedHashSet<Transition.Builder> transitions = new LinkedHashSet<>();
 	private final LinkedHashSet<Criterion> accepts = new LinkedHashSet<>();
+	protected StateSpaceStore stateSpaceStore;
 
 	@Override
 	public TransitionSystemBuilder transition(TransitionRule rule) {
@@ -28,6 +33,12 @@ public class TransitionSystemBuilderImpl extends AbstractModelAdapterBuilder<Tra
 	@Override
 	public TransitionSystemBuilder accept(Criterion criterion) {
 		accepts.add(criterion);
+		return this;
+	}
+
+	@Override
+	public TransitionSystemBuilder with(StateSpaceStore stateSpaceStore) {
+		this.stateSpaceStore = stateSpaceStore;
 		return this;
 	}
 

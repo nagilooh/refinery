@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 The Refinery Authors <https://refinery.tools/>
+ * SPDX-FileCopyrightText: 2023-2026 The Refinery Authors <https://refinery.tools/>
  *
  * SPDX-License-Identifier: EPL-2.0
  */
@@ -45,17 +45,13 @@ public class TransitionSystemActivationStoreWorker {
 						true,
 						result.mayHaveMore(),
 						selectedTransition,
-						selectedActivation,
-						transition.toString(),
-						tuple);
+						selectedActivation);
 			} else {
 				return new ActivationStore.VisitResult(
 						false,
 						result.mayHaveMore(),
 						selectedTransition,
-						selectedActivation,
-						transition.toString(),
-						tuple);
+						selectedActivation);
 			}
 		}
 		return result;
