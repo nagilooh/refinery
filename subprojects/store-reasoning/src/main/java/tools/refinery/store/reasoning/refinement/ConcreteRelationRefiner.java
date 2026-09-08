@@ -54,7 +54,7 @@ public class ConcreteRelationRefiner extends
 	private final RefinementPropagation[] refinementPropagations;
 
 	protected ConcreteRelationRefiner(ReasoningAdapter adapter, PartialSymbol<TruthValue, Boolean> partialSymbol,
-	                                  Symbol<TruthValue> concreteSymbol, RoundingMode roundingMode) {
+									  Symbol<TruthValue> concreteSymbol, RoundingMode roundingMode) {
 		super(adapter, partialSymbol);
 		interpretation = adapter.getModel().getInterpretation(concreteSymbol);
 		this.roundingMode = roundingMode;
@@ -63,9 +63,9 @@ public class ConcreteRelationRefiner extends
 	}
 
 	protected ConcreteRelationRefiner(ReasoningAdapter adapter, PartialSymbol<TruthValue, Boolean> partialSymbol,
-	                                  Symbol<TruthValue> concreteSymbol, RoundingMode roundingMode,
-	                                  List<AbstractionPropagation> abstractionPropagations,
-	                                  List<RefinementPropagation> refinementPropagations) {
+									  Symbol<TruthValue> concreteSymbol, RoundingMode roundingMode,
+									  List<AbstractionPropagation> abstractionPropagations,
+									  List<RefinementPropagation> refinementPropagations) {
 		super(adapter, partialSymbol);
 		interpretation = adapter.getModel().getInterpretation(concreteSymbol);
 		this.roundingMode = roundingMode;
@@ -130,7 +130,14 @@ public class ConcreteRelationRefiner extends
 		}
 
 		var relation = getPartialSymbol();
-		var cursor = modelSeed.getCursor(relation);
+		var cursor = modelSeed.getCursorWithFilterCondition(relation, value -> {
+			for (var refinementPropagation : refinementPropagations) {
+				if (refinementPropagation.refineIfValue.test(value)) {
+					return true;
+				}
+			}
+			return false;
+		});
 		while (cursor.move()) {
 			var key = cursor.getKey();
 			var value = cursor.getValue();
@@ -194,7 +201,7 @@ public class ConcreteRelationRefiner extends
 	}
 
 	public static Factory<TruthValue, Boolean> of(Symbol<TruthValue> concreteSymbol,
-	                                              RelationalQuery query, RoundingMode roundingMode) {
+												  RelationalQuery query, RoundingMode roundingMode) {
 		if (roundingMode == RoundingMode.NONE) {
 			return ConcreteSymbolRefiner.of(concreteSymbol);
 		}
@@ -209,8 +216,8 @@ public class ConcreteRelationRefiner extends
 	}
 
 	protected static void collectPropagations(PartialSymbol<TruthValue, Boolean> partialSymbol, RelationalQuery query,
-	                                          List<AbstractionPropagation> abstractionPropagations,
-	                                          List<RefinementPropagation> refinementPropagations) {
+											  List<AbstractionPropagation> abstractionPropagations,
+											  List<RefinementPropagation> refinementPropagations) {
 		if (query == null) {
 			return;
 		}
@@ -251,10 +258,10 @@ public class ConcreteRelationRefiner extends
 	 * @param isProjectionPositive the polarity of the projection
 	 */
 	protected static void collectPropagations(int arity, Dnf dnf,
-	                                          Map<Variable, Integer> projection,
-	                                          Boolean isProjectionPositive,
-	                                          List<AbstractionPropagation> abstractionPropagations,
-	                                          List<RefinementPropagation> refinementPropagations) {
+											  Map<Variable, Integer> projection,
+											  Boolean isProjectionPositive,
+											  List<AbstractionPropagation> abstractionPropagations,
+											  List<RefinementPropagation> refinementPropagations) {
 		for (var clause : dnf.getClauses()) {
 			for (var literal : clause.literals()) {
 				switch (literal) {
@@ -312,7 +319,7 @@ public class ConcreteRelationRefiner extends
 	}
 
 	private static void collectPropagations(Term<?> term, int arity, Map<Variable, Integer> projection,
-	                                        List<AbstractionPropagation> abstractionPropagations) {
+											List<AbstractionPropagation> abstractionPropagations) {
 		switch (term) {
 		case PartialFunctionCallTerm<?, ?> partialFunctionCallTerm -> {
 			var arguments = partialFunctionCallTerm.getArguments();
@@ -340,8 +347,8 @@ public class ConcreteRelationRefiner extends
 	}
 
 	private static void collectPropagations(Constraint constraint, int arity, Map<Variable, Integer> projection,
-	                                        List<Variable> arguments,
-	                                        List<AbstractionPropagation> abstractionPropagations) {
+											List<Variable> arguments,
+											List<AbstractionPropagation> abstractionPropagations) {
 		switch (constraint) {
 		case PartialRelation relation -> {
 			var argumentMapping = getArgumentMapping(arity, projection, arguments);
@@ -364,7 +371,7 @@ public class ConcreteRelationRefiner extends
 	}
 
 	private static void collectPropagations(Literal literal, int arity, Map<Variable, Integer> projection,
-	                                        List<AbstractionPropagation> abstractionPropagations) {
+											List<AbstractionPropagation> abstractionPropagations) {
 		switch (literal) {
 		case AbstractCallLiteral abstractCallLiteral ->
 				collectPropagations(abstractCallLiteral.getTarget(), arity, projection,
@@ -377,7 +384,7 @@ public class ConcreteRelationRefiner extends
 	}
 
 	private static int[] getArgumentMapping(int arity, Map<Variable, Integer> projection,
-	                                        List<? extends Variable> arguments) {
+											List<? extends Variable> arguments) {
 		int[] argumentMapping = new int[arity];
 		Arrays.fill(argumentMapping, -1);
 		for (var entry : projection.entrySet()) {
@@ -390,7 +397,7 @@ public class ConcreteRelationRefiner extends
 	}
 
 	private static Map<Variable, Integer> updateProjection(Map<Variable, Integer> projection,
-	                                                       List<Variable> arguments, Dnf dnf) {
+														   List<Variable> arguments, Dnf dnf) {
 		var updatedProjection = new LinkedHashMap<Variable, Integer>();
 		var parameters = dnf.getSymbolicParameters();
 		for (int i = 0; i < dnf.arity(); ++i) {
@@ -448,9 +455,9 @@ public class ConcreteRelationRefiner extends
 	}
 
 	private static boolean backtrack(int n, int k, int depth,
-	                                 int[] fixedArr,
-	                                 int[] current,
-	                                 Function<Tuple, Boolean> consumer) {
+									 int[] fixedArr,
+									 int[] current,
+									 Function<Tuple, Boolean> consumer) {
 
 		if (depth == k) {
 			return consumer.apply(Tuple.of(current));
@@ -472,9 +479,9 @@ public class ConcreteRelationRefiner extends
 	}
 
 	private static void refineIfPossible(List<RefinementPropagation> refinementPropagations,
-	                                     PartialRelation relation, Map<Variable, Integer> projection,
-	                                     List<Variable> arguments, Predicate<TruthValue> refineIfValue,
-	                                     TruthValue mergedValue) {
+										 PartialRelation relation, Map<Variable, Integer> projection,
+										 List<Variable> arguments, Predicate<TruthValue> refineIfValue,
+										 TruthValue mergedValue) {
 		boolean anyExistentiallyQuantified = false;
 		int[] callProjection = new int[relation.arity()];
 		for (int i = 0; i < relation.arity(); ++i) {
@@ -495,6 +502,6 @@ public class ConcreteRelationRefiner extends
 	}
 
 	public record RefinementPropagation(PartialRelation relation, Predicate<TruthValue> refineIfValue,
-										   int[] projection, TruthValue valueToMerge) {
+										int[] projection, TruthValue valueToMerge) {
 	}
 }
