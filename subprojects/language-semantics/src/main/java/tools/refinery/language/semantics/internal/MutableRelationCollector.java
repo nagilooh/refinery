@@ -6,10 +6,7 @@
 package tools.refinery.language.semantics.internal;
 
 import com.google.inject.Inject;
-import tools.refinery.language.model.problem.ClassDeclaration;
-import tools.refinery.language.model.problem.PredicateDefinition;
-import tools.refinery.language.model.problem.Problem;
-import tools.refinery.language.model.problem.Relation;
+import tools.refinery.language.model.problem.*;
 import tools.refinery.language.validation.ActionTargetCollector;
 
 import java.util.*;
@@ -21,9 +18,7 @@ public class MutableRelationCollector {
 	private ActionTargetCollector actionTargetCollector;
 
 	public boolean isMutable(Relation relation) {
-		return true;
-		// TODO do it properly
-		//return mutablePredicates.contains(relation);
+		return mutablePredicates.contains(relation);
 	}
 
 	public void collectMutableRelations(Collection<Problem> problems) {
@@ -36,10 +31,36 @@ public class MutableRelationCollector {
 			switch (statement) {
 			case ClassDeclaration classDeclaration -> collectMutableRelations(classDeclaration);
 			case PredicateDefinition predicateDefinition -> collectMutableRelations(predicateDefinition);
+			case RuleDefinition ruleDefinition -> collectMutableRelations(ruleDefinition);
 			default -> {
-				// No mutable predicates to collect ({@code RuleDefinition} instances have already been processed by
-				// {@link ActionTargetCollector}.
+				// No mutable predicates to collect (actions of {@code RuleDefinition} instances have already been
+				// processed by {@link ActionTargetCollector}).
 			}
+			}
+		}
+	}
+
+	private void collectMutableRelations(RuleDefinition ruleDefinition) {
+		mutablePredicates.add(ruleDefinition.getPreconditionPredicate());
+		for (var parameter : ruleDefinition.getParameters()) {
+			var parameterType = parameter.getParameterType();
+			if (parameterType != null) {
+				mutablePredicates.add(parameterType);
+			}
+		}
+		for (var conjunction : ruleDefinition.getPreconditions()) {
+			for (var literal : conjunction.getLiterals()) {
+				switch (literal) {
+				case Atom atom -> {
+					var atomRelation = atom.getRelation();
+					if (atomRelation != null) {
+						mutablePredicates.add(atomRelation);
+					}
+				}
+				default -> {
+					// Do nothing
+				}
+				}
 			}
 		}
 	}
