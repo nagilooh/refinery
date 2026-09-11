@@ -10,7 +10,9 @@ import com.google.inject.Provider;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.EcoreUtil2;
 import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
 import tools.refinery.language.model.problem.*;
+import tools.refinery.language.model.problem.Parameter;
 import tools.refinery.language.scoping.imports.ImportAdapterProvider;
 import tools.refinery.language.semantics.ProblemTrace;
 import tools.refinery.language.semantics.SemanticsUtils;
@@ -77,17 +79,23 @@ public class QueryCompiler {
 
 	public List<Conjunction> getBodies(PredicateDefinition predicateDefinition) {
 		if (ProblemUtil.isPreconditionPredicate(predicateDefinition)) {
-			var ruleDefinition = EcoreUtil2.getContainerOfType(predicateDefinition, RuleDefinition.class);
-			if (ruleDefinition == null) {
-				throw new TracedException(predicateDefinition, "Precondition predicate must be contained in a rule definition.");
-			}
+			var ruleDefinition = getEnclosingRuleDefinition(predicateDefinition);
 			return ruleDefinition.getPreconditions();
 		}
 		return predicateDefinition.getBodies();
 	}
 
+	private static @NonNull RuleDefinition getEnclosingRuleDefinition(EObject predicateDefinition) {
+		var ruleDefinition = EcoreUtil2.getContainerOfType(predicateDefinition, RuleDefinition.class);
+		if (ruleDefinition == null) {
+			throw new TracedException(predicateDefinition,
+					"Precondition predicate must be contained in a rule definition.");
+		}
+		return ruleDefinition;
+	}
+
 	PreparedQuery prepareParameters(ParametricDefinition parametricDefinition) {
-		var problemParameters = parametricDefinition.getParameters();
+		var problemParameters = getParameters(parametricDefinition);
 		int arity = problemParameters.size();
 		var parameters = new NodeVariable[arity];
 		var parameterMap = HashMap.<tools.refinery.language.model.problem.Variable, Variable>newHashMap(arity);
@@ -104,6 +112,14 @@ public class QueryCompiler {
 			}
 		}
 		return new PreparedQuery(parameters, parameterMap, commonLiterals);
+	}
+
+	private List<Parameter> getParameters(ParametricDefinition parametricDefinition) {
+		if (ProblemUtil.isPreconditionPredicate(parametricDefinition)) {
+			var ruleDefinition = getEnclosingRuleDefinition(parametricDefinition);
+			return ruleDefinition.getParameters();
+		}
+		return parametricDefinition.getParameters();
 	}
 
 	record PreparedQuery(NodeVariable[] parameters,
