@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 The Refinery Authors <https://refinery.tools/>
+ * SPDX-FileCopyrightText: 2023-2026 The Refinery Authors <https://refinery.tools/>
  *
  * SPDX-License-Identifier: EPL-2.0
  */
@@ -7,6 +7,7 @@ package tools.refinery.store.dse.transition;
 
 import tools.refinery.store.adapter.ModelAdapter;
 import tools.refinery.store.dse.transition.internal.DesignSpaceExplorationBuilderImpl;
+import tools.refinery.store.dse.transition.statespace.StateSpaceStore;
 
 import java.util.List;
 
@@ -25,4 +26,6 @@ public interface DesignSpaceExplorationAdapter extends ModelAdapter {
 	boolean checkExclude();
 
 	ObjectiveValue getObjectiveValue();
+
+	StateSpaceStore getStateSpaceStore();
 }

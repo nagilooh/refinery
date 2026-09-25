@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 The Refinery Authors <https://refinery.tools/>
+ * SPDX-FileCopyrightText: 2023-2026 The Refinery Authors <https://refinery.tools/>
  *
  * SPDX-License-Identifier: EPL-2.0
  */
@@ -12,6 +12,7 @@ import tools.refinery.store.dse.transition.objectives.Criterion;
 import tools.refinery.store.dse.transition.objectives.CriterionCalculator;
 import tools.refinery.store.dse.transition.objectives.Objective;
 import tools.refinery.store.dse.transition.objectives.ObjectiveCalculator;
+import tools.refinery.store.dse.transition.statespace.StateSpaceStore;
 import tools.refinery.store.model.Model;
 import tools.refinery.store.model.ModelStore;
 import tools.refinery.store.query.resultset.PriorityAgenda;
@@ -25,15 +26,17 @@ public class DesignSpaceExplorationStoreAdapterImpl implements DesignSpaceExplor
 	protected final List<Criterion> accepts;
 	protected final List<Criterion> excludes;
 	protected final List<Objective> objectives;
+	protected final StateSpaceStore stateSpaceStore;
 
 	public DesignSpaceExplorationStoreAdapterImpl(
 			ModelStore store, List<DecisionRule> decisionRules, List<Criterion> accepts, List<Criterion> excludes,
-			List<Objective> objectives) {
+			List<Objective> objectives, StateSpaceStore stateSpaceStore) {
 		this.store = store;
 		this.decisionRules = decisionRules;
 		this.accepts = accepts;
 		this.excludes = excludes;
 		this.objectives = objectives;
+		this.stateSpaceStore = stateSpaceStore;
 	}
 
 	@Override
@@ -51,7 +54,7 @@ public class DesignSpaceExplorationStoreAdapterImpl implements DesignSpaceExplor
 		final List<CriterionCalculator> e = this.excludes.stream().map(x -> x.createCalculator(model)).toList();
 		final List<ObjectiveCalculator> o = this.objectives.stream().map(x -> x.createCalculator(model)).toList();
 
-		return new DesignSpaceExplorationAdapterImpl(model, this, t, a, e, o);
+		return new DesignSpaceExplorationAdapterImpl(model, this, t, a, e, o, stateSpaceStore);
 	}
 
 	@Override
@@ -72,5 +75,10 @@ public class DesignSpaceExplorationStoreAdapterImpl implements DesignSpaceExplor
 	@Override
 	public List<Objective> getObjectives() {
 		return objectives;
+	}
+
+	@Override
+	public StateSpaceStore getStateSpaceStore() {
+		return this.stateSpaceStore;
 	}
 }

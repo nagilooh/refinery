@@ -1,38 +1,37 @@
 /*
- * SPDX-FileCopyrightText: 2021-2023 The Refinery Authors <https://refinery.tools/>
+ * SPDX-FileCopyrightText: 2021-2026 The Refinery Authors <https://refinery.tools/>
  *
  * SPDX-License-Identifier: EPL-2.0
  */
 package tools.refinery.visualization.internal;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import tools.refinery.logic.term.truthvalue.TruthValue;
+import tools.refinery.store.dse.transition.DesignSpaceExplorationAdapter;
+import tools.refinery.store.dse.transition.Transformation;
+import tools.refinery.store.dse.transition.statespace.StateSpaceStore;
 import tools.refinery.store.map.Version;
 import tools.refinery.store.model.Interpretation;
 import tools.refinery.store.model.Model;
 import tools.refinery.store.representation.AnySymbol;
-import tools.refinery.logic.term.truthvalue.TruthValue;
 import tools.refinery.store.tuple.Tuple;
 import tools.refinery.visualization.ModelVisualizerAdapter;
 import tools.refinery.visualization.ModelVisualizerStoreAdapter;
-import tools.refinery.visualization.statespace.VisualizationStore;
 
 import java.io.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
-	private static final Logger LOG = LoggerFactory.getLogger(ModelVisualizerAdapterImpl.class);
 
 	private final Model model;
 	private final ModelVisualizerStoreAdapterImpl storeAdapter;
 	private final Map<AnySymbol, Interpretation<?>> allInterpretations;
-	private final StringBuilder designSpaceBuilder = new StringBuilder();
-	private final Map<Version, Integer> states = new HashMap<>();
 	private final String outputPath;
 	private final Set<FileFormat> formats;
 	private final boolean renderDesignSpace;
 	private final boolean renderStates;
+	private final StateSpaceStore stateSpaceStore;
+	private final List<Transformation> transformations;
 
 	private static final Map<Object, String> truthValueToDot = Map.of(
 			TruthValue.TRUE, "1",
@@ -42,6 +41,9 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 			true, "1",
 			false, "0"
 	);
+
+	private record ActivationReference(Version fromVersion, int transformationIndex, int activationIndex) {
+	}
 
 	public ModelVisualizerAdapterImpl(Model model, ModelVisualizerStoreAdapterImpl storeAdapter) {
 		this.model = model;
@@ -63,25 +65,18 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 			var interpretation = (Interpretation<?>) model.getInterpretation(symbol);
 			allInterpretations.put(symbol, interpretation);
 		}
-		designSpaceBuilder.append("digraph designSpace {\n");
-		designSpaceBuilder.append("""
-				nodesep=0
-				ranksep=5
-				node[
-				\tstyle=filled
-				\tfillcolor=white
-				]
-				""");
+		this.stateSpaceStore = storeAdapter.getStateSpaceStore();
+		this.transformations = model.getAdapter(DesignSpaceExplorationAdapter.class).getTransformations();
 	}
 
 	@Override
 	public Model getModel() {
-		return model;
+		return this.model;
 	}
 
 	@Override
 	public ModelVisualizerStoreAdapter getStoreAdapter() {
-		return storeAdapter;
+		return this.storeAdapter;
 	}
 
 	private String createDotForCurrentModelState() {
@@ -260,7 +255,6 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 		try (FileWriter writer = new FileWriter(file)) {
 			writer.write(dot);
 		} catch (IOException e) {
-			LOG.error("Failed to write dot file", e);
 			return false;
 		}
 		return true;
@@ -280,59 +274,125 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 			pwToProcess.write(dot);
 			pwToProcess.close();
 		} catch (IOException e) {
-			LOG.error("Failed to render dot", e);
 			return false;
 		}
 		return true;
 	}
 
-	private String buildDesignSpaceDot() {
+	private StringBuilder buildDesignSpaceTransitionsDot(List<StateSpaceStore.StateTransition> transitions) {
+		StringBuilder transitionsBuilder = new StringBuilder();
+		var originalVersion = model.getState();
+		Version restoredVersion = null;
+
+		try {
+			for (var transition : transitions) {
+				var fromState = this.stateSpaceStore.getStateId(transition.from());
+				var toState = this.stateSpaceStore.getStateId(transition.to());
+				var visitResult = transition.visitResult();
+				var ruleName = this.transformations.get(visitResult.transformation()).getDefinition().rule().getName();
+				var activationReference = new ActivationReference(transition.from(), visitResult.transformation(),
+						visitResult.activation());
+				if (!transition.from().equals(restoredVersion)) {
+					model.restore(transition.from());
+					restoredVersion = transition.from();
+				}
+				var activationTuple = resolveActivationTuple(activationReference);
+				var activationLabel = activationTuple.toString();
+				var label = ruleName + ", " + activationLabel;
+				transitionsBuilder.append(fromState).append(" -> ").append(toState)
+						.append(" [label=\"").append(transition.id()).append(": ").append(label).append("\"]\n");
+			}
+		} finally {
+			model.restore(originalVersion);
+		}
+		return transitionsBuilder;
+	}
+
+	private Tuple resolveActivationTuple(ActivationReference activationReference) {
+		int transformationIndex = activationReference.transformationIndex();
+		int activationIndex = activationReference.activationIndex();
+
+		Tuple activation;
+		if (transformationIndex < 0 || transformationIndex >= this.transformations.size()) {
+			throw new IllegalStateException("Transformation index %d is out of bounds for state %s"
+					.formatted(transformationIndex, activationReference.fromVersion()));
+		}
+		var transformation = this.transformations.get(transformationIndex);
+		int activationCount = transformation.getAllActivationsAsResultSet().size();
+		if (activationIndex < 0 || activationIndex >= activationCount) {
+			throw new IllegalStateException("Activation index %d is out of bounds (size=%d) for transformation %d in state %s"
+					.formatted(activationIndex, activationCount, transformationIndex, activationReference.fromVersion()));
+		}
+		activation = transformation.getActivation(activationIndex);
+
+		return activation;
+	}
+
+	private String buildDesignSpaceDot(boolean renderTransitionsToAlreadyVisitedStates) {
+		StringBuilder designSpaceBuilder = new StringBuilder();
+		designSpaceBuilder.append("digraph designSpace {\n");
+		designSpaceBuilder.append("""
+				nodesep=0
+				ranksep=5
+				node[
+				\tstyle=filled
+				\tfillcolor=white
+				]
+				""");
+
+		for (var state : this.stateSpaceStore.getStates()) {
+
+			designSpaceBuilder.append(state.id()).append(" [label = \"").append(state.id()).append(" (");
+			designSpaceBuilder.append(state.objectiveValue());
+			designSpaceBuilder.append(")\"\n").append("URL=\"./").append(state.id()).append(".svg\"");
+			if (state.isSolution()) {
+				designSpaceBuilder.append(" peripheries = 2");
+			}
+			designSpaceBuilder.append("]\n");
+		}
+
+		designSpaceBuilder.append(buildDesignSpaceTransitionsDot(this.stateSpaceStore.getTransitions()));
+
+
+		if (renderTransitionsToAlreadyVisitedStates) {
+			designSpaceBuilder.append(buildDesignSpaceTransitionsDot(this.stateSpaceStore.getTransitionsToAlreadyVisited()));
+		}
+
 		designSpaceBuilder.append("}");
 		return designSpaceBuilder.toString();
 	}
 
-	private boolean saveDesignSpace(String path) {
-		saveDot(buildDesignSpaceDot(), path + "/designSpace.dot");
-		for (var entry : states.entrySet()) {
-			saveDot(createDotForModelState(entry.getKey()), path + "/" + entry.getValue() + ".dot");
-		}
-		return true;
-	}
-
-	private void renderDesignSpace(String path, Set<FileFormat> formats) {
-		File filePath = new File(path);
+	@Override
+	public void visualize(StateSpaceStore stateSpaceStore, boolean renderTransitionsToAlreadyVisitedStates) {
+		File filePath = new File(this.outputPath);
 		filePath.mkdirs();
+
 		if (renderStates) {
-			for (var entry : states.entrySet()) {
-				var stateId = entry.getValue();
-				var stateDot = createDotForModelState(entry.getKey());
-				for (var format : formats) {
+			for (var state : this.stateSpaceStore.getStates()) {
+				var stateId = state.id();
+				var stateVersion = state.version();
+				var stateDot = createDotForModelState(stateVersion);
+				for (var format : this.formats) {
 					if (format == FileFormat.DOT) {
-						saveDot(stateDot, path + "/" + stateId + ".dot");
+						saveDot(stateDot, this.outputPath + "/" + stateId + ".dot");
 					}
 					else {
-						renderDot(stateDot, format, path + "/" + stateId + "." + format.getFormat());
+						renderDot(stateDot, format, this.outputPath + "/" + stateId + "." + format.getFormat());
 					}
 				}
 			}
 		}
+
 		if (renderDesignSpace) {
-			var designSpaceDot = buildDesignSpaceDot();
-			for (var format : formats) {
+			var designSpaceDot = buildDesignSpaceDot(renderTransitionsToAlreadyVisitedStates);
+			for (var format : this.formats) {
 				if (format == FileFormat.DOT) {
-					saveDot(designSpaceDot, path + "/designSpace.dot");
+					saveDot(designSpaceDot, this.outputPath + "/designSpace.dot");
 				}
 				else {
-					renderDot(designSpaceDot, format, path + "/designSpace." + format.getFormat());
+					renderDot(designSpaceDot, format, this.outputPath + "/designSpace." + format.getFormat());
 				}
 			}
 		}
-	}
-
-	@Override
-	public void visualize(VisualizationStore visualizationStore) {
-		this.designSpaceBuilder.append(visualizationStore.getDesignSpaceStringBuilder());
-		this.states.putAll(visualizationStore.getStates());
-		renderDesignSpace(outputPath, formats);
 	}
 }

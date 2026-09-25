@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2021-2023 The Refinery Authors <https://refinery.tools/>
+ * SPDX-FileCopyrightText: 2021-2026 The Refinery Authors <https://refinery.tools/>
  *
  * SPDX-License-Identifier: EPL-2.0
  */
@@ -27,8 +27,6 @@ import tools.refinery.store.query.view.KeyOnlyView;
 import tools.refinery.store.representation.Symbol;
 import tools.refinery.store.statecoding.StateCoderAdapter;
 import tools.refinery.store.tuple.Tuple;
-import tools.refinery.visualization.ModelVisualizerAdapter;
-import tools.refinery.visualization.internal.FileFormat;
 
 import java.util.List;
 
@@ -116,12 +114,6 @@ class CRAExamplesTest {
 		var store = ModelStore.builder()
 				.symbols(classElement, encapsulates, attribute, method, dataDependency, functionalDependency, name)
 				.with(QueryInterpreterAdapter.builder())
-				.with(ModelVisualizerAdapter.builder()
-						.withOutputPath("test_output")
-						.withFormat(FileFormat.DOT)
-						.withFormat(FileFormat.SVG)
-						.saveStates()
-						.saveDesignSpace())
 				.with(StateCoderAdapter.builder())
 				.with(ModificationAdapter.builder())
 				.with(DesignSpaceExplorationAdapter.builder()
@@ -206,7 +198,6 @@ class CRAExamplesTest {
 			bestFirst.startExploration(initialVersion);
 			var resultStore = bestFirst.getSolutionStore();
 			System.out.println("states size: " + resultStore.getSolutions().size());
-			model.getAdapter(ModelVisualizerAdapter.class).visualize(bestFirst.getVisualizationStore());
 		}
 	}
 }

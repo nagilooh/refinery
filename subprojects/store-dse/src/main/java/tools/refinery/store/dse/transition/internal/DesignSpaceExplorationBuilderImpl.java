@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 The Refinery Authors <https://refinery.tools/>
+ * SPDX-FileCopyrightText: 2023-2026 The Refinery Authors <https://refinery.tools/>
  *
  * SPDX-License-Identifier: EPL-2.0
  */
@@ -12,6 +12,7 @@ import tools.refinery.store.dse.transition.DesignSpaceExplorationBuilder;
 import tools.refinery.store.dse.transition.ExclusionPropagator;
 import tools.refinery.store.dse.transition.objectives.Criterion;
 import tools.refinery.store.dse.transition.objectives.Objective;
+import tools.refinery.store.dse.transition.statespace.StateSpaceStore;
 import tools.refinery.store.model.ModelStore;
 import tools.refinery.store.model.ModelStoreBuilder;
 import tools.refinery.store.query.ModelQueryBuilder;
@@ -27,6 +28,7 @@ public class DesignSpaceExplorationBuilderImpl
 	LinkedHashSet<Criterion> accepts = new LinkedHashSet<>();
 	LinkedHashSet<Criterion> excludes = new LinkedHashSet<>();
 	LinkedHashSet<Objective> objectives = new LinkedHashSet<>();
+	StateSpaceStore stateSpaceStore;
 
 	@Override
 	public DesignSpaceExplorationBuilder transformation(DecisionRule decisionRule) {
@@ -54,6 +56,12 @@ public class DesignSpaceExplorationBuilderImpl
 	}
 
 	@Override
+	public DesignSpaceExplorationBuilder with(StateSpaceStore stateSpaceStore) {
+		this.stateSpaceStore = stateSpaceStore;
+		return this;
+	}
+
+	@Override
 	protected void doConfigure(ModelStoreBuilder storeBuilder) {
 		var queryEngine = storeBuilder.getAdapter(ModelQueryBuilder.class);
 		decisionRules.forEach(x -> queryEngine.queries(x.rule().getQueries()));
@@ -74,6 +82,6 @@ public class DesignSpaceExplorationBuilderImpl
 		List<Objective> objectivesList = List.copyOf(objectives);
 
 		return new DesignSpaceExplorationStoreAdapterImpl(store, decisionRuleList, acceptsList,
-				excludesList, objectivesList);
+				excludesList, objectivesList, stateSpaceStore);
 	}
 }

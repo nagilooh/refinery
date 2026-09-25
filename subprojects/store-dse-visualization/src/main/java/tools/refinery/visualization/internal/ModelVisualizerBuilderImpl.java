@@ -1,12 +1,16 @@
 /*
- * SPDX-FileCopyrightText: 2021-2023 The Refinery Authors <https://refinery.tools/>
+ * SPDX-FileCopyrightText: 2021-2026 The Refinery Authors <https://refinery.tools/>
  *
  * SPDX-License-Identifier: EPL-2.0
  */
 package tools.refinery.visualization.internal;
 
 import tools.refinery.store.adapter.AbstractModelAdapterBuilder;
+import tools.refinery.store.dse.transition.DesignSpaceExplorationBuilder;
+import tools.refinery.store.dse.transition.statespace.StateSpaceStore;
+import tools.refinery.store.dse.transition.statespace.internal.StateSpaceStoreImpl;
 import tools.refinery.store.model.ModelStore;
+import tools.refinery.store.model.ModelStoreBuilder;
 import tools.refinery.visualization.ModelVisualizerBuilder;
 
 import java.util.LinkedHashSet;
@@ -20,10 +24,12 @@ public class ModelVisualizerBuilderImpl
 	private boolean saveDesignSpace = false;
 	private boolean saveStates = false;
 	private final Set<FileFormat> formats = new LinkedHashSet<>();
+	private final StateSpaceStore stateSpaceStore = new StateSpaceStoreImpl();
 
 	@Override
 	protected ModelVisualizerStoreAdapterImpl doBuild(ModelStore store) {
-		return new ModelVisualizerStoreAdapterImpl(store, dotBinaryPath, outputPath, formats, saveDesignSpace, saveStates);
+		return new ModelVisualizerStoreAdapterImpl(store, stateSpaceStore, dotBinaryPath, outputPath, formats, saveDesignSpace,
+				saveStates);
 	}
 
 	@Override
@@ -59,5 +65,14 @@ public class ModelVisualizerBuilderImpl
 		checkNotConfigured();
 		this.saveStates = true;
 		return this;
+	}
+
+	@Override
+	protected void doConfigure(ModelStoreBuilder storeBuilder) {
+		if (outputPath == null || outputPath.isEmpty()) {
+			throw new IllegalStateException("Output path must be set for ModelVisualizerAdapter");
+		}
+		storeBuilder.tryGetAdapter(DesignSpaceExplorationBuilder.class)
+				.ifPresent(dseBuilder -> dseBuilder.with(stateSpaceStore));
 	}
 }

@@ -1,18 +1,17 @@
 /*
- * SPDX-FileCopyrightText: 2023 The Refinery Authors <https://refinery.tools/>
+ * SPDX-FileCopyrightText: 2023-2026 The Refinery Authors <https://refinery.tools/>
  *
  * SPDX-License-Identifier: EPL-2.0
  */
 package tools.refinery.store.dse.transition.internal;
 
-import tools.refinery.store.dse.propagation.PropagationRejectedResult;
-import tools.refinery.store.dse.propagation.PropagationResult;
 import tools.refinery.store.dse.transition.DesignSpaceExplorationAdapter;
 import tools.refinery.store.dse.transition.DesignSpaceExplorationStoreAdapter;
 import tools.refinery.store.dse.transition.ObjectiveValue;
 import tools.refinery.store.dse.transition.Transformation;
 import tools.refinery.store.dse.transition.objectives.CriterionCalculator;
 import tools.refinery.store.dse.transition.objectives.ObjectiveCalculator;
+import tools.refinery.store.dse.transition.statespace.StateSpaceStore;
 import tools.refinery.store.model.Model;
 
 import java.util.List;
@@ -25,13 +24,15 @@ public class DesignSpaceExplorationAdapterImpl implements DesignSpaceExploration
 	final List<CriterionCalculator> accepts;
 	final List<CriterionCalculator> excludes;
 	final List<ObjectiveCalculator> objectives;
+	final StateSpaceStore stateSpaceStore;
 
 	public DesignSpaceExplorationAdapterImpl(Model model,
 											 DesignSpaceExplorationStoreAdapter designSpaceExplorationStoreAdapter,
 											 List<Transformation> transformations,
 											 List<CriterionCalculator> accepts,
 											 List<CriterionCalculator> excludes,
-											 List<ObjectiveCalculator> objectives) {
+											 List<ObjectiveCalculator> objectives,
+											 StateSpaceStore stateSpaceStore) {
 		this.model = model;
 		this.designSpaceExplorationStoreAdapter = designSpaceExplorationStoreAdapter;
 
@@ -39,6 +40,7 @@ public class DesignSpaceExplorationAdapterImpl implements DesignSpaceExploration
 		this.accepts = accepts;
 		this.excludes = excludes;
 		this.objectives = objectives;
+		this.stateSpaceStore = stateSpaceStore;
 	}
 
 	@Override
@@ -92,5 +94,10 @@ public class DesignSpaceExplorationAdapterImpl implements DesignSpaceExploration
 			}
 			return ObjectiveValue.of(res);
 		}
+	}
+
+	@Override
+	public StateSpaceStore getStateSpaceStore() {
+		return this.stateSpaceStore;
 	}
 }

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 The Refinery Authors <https://refinery.tools/>
+ * SPDX-FileCopyrightText: 2023-2026 The Refinery Authors <https://refinery.tools/>
  *
  * SPDX-License-Identifier: EPL-2.0
  */
@@ -10,12 +10,12 @@ import tools.refinery.store.dse.propagation.PropagationAdapter;
 import tools.refinery.store.dse.transition.DesignSpaceExplorationAdapter;
 import tools.refinery.store.dse.transition.ObjectiveValue;
 import tools.refinery.store.dse.transition.VersionWithObjectiveValue;
+import tools.refinery.store.dse.transition.statespace.StateSpaceStore;
 import tools.refinery.store.dse.transition.statespace.internal.ActivationStoreWorker;
 import tools.refinery.store.map.Version;
 import tools.refinery.store.model.Model;
 import tools.refinery.store.query.ModelQueryAdapter;
 import tools.refinery.store.statecoding.StateCoderAdapter;
-import tools.refinery.visualization.statespace.VisualizationStore;
 
 import java.util.Random;
 
@@ -27,7 +27,7 @@ public class BestFirstWorker {
 	final DesignSpaceExplorationAdapter explorationAdapter;
 	final ModelQueryAdapter queryAdapter;
 	final @Nullable PropagationAdapter propagationAdapter;
-	final VisualizationStore visualizationStore;
+	final StateSpaceStore stateSpaceStore;
 	final boolean isVisualizationEnabled;
 
 	public BestFirstWorker(BestFirstStoreManager storeManager, Model model) {
@@ -40,8 +40,8 @@ public class BestFirstWorker {
 		propagationAdapter = model.tryGetAdapter(PropagationAdapter.class).orElse(null);
 		activationStoreWorker = new ActivationStoreWorker(storeManager.getActivationStore(),
 				explorationAdapter.getTransformations());
-		visualizationStore = storeManager.getVisualizationStore();
-		isVisualizationEnabled = visualizationStore != null;
+		stateSpaceStore = explorationAdapter.getStateSpaceStore();
+		isVisualizationEnabled = stateSpaceStore != null;
 	}
 
 	protected VersionWithObjectiveValue last = null;
@@ -83,10 +83,7 @@ public class BestFirstWorker {
 		}
 
 		if (isVisualizationEnabled) {
-			visualizationStore.addState(version, objectiveValue.toString());
-			if (accepted) {
-				visualizationStore.addSolution(version);
-			}
+			stateSpaceStore.addState(version, stateCoderAdapter.calculateModelCode(), accepted, false, objectiveValue);
 		}
 
 		return new SubmitResult(true, accepted, objectiveValue, last);
@@ -192,10 +189,13 @@ public class BestFirstWorker {
 			oldVersion = last.version();
 		}
 		var submitResult = submit();
-		if (isVisualizationEnabled && submitResult.newVersion() != null) {
-			var newVersion = submitResult.newVersion().version();
-			visualizationStore.addTransition(oldVersion, newVersion,
-					"fire: " + visitResult.transformation() + ", " + visitResult.activation());
+		if (isVisualizationEnabled) {
+			if (submitResult.newVersion() != null) {
+				var newVersion = submitResult.newVersion().version();
+				stateSpaceStore.addTransition(oldVersion, newVersion, visitResult);
+			} else {
+				stateSpaceStore.addTransition(oldVersion, stateCoderAdapter.calculateModelCode(), visitResult);
+			}
 		}
 		return new RandomVisitResult(submitResult, visitResult.mayHaveMore());
 	}

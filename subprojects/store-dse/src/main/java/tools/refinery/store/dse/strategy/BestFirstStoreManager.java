@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 The Refinery Authors <https://refinery.tools/>
+ * SPDX-FileCopyrightText: 2023-2026 The Refinery Authors <https://refinery.tools/>
  *
  * SPDX-License-Identifier: EPL-2.0
  */
@@ -18,8 +18,6 @@ import tools.refinery.store.dse.transition.statespace.internal.SolutionStoreImpl
 import tools.refinery.store.map.Version;
 import tools.refinery.store.model.ModelStore;
 import tools.refinery.store.statecoding.StateCoderStoreAdapter;
-import tools.refinery.visualization.statespace.VisualizationStore;
-import tools.refinery.visualization.statespace.internal.VisualizationStoreImpl;
 
 import java.util.function.Consumer;
 
@@ -30,7 +28,6 @@ public class BestFirstStoreManager {
 	ActivationStore activationStore;
 	SolutionStore solutionStore;
 	EquivalenceClassStore equivalenceClassStore;
-	VisualizationStore visualizationStore;
 
 	public BestFirstStoreManager(ModelStore modelStore, int maxNumberOfSolutions) {
 		this.modelStore = modelStore;
@@ -48,7 +45,6 @@ public class BestFirstStoreManager {
 						"symmetries!");
 			}
 		};
-		visualizationStore = new VisualizationStoreImpl();
 	}
 
 	public ModelStore getModelStore() {
@@ -69,10 +65,6 @@ public class BestFirstStoreManager {
 
 	EquivalenceClassStore getEquivalenceClassStore() {
 		return equivalenceClassStore;
-	}
-
-	public VisualizationStore getVisualizationStore() {
-		return visualizationStore;
 	}
 
 	public void startExploration(Version initial) {
