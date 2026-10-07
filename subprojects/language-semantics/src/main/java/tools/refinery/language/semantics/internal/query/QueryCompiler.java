@@ -21,6 +21,8 @@ import tools.refinery.language.typesystem.DataExprType;
 import tools.refinery.language.typesystem.ExprType;
 import tools.refinery.language.typesystem.FixedType;
 import tools.refinery.language.typesystem.ProblemTypeAnalyzer;
+import tools.refinery.language.utils.BuiltinAnnotationContext;
+import tools.refinery.language.utils.ParameterBinding;
 import tools.refinery.language.utils.ProblemUtil;
 import tools.refinery.language.validation.ReferenceCounter;
 import tools.refinery.logic.Constraint;
@@ -42,6 +44,9 @@ import java.util.*;
 public class QueryCompiler {
 	@Inject
 	private SemanticsUtils semanticsUtils;
+
+	@Inject
+	private BuiltinAnnotationContext builtinAnnotationContext;
 
 	@Inject
 	private ReferenceCounter referenceCounter;
@@ -96,12 +101,15 @@ public class QueryCompiler {
 
 	PreparedQuery prepareParameters(ParametricDefinition parametricDefinition) {
 		var problemParameters = getParameters(parametricDefinition);
-		int arity = problemParameters.size();
+		var nonNewProblemParameters = problemParameters.stream()
+				.filter(parameter -> builtinAnnotationContext.getParameterBinding(parameter) != ParameterBinding.NEW)
+				.toList();
+		int arity = nonNewProblemParameters.size();
 		var parameters = new NodeVariable[arity];
 		var parameterMap = HashMap.<tools.refinery.language.model.problem.Variable, Variable>newHashMap(arity);
 		var commonLiterals = new ArrayList<Literal>();
 		for (int i = 0; i < arity; i++) {
-			var problemParameter = problemParameters.get(i);
+			var problemParameter = nonNewProblemParameters.get(i);
 			var parameter = Variable.of(problemParameter.getName());
 			parameters[i] = parameter;
 			parameterMap.put(problemParameter, parameter);
