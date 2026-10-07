@@ -13,6 +13,7 @@ mavenArtifact {
 }
 
 dependencies {
+	api(project(":refinery-generator-core"))
 	api(project(":refinery-language-semantics"))
 	api(project(":refinery-store-dse"))
 	api(project(":refinery-store-reasoning"))

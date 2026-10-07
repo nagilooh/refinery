@@ -64,6 +64,7 @@ public class TransitionSystemExplorer {
 					last = restoreToBest();
 				}
 				if (last == null) {
+					System.out.println("No more states to explore. Exploration finished.");
 					return;
 				}
 			}
