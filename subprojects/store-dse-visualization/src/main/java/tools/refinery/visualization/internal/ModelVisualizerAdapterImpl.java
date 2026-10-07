@@ -12,11 +12,13 @@ import tools.refinery.store.dse.transition.DesignSpaceExplorationAdapter;
 import tools.refinery.store.dse.transition.Transformation;
 import tools.refinery.store.dse.transition.statespace.StateSpaceStore;
 import tools.refinery.store.map.Version;
-import tools.refinery.store.model.Interpretation;
 import tools.refinery.store.model.Model;
-import tools.refinery.store.model.wrapper.InterpretationInterpretationWrapper;
 import tools.refinery.store.model.wrapper.InterpretationWrapper;
-import tools.refinery.store.representation.wrapper.SymbolSymbolWrapper;
+import tools.refinery.store.reasoning.ReasoningAdapter;
+import tools.refinery.store.reasoning.interpretation.AnyPartialInterpretation;
+import tools.refinery.store.reasoning.interpretation.PartialInterpretation;
+import tools.refinery.store.reasoning.literal.Concreteness;
+import tools.refinery.store.reasoning.representation.AnyPartialSymbol;
 import tools.refinery.store.representation.wrapper.SymbolWrapper;
 import tools.refinery.store.transition.system.TransitionSystemAdapter;
 import tools.refinery.store.transition.system.statespace.Transition;
@@ -33,7 +35,8 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 
 	private final Model model;
 	private final ModelVisualizerStoreAdapterImpl storeAdapter;
-	private Map<SymbolWrapper, InterpretationWrapper<?>> allInterpretations;
+	private final ReasoningAdapter reasoningAdapter;
+	private Map<AnyPartialSymbol, PartialInterpretation> allInterpretations;
 	private final String outputPath;
 	private final Set<FileFormat> formats;
 	private final Function<Integer, String> nodeNameProvider;
@@ -45,7 +48,7 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 
 	@FunctionalInterface
 	private interface SkipVisualizationPredicate {
-		boolean shouldSkip(SymbolWrapper symbol, Tuple key, Object value);
+		boolean shouldSkip(AnyPartialSymbol symbol, Tuple key, Object value);
 	}
 	private final SkipVisualizationPredicate skippedEntry = (symbol, key, value) -> {
 		var name = symbol.name().toLowerCase();
@@ -76,6 +79,7 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 	public ModelVisualizerAdapterImpl(Model model, ModelVisualizerStoreAdapterImpl storeAdapter) {
 		this.model = model;
 		this.storeAdapter = storeAdapter;
+		this.reasoningAdapter = model.getAdapter(ReasoningAdapter.class);
 		this.outputPath = storeAdapter.getOutputPath();
 		this.formats = storeAdapter.getFormats();
 		if (formats.isEmpty()) {
@@ -87,14 +91,8 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 		this.renderStates = storeAdapter.isRenderStates();
 
 		this.allInterpretations = new HashMap<>();
-		for (var symbol : storeAdapter.getStore().getSymbols()) {
-			var arity = symbol.arity();
-			if (arity < 1 || arity > 2) {
-				continue;
-			}
-			var interpretation = (Interpretation<?>) model.getInterpretation(symbol);
-			allInterpretations.put(new SymbolSymbolWrapper(symbol),
-					new InterpretationInterpretationWrapper<>(interpretation));
+		for (var symbol : reasoningAdapter.getPartialSymbols()) {
+			allInterpretations.put(symbol, (PartialInterpretation) reasoningAdapter.getPartialInterpretation(Concreteness.PARTIAL, symbol));
 		}
 		this.stateSpaceStore = storeAdapter.getStateSpaceStore();
 		if (storeAdapter.hasDesignSpaceExploration()) {
@@ -121,7 +119,7 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 
 	private String createDotForCurrentModelState(List<String> hiddenRelations) {
 
-		var unaryTupleToInterpretationsMap = new HashMap<Tuple, LinkedHashSet<InterpretationWrapper<?>>>();
+		var unaryTupleToInterpretationsMap = new HashMap<Tuple, LinkedHashSet<PartialInterpretation>>();
 
 		var sb = new StringBuilder();
 
@@ -141,8 +139,8 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 				]
 				""");
 
-		for (var entry : allInterpretations.entrySet()) {
-			var symbol = entry.getKey();
+		for (Map.Entry<AnyPartialSymbol, PartialInterpretation> entry : allInterpretations.entrySet()) {
+			AnyPartialSymbol symbol = entry.getKey();
 			if (hiddenRelations.contains(symbol.name())) {
 				continue;
 			}
@@ -150,23 +148,23 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 			var cursor = entry.getValue().getAll();
 			if (arity == 1) {
 				while (cursor.move()) {
-					if (skippedEntry.shouldSkip(symbol, cursor.getKey(), cursor.getValue())) {
+					if (skippedEntry.shouldSkip(symbol, (Tuple) cursor.getKey(), cursor.getValue())) {
 						continue;
 					}
-					unaryTupleToInterpretationsMap.computeIfAbsent(cursor.getKey(), k -> new LinkedHashSet<>())
+					unaryTupleToInterpretationsMap.computeIfAbsent((Tuple) cursor.getKey(), k -> new LinkedHashSet<>())
 							.add(entry.getValue());
 				}
 			} else if (arity == 2) {
 				while (cursor.move()) {
-					if (skippedEntry.shouldSkip(symbol, cursor.getKey(), cursor.getValue())) {
+					if (skippedEntry.shouldSkip(symbol, (Tuple) cursor.getKey(), cursor.getValue())) {
 						continue;
 					}
-					var tuple = cursor.getKey();
+					var tuple = (Tuple) cursor.getKey();
 					for (var i = 0; i < tuple.getSize(); i++) {
 						var id = tuple.get(i);
 						unaryTupleToInterpretationsMap.computeIfAbsent(Tuple.of(id), k -> new LinkedHashSet<>());
 					}
-					sb.append(drawEdge(cursor.getKey(), symbol, cursor.getValue()));
+					sb.append(drawEdge((Tuple) cursor.getKey(), symbol, cursor.getValue()));
 				}
 			}
 		}
@@ -177,7 +175,7 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 		return sb.toString();
 	}
 
-	private StringBuilder drawElement(Map.Entry<Tuple, LinkedHashSet<InterpretationWrapper<?>>> entry) {
+	private StringBuilder drawElement(Map.Entry<Tuple, LinkedHashSet<PartialInterpretation>> entry) {
 		var sb = new StringBuilder();
 
 		var tableStyle =  " CELLSPACING=\"0\" BORDER=\"2\" CELLBORDER=\"0\" CELLPADDING=\"4\" STYLE=\"ROUNDED\"";
@@ -209,13 +207,13 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 					color = "red";
 				}
 				var value = truthValueToDot.getOrDefault(rawValue, rawValue.toString());
-				var symbol = interpretation.getSymbol();
+				var symbol = interpretation.getPartialSymbol();
 
-				if (symbol.valueType() == String.class) {
+				if (symbol.abstractDomain().abstractType() == String.class) {
 					value = "\"" + value + "\"";
 				}
 				sb.append("\t\t<TR><TD><FONT COLOR=\"").append(color).append("\">")
-						.append(interpretation.getSymbol().name())
+						.append(interpretation.getPartialSymbol().name())
 						.append("</FONT></TD><TD><FONT COLOR=\"").append(color).append("\">")
 						.append("=</FONT></TD><TD><FONT COLOR=\"").append(color).append("\">").append(value)
 						.append("</FONT></TD></TR>\n");
@@ -227,7 +225,7 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 		return sb;
 	}
 
-	private String drawEdge(Tuple edge, SymbolWrapper symbol, Object value) {
+	private String drawEdge(Tuple edge, AnyPartialSymbol symbol, Object value) {
 		if (value == null || value.equals(TruthValue.FALSE) || value.equals(false)) {
 			return "";
 		}
@@ -270,13 +268,13 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 		return new Integer[]{random.nextInt(128) + 128, random.nextInt(128) + 128, random.nextInt(128) + 128};
 	}
 
-	private Integer[] averageColor(Set<InterpretationWrapper<?>> interpretations) {
+	private Integer[] averageColor(Set<PartialInterpretation> interpretations) {
 		if (interpretations.isEmpty()) {
 			return new Integer[]{256, 256, 256};
 		}
 		// TODO: Only use interpretations where the value is not false (or unknown)
 		var symbols = interpretations.stream()
-				.map(i -> typeColor(i.getSymbol().name())).toArray(Integer[][]::new);
+				.map(i -> typeColor(i.getPartialSymbol().name())).toArray(Integer[][]::new);
 
 
 		return new Integer[]{
@@ -432,6 +430,19 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 		File filePath = new File(path);
 		filePath.mkdirs();
 
+		if (renderDesignSpace) {
+			var designSpaceDot = buildDesignSpaceDot(renderTransitionsToAlreadyVisitedStates);
+			for (var format : this.formats) {
+				var filename = name == null ? "designSpace" : name;
+				if (format == FileFormat.DOT) {
+					saveDot(designSpaceDot, path + "/" + filename + ".dot");
+				}
+				else {
+					renderDot(designSpaceDot, format, path + "/" + filename + "." + format.getFormat());
+				}
+			}
+		}
+
 		if (renderStates) {
 			for (var state : this.stateSpaceStore.getStates()) {
 				var stateId = state.id();
@@ -443,20 +454,13 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 					}
 					else {
 						renderDot(stateDot, format, path + "/" + stateId + "." + format.getFormat());
+						try {
+							Thread.sleep(100); // Sleep for a short time to avoid overwhelming the system with too many processes at once
+						}
+						catch (InterruptedException e) {
+							Thread.currentThread().interrupt();
+						}
 					}
-				}
-			}
-		}
-
-		if (renderDesignSpace) {
-			var designSpaceDot = buildDesignSpaceDot(renderTransitionsToAlreadyVisitedStates);
-			for (var format : this.formats) {
-				var filename = name == null ? "designSpace" : name;
-				if (format == FileFormat.DOT) {
-					saveDot(designSpaceDot, path + "/" + filename + ".dot");
-				}
-				else {
-					renderDot(designSpaceDot, format, path + "/" + filename + "." + format.getFormat());
 				}
 			}
 		}
