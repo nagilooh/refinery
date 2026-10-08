@@ -21,4 +21,8 @@ public interface ObjectiveValue {
 		return new ObjectiveValues.ObjectiveValueN(v);
 	}
 
+	static ObjectiveValue of(int v1) {
+		return new ObjectiveValues.ObjectiveValueInt1(v1);
+	}
+
 }

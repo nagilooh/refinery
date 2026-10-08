@@ -8,6 +8,18 @@ package tools.refinery.store.dse.transition;
 import java.util.Arrays;
 
 public interface ObjectiveValues {
+	public record ObjectiveValueInt1(int value0) implements ObjectiveValue {
+		@Override
+		public double get(int index) {
+			if(index == 0) return value0;
+			else throw new IllegalArgumentException("No value at " + index);
+		}
+
+		@Override
+		public int getSize() {
+			return 1;
+		}
+	}
 	public record ObjectiveValue1(double value0) implements ObjectiveValue {
 		@Override
 		public double get(int index) {

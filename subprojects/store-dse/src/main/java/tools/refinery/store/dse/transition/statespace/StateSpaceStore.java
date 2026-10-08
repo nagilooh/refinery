@@ -18,7 +18,7 @@ public interface StateSpaceStore {
 	}
 
 	default void addState(Version state, int stateCode, boolean isSolution, boolean isError) {
-		addState(state, stateCode, isSolution, isError, null);
+		addState(state, stateCode, isSolution, isError, ObjectiveValue.of(stateCode));
 	}
 	void addState(Version state, int stateCode, boolean isSolution, boolean isError, ObjectiveValue objectiveValue);
 	void addTransition(Version from, Version to, ActivationStore.VisitResult visitResult);
