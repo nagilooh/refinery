@@ -5,13 +5,13 @@
  */
 package tools.refinery.store.reasoning;
 
-import tools.refinery.store.adapter.ModelAdapterBuilder;
-import tools.refinery.store.dse.transition.objectives.Objective;
-import tools.refinery.store.model.ModelStore;
 import tools.refinery.logic.dnf.Dnf;
 import tools.refinery.logic.dnf.FunctionalQuery;
 import tools.refinery.logic.dnf.Query;
 import tools.refinery.logic.dnf.RelationalQuery;
+import tools.refinery.store.adapter.ModelAdapterBuilder;
+import tools.refinery.store.dse.transition.objectives.Objective;
+import tools.refinery.store.model.ModelStore;
 import tools.refinery.store.reasoning.literal.Concreteness;
 import tools.refinery.store.reasoning.literal.ConcretenessSpecification;
 import tools.refinery.store.reasoning.literal.Modality;

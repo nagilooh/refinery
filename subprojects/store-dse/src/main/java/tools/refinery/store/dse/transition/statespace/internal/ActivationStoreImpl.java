@@ -5,26 +5,31 @@
  */
 package tools.refinery.store.dse.transition.statespace.internal;
 
-import tools.refinery.store.dse.transition.DecisionRule;
-import tools.refinery.store.dse.transition.VersionWithObjectiveValue;
 import tools.refinery.store.dse.transition.statespace.ActivationStore;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
-public class ActivationStoreImpl implements ActivationStore {
-	private final List<DecisionRule> transformations;
-	private final Consumer<VersionWithObjectiveValue> actionWhenAllActivationVisited;
-	private final Map<VersionWithObjectiveValue, List<ActivationStoreEntry>> versionToActivations;
+public class ActivationStoreImpl<R, V> implements ActivationStore<V> {
+	private final List<R> transformations;
+	private final BiFunction<R, Integer, Double> weightProvider;
+	private final Consumer<V> actionWhenAllActivationVisited;
+	private final Map<V, List<ActivationStoreEntry>> versionToActivations;
 
-	public ActivationStoreImpl(List<DecisionRule> transformations,
-							   Consumer<VersionWithObjectiveValue> actionWhenAllActivationVisited) {
+	public ActivationStoreImpl(List<R> transformations, BiFunction<R, Integer, Double> weightProvider,
+							   Consumer<V> actionWhenAllActivationVisited) {
 		this.transformations = transformations;
+		this.weightProvider = weightProvider;
 		this.actionWhenAllActivationVisited = actionWhenAllActivationVisited;
 		versionToActivations = new HashMap<>();
 	}
 
-	public synchronized VisitResult markNewAsVisited(VersionWithObjectiveValue to, int[] emptyEntrySizes) {
+	public synchronized VisitResult markNewAsVisited(V to, int[] emptyEntrySizes) {
 		boolean[] successful = new boolean[]{false};
 		var entries = versionToActivations.computeIfAbsent(to, x -> {
 			successful[0] = true;
@@ -47,8 +52,7 @@ public class ActivationStoreImpl implements ActivationStore {
 		return new VisitResult(successful[0], hasMore, -1, -1);
 	}
 
-	public synchronized VisitResult visitActivation(VersionWithObjectiveValue from, int transformationIndex,
-													int activationIndex) {
+	public synchronized VisitResult visitActivation(V from, int transformationIndex, int activationIndex) {
 		var entries = versionToActivations.get(from);
 		var entry = entries.get(transformationIndex);
 		final int unvisited = entry.getNumberOfUnvisitedActivations();
@@ -89,7 +93,7 @@ public class ActivationStoreImpl implements ActivationStore {
 	}
 
 	@Override
-	public synchronized boolean hasUnmarkedActivation(VersionWithObjectiveValue version) {
+	public synchronized boolean hasUnmarkedActivation(V version) {
 		var entries = versionToActivations.get(version);
 		boolean hasMore = false;
 		for (var entry : entries) {
@@ -102,7 +106,7 @@ public class ActivationStoreImpl implements ActivationStore {
 	}
 
 	@Override
-	public synchronized VisitResult getRandomAndMarkAsVisited(VersionWithObjectiveValue version, Random random) {
+	public synchronized VisitResult getRandomAndMarkAsVisited(V version, Random random) {
 		var entries = versionToActivations.get(version);
 
 		var weights = new double[entries.size()];
@@ -110,9 +114,9 @@ public class ActivationStoreImpl implements ActivationStore {
 		int numberOfAllUnvisitedActivations = 0;
 		for (int i = 0; i < weights.length; i++) {
 			var entry = entries.get(i);
-			var decisionRule = transformations.get(i);
+			var rule = transformations.get(i);
 			int unvisited = entry.getNumberOfUnvisitedActivations();
-			double weight = decisionRule.getWeight(unvisited);
+			double weight = weightProvider.apply(rule, unvisited); // rule.getWeight(unvisited);
 			weights[i] = weight;
 			totalWeight += weight;
 			numberOfAllUnvisitedActivations += unvisited;

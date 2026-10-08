@@ -10,7 +10,9 @@ import com.google.inject.Provider;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.EcoreUtil2;
 import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
 import tools.refinery.language.model.problem.*;
+import tools.refinery.language.model.problem.Parameter;
 import tools.refinery.language.scoping.imports.ImportAdapterProvider;
 import tools.refinery.language.semantics.ProblemTrace;
 import tools.refinery.language.semantics.SemanticsUtils;
@@ -19,6 +21,8 @@ import tools.refinery.language.typesystem.DataExprType;
 import tools.refinery.language.typesystem.ExprType;
 import tools.refinery.language.typesystem.FixedType;
 import tools.refinery.language.typesystem.ProblemTypeAnalyzer;
+import tools.refinery.language.utils.BuiltinAnnotationContext;
+import tools.refinery.language.utils.ParameterBinding;
 import tools.refinery.language.utils.ProblemUtil;
 import tools.refinery.language.validation.ReferenceCounter;
 import tools.refinery.logic.Constraint;
@@ -40,6 +44,9 @@ import java.util.*;
 public class QueryCompiler {
 	@Inject
 	private SemanticsUtils semanticsUtils;
+
+	@Inject
+	private BuiltinAnnotationContext builtinAnnotationContext;
 
 	@Inject
 	private ReferenceCounter referenceCounter;
@@ -66,7 +73,7 @@ public class QueryCompiler {
 		try {
 			var preparedQuery = prepareParameters(predicateDefinition);
 			var builder = Query.builder(name).parameters(preparedQuery.parameters());
-			for (var body : predicateDefinition.getBodies()) {
+			for (var body : getBodies(predicateDefinition)) {
 				buildConjunction(body, preparedQuery.parameterMap(), preparedQuery.commonLiterals(), builder);
 			}
 			return builder.build();
@@ -75,14 +82,34 @@ public class QueryCompiler {
 		}
 	}
 
+	public List<Conjunction> getBodies(PredicateDefinition predicateDefinition) {
+		if (ProblemUtil.isPreconditionPredicate(predicateDefinition)) {
+			var ruleDefinition = getEnclosingRuleDefinition(predicateDefinition);
+			return ruleDefinition.getPreconditions();
+		}
+		return predicateDefinition.getBodies();
+	}
+
+	private static @NonNull RuleDefinition getEnclosingRuleDefinition(EObject predicateDefinition) {
+		var ruleDefinition = EcoreUtil2.getContainerOfType(predicateDefinition, RuleDefinition.class);
+		if (ruleDefinition == null) {
+			throw new TracedException(predicateDefinition,
+					"Precondition predicate must be contained in a rule definition.");
+		}
+		return ruleDefinition;
+	}
+
 	PreparedQuery prepareParameters(ParametricDefinition parametricDefinition) {
-		var problemParameters = parametricDefinition.getParameters();
-		int arity = problemParameters.size();
+		var problemParameters = getParameters(parametricDefinition);
+		var nonNewProblemParameters = problemParameters.stream()
+				.filter(parameter -> builtinAnnotationContext.getParameterBinding(parameter) != ParameterBinding.NEW)
+				.toList();
+		int arity = nonNewProblemParameters.size();
 		var parameters = new NodeVariable[arity];
 		var parameterMap = HashMap.<tools.refinery.language.model.problem.Variable, Variable>newHashMap(arity);
 		var commonLiterals = new ArrayList<Literal>();
 		for (int i = 0; i < arity; i++) {
-			var problemParameter = problemParameters.get(i);
+			var problemParameter = nonNewProblemParameters.get(i);
 			var parameter = Variable.of(problemParameter.getName());
 			parameters[i] = parameter;
 			parameterMap.put(problemParameter, parameter);
@@ -93,6 +120,14 @@ public class QueryCompiler {
 			}
 		}
 		return new PreparedQuery(parameters, parameterMap, commonLiterals);
+	}
+
+	private List<Parameter> getParameters(ParametricDefinition parametricDefinition) {
+		if (ProblemUtil.isPreconditionPredicate(parametricDefinition)) {
+			var ruleDefinition = getEnclosingRuleDefinition(parametricDefinition);
+			return ruleDefinition.getParameters();
+		}
+		return parametricDefinition.getParameters();
 	}
 
 	record PreparedQuery(NodeVariable[] parameters,

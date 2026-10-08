@@ -14,6 +14,7 @@ import tools.refinery.language.tests.utils.ProblemParseHelper;
 import tools.refinery.store.dse.propagation.PropagationAdapter;
 import tools.refinery.store.dse.strategy.BestFirstStoreManager;
 import tools.refinery.store.dse.transition.DesignSpaceExplorationAdapter;
+import tools.refinery.store.dse.transition.DesignSpaceExplorationStoreAdapter;
 import tools.refinery.store.map.Version;
 import tools.refinery.store.model.ModelStore;
 import tools.refinery.store.query.interpreter.QueryInterpreterAdapter;
@@ -82,11 +83,12 @@ class ModelGenerationTest {
 				.with(PropagationAdapter.builder())
 				.with(StateCoderAdapter.builder())
 				.with(DesignSpaceExplorationAdapter.builder())
-				.with(ModelVisualizerAdapter.builder()
-						.withOutputPath("test_output_snTest")
-						.withFormat(FileFormat.DOT)
-						.withFormat(FileFormat.SVG)
-						.saveDesignSpace())
+//				.with(ModelVisualizerAdapter.builder()
+//						.withOutputPath("test_output_snTest")
+//						.withFormat(FileFormat.DOT)
+//						.withFormat(FileFormat.SVG)
+//						.saveStates()
+//						.saveDesignSpace())
 				.with(ReasoningAdapter.builder());
 
 		var modelSeed = modelInitializer.createModel(problem, storeBuilder);
@@ -101,7 +103,7 @@ class ModelGenerationTest {
 			bestFirst.startExploration(initialVersion);
 			var resultStore = bestFirst.getSolutionStore();
 			System.out.println("states size: " + resultStore.getSolutions().size());
-//			initialModel.getAdapter(ModelVisualizerAdapter.class).visualize(store.getAdapter(DesignSpaceExplorationStoreAdapter.class).getStateSpaceStore());
+//			initialModel.getAdapter(ModelVisualizerAdapter.class).visualize(store.getAdapter(DesignSpaceExplorationStoreAdapter.class).getStateSpaceStore(), true);
 		}
 	}
 
@@ -254,7 +256,7 @@ class ModelGenerationTest {
 			}
 			System.out.println("Model size: " + (max + 1));
 			System.out.println(types);
-//			model.getAdapter(ModelVisualizerAdapter.class).visualize(store.getAdapter(DesignSpaceExplorationStoreAdapter.class).getStateSpaceStore());
+//			model.getAdapter(ModelVisualizerAdapter.class).visualize(store.getAdapter(DesignSpaceExplorationStoreAdapter.class).getStateSpaceStore(), false);
 		}
 	}
 
@@ -323,7 +325,7 @@ class ModelGenerationTest {
 			}
 			System.out.println("Model size: " + (max + 1));
 			System.out.println(types);
-//			model.getAdapter(ModelVisualizerAdapter.class).visualize(store.getAdapter(DesignSpaceExplorationStoreAdapter.class).getStateSpaceStore());
+//			model.getAdapter(ModelVisualizerAdapter.class).visualize(store.getAdapter(DesignSpaceExplorationStoreAdapter.class).getStateSpaceStore(), false);
 		}
 	}
 

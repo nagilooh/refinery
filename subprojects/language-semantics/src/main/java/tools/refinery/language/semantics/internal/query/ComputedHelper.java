@@ -7,7 +7,11 @@ package tools.refinery.language.semantics.internal.query;
 
 import org.jetbrains.annotations.Nullable;
 import tools.refinery.logic.AbstractValue;
-import tools.refinery.logic.dnf.*;
+import tools.refinery.logic.dnf.Dnf;
+import tools.refinery.logic.dnf.FunctionalQuery;
+import tools.refinery.logic.dnf.Query;
+import tools.refinery.logic.dnf.RelationalQuery;
+import tools.refinery.logic.dnf.SymbolicParameter;
 import tools.refinery.logic.literal.CallPolarity;
 import tools.refinery.logic.literal.Literal;
 import tools.refinery.logic.term.NodeVariable;
@@ -15,7 +19,11 @@ import tools.refinery.logic.term.Term;
 import tools.refinery.logic.term.Variable;
 import tools.refinery.store.dse.transition.actions.ActionLiteral;
 import tools.refinery.store.reasoning.actions.PartialActionLiterals;
-import tools.refinery.store.reasoning.literal.*;
+import tools.refinery.store.reasoning.literal.Concreteness;
+import tools.refinery.store.reasoning.literal.ConcretenessSpecification;
+import tools.refinery.store.reasoning.literal.ModalConstraint;
+import tools.refinery.store.reasoning.literal.Modality;
+import tools.refinery.store.reasoning.literal.ModalitySpecification;
 import tools.refinery.store.reasoning.representation.PartialSymbol;
 
 import java.util.ArrayList;
@@ -31,7 +39,7 @@ class ComputedHelper<A extends AbstractValue<A, C>, C> {
 	private FunctionalQuery<A> helper;
 
 	ComputedHelper(PreparedRule preparedRule, PartialSymbol<A, C> partialSymbol, List<Literal> literals,
-				   Term<A> valueTerm) {
+	               Term<A> valueTerm) {
 		this.partialSymbol = partialSymbol;
 		this.literals = literals;
 		this.valueTerm = valueTerm;
@@ -79,7 +87,8 @@ class ComputedHelper<A extends AbstractValue<A, C>, C> {
 				.build();
 	}
 
-	public ActionLiteral toActionLiteral(Concreteness concreteness, List<NodeVariable> arguments) {
+	public ActionLiteral toActionLiteral(Concreteness concreteness, List<NodeVariable> arguments,
+										 boolean useModifyActions) {
 		var dnf = helper.getDnf();
 		var constraint = ModalConstraint.of(concreteness, dnf);
 		var symbolicParameters = dnf.getSymbolicParameters();
@@ -90,7 +99,9 @@ class ComputedHelper<A extends AbstractValue<A, C>, C> {
 				.symbolicParameters(symbolicParameters)
 				.clause(constraint.call(CallPolarity.POSITIVE, parameterVariables))
 				.build());
-		return PartialActionLiterals.mergeComputed(partialSymbol, arguments, concreteHelper,
-				helperParameters);
+		if (useModifyActions) {
+			return PartialActionLiterals.modifyComputed(partialSymbol, arguments, concreteHelper, helperParameters);
+		}
+		return PartialActionLiterals.mergeComputed(partialSymbol, arguments, concreteHelper, helperParameters);
 	}
 }

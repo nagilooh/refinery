@@ -24,8 +24,9 @@ class WrappedComputedFunctionAction<A extends AbstractValue<A, C>, C> extends Wr
 
 	public WrappedComputedFunctionAction(
 			RuleCompiler ruleCompiler, PreparedRule preparedRule, PartialFunction<A, C> partialFunction,
-			List<AssertionArgument> problemArguments, List<Literal> literals, Term<A> valueTerm) {
-		super(ruleCompiler, preparedRule, partialFunction, problemArguments);
+			List<AssertionArgument> problemArguments, List<Literal> literals, Term<A> valueTerm,
+			boolean useModifyActions) {
+		super(ruleCompiler, preparedRule, partialFunction, problemArguments, useModifyActions);
 		helper = new ComputedHelper<>(preparedRule, partialFunction, literals, valueTerm);
 	}
 
@@ -47,6 +48,6 @@ class WrappedComputedFunctionAction<A extends AbstractValue<A, C>, C> extends Wr
 
 	@Override
 	protected ActionLiteral getActionLiteral(Concreteness concreteness, List<NodeVariable> arguments) {
-		return helper.toActionLiteral(concreteness, arguments);
+		return helper.toActionLiteral(concreteness, arguments, useModifyActions);
 	}
 }

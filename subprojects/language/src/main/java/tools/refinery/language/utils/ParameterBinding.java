@@ -9,5 +9,7 @@ public enum ParameterBinding {
 	SINGLE,
 	FOCUS,
 	LONE,
-	MULTI
+	MULTI,
+	NEW,
+	DELETE,
 }

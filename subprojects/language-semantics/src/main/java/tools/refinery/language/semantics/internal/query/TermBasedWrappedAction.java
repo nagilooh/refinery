@@ -25,8 +25,9 @@ abstract class TermBasedWrappedAction<A extends AbstractValue<A, C>, C> extends 
 	private final PartialSymbol<A, C> partialSymbol;
 
 	protected TermBasedWrappedAction(RuleCompiler ruleCompiler, PreparedRule preparedRule,
-									 PartialSymbol<A, C> partialSymbol, List<AssertionArgument> problemArguments) {
-		super(ruleCompiler, preparedRule, problemArguments);
+	                                 PartialSymbol<A, C> partialSymbol, List<AssertionArgument> problemArguments,
+	                                 boolean useModifyActions) {
+		super(ruleCompiler, preparedRule, problemArguments, useModifyActions);
 		this.partialSymbol = partialSymbol;
 	}
 
@@ -58,7 +59,7 @@ abstract class TermBasedWrappedAction<A extends AbstractValue<A, C>, C> extends 
 	}
 
 	protected abstract @NotNull Term<A> getCurrentTerm(ConcretenessSpecification concreteness,
-                                                       List<NodeVariable> arguments);
+	                                                   List<NodeVariable> arguments);
 
 	protected abstract @Nullable Term<A> getValueTerm(ConcretenessSpecification concreteness);
 }

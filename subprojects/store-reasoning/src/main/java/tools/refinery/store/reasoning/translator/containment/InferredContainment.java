@@ -11,7 +11,7 @@ import tools.refinery.logic.term.truthvalue.TruthValue;
 import java.util.Objects;
 import java.util.Set;
 
-final class InferredContainment {
+public final class InferredContainment {
 	public static final InferredContainment UNKNOWN = new InferredContainment(
 			TruthValue.UNKNOWN, Set.of(), Set.of());
 	private final TruthValue contains;

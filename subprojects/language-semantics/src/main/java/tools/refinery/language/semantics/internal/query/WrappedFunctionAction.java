@@ -18,8 +18,8 @@ import java.util.List;
 abstract class WrappedFunctionAction<A extends AbstractValue<A, C>, C> extends TermBasedWrappedAction<A, C> {
 	protected WrappedFunctionAction(
 			RuleCompiler ruleCompiler, PreparedRule preparedRule, PartialFunction<A, C> partialFunction,
-			List<AssertionArgument> problemArguments) {
-		super(ruleCompiler, preparedRule, partialFunction, problemArguments);
+			List<AssertionArgument> problemArguments, boolean useModifyActions) {
+		super(ruleCompiler, preparedRule, partialFunction, problemArguments, useModifyActions);
 	}
 
 	public PartialFunction<A, C> getPartialFunction() {

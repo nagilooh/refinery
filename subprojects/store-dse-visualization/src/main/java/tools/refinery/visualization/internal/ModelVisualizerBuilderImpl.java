@@ -11,25 +11,30 @@ import tools.refinery.store.dse.transition.statespace.StateSpaceStore;
 import tools.refinery.store.dse.transition.statespace.internal.StateSpaceStoreImpl;
 import tools.refinery.store.model.ModelStore;
 import tools.refinery.store.model.ModelStoreBuilder;
+import tools.refinery.store.transition.system.TransitionSystemBuilder;
 import tools.refinery.visualization.ModelVisualizerBuilder;
 
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.function.Function;
 
 public class ModelVisualizerBuilderImpl
 		extends AbstractModelAdapterBuilder<ModelVisualizerStoreAdapterImpl>
 		implements ModelVisualizerBuilder {
 	private String dotBinaryPath = "dot";
 	private String outputPath;
+	private Function<Integer, String> nodeNameProvider;
 	private boolean saveDesignSpace = false;
 	private boolean saveStates = false;
 	private final Set<FileFormat> formats = new LinkedHashSet<>();
 	private final StateSpaceStore stateSpaceStore = new StateSpaceStoreImpl();
+	private boolean hasDse;
+	private boolean hasTs;
 
 	@Override
 	protected ModelVisualizerStoreAdapterImpl doBuild(ModelStore store) {
-		return new ModelVisualizerStoreAdapterImpl(store, stateSpaceStore, dotBinaryPath, outputPath, formats, saveDesignSpace,
-				saveStates);
+		return new ModelVisualizerStoreAdapterImpl(store, stateSpaceStore, dotBinaryPath, outputPath, formats,
+				nodeNameProvider, saveDesignSpace, saveStates, hasDse, hasTs);
 	}
 
 	@Override
@@ -54,6 +59,13 @@ public class ModelVisualizerBuilderImpl
 	}
 
 	@Override
+	public ModelVisualizerBuilder withTrace(Function<Integer, String> nodeNameProvider) {
+		checkNotConfigured();
+		this.nodeNameProvider = nodeNameProvider;
+		return this;
+	}
+
+	@Override
 	public ModelVisualizerBuilder saveDesignSpace() {
 		checkNotConfigured();
 		this.saveDesignSpace = true;
@@ -72,7 +84,15 @@ public class ModelVisualizerBuilderImpl
 		if (outputPath == null || outputPath.isEmpty()) {
 			throw new IllegalStateException("Output path must be set for ModelVisualizerAdapter");
 		}
-		storeBuilder.tryGetAdapter(DesignSpaceExplorationBuilder.class)
-				.ifPresent(dseBuilder -> dseBuilder.with(stateSpaceStore));
+		var dseAdapterOptional = storeBuilder.tryGetAdapter(DesignSpaceExplorationBuilder.class);
+		var tsAdapterOptional = storeBuilder.tryGetAdapter(TransitionSystemBuilder.class);
+		hasDse = dseAdapterOptional.isPresent();
+		hasTs = tsAdapterOptional.isPresent();
+		if (!hasDse && !hasTs) {
+			throw new IllegalStateException(
+					"ModelVisualizerAdapter requires either DesignSpaceExplorationBuilder or TransitionSystemBuilder to be present");
+		}
+		dseAdapterOptional.ifPresent(dseBuilder -> dseBuilder.with(stateSpaceStore));
+		tsAdapterOptional.ifPresent(tsBuilder -> tsBuilder.with(stateSpaceStore));
 	}
 }

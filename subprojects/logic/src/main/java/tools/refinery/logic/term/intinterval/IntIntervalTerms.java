@@ -8,6 +8,7 @@ package tools.refinery.logic.term.intinterval;
 import tools.refinery.logic.term.*;
 import tools.refinery.logic.term.abstractdomain.AbstractDomainTerms;
 import tools.refinery.logic.term.operators.AddTerm;
+import tools.refinery.logic.term.operators.DivTerm;
 import tools.refinery.logic.term.operators.MulTerm;
 import tools.refinery.logic.term.operators.PlusTerm;
 import tools.refinery.logic.term.operators.SubTerm;
@@ -54,6 +55,10 @@ public class IntIntervalTerms {
 
 	public static Term<IntInterval> mul(Term<IntInterval> left, Term<IntInterval> right) {
 		return new MulTerm<>(IntInterval.class, left, right);
+	}
+
+	public static Term<IntInterval> div(Term<IntInterval> left, Term<IntInterval> right) {
+		return new DivTerm<>(IntInterval.class, left, right);
 	}
 
 	public static Term<IntInterval> range(Term<IntInterval> left, Term<IntInterval> right) {

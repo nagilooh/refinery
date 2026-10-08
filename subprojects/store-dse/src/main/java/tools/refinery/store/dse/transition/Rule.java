@@ -30,12 +30,21 @@ public class Rule {
 		this.action = action;
 	}
 
+	@Override
+	public String toString() {
+		return name;
+	}
+
 	public String getName() {
 		return name;
 	}
 
 	public RelationalQuery getPrecondition() {
 		return precondition;
+	}
+
+	public Action getAction() {
+		return action;
 	}
 
 	public List<AnyQuery> getQueries() {

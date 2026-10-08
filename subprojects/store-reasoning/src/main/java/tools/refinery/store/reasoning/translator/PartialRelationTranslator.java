@@ -26,7 +26,10 @@ import tools.refinery.store.query.view.MustView;
 import tools.refinery.store.reasoning.ReasoningAdapter;
 import tools.refinery.store.reasoning.ReasoningBuilder;
 import tools.refinery.store.reasoning.actions.PartialActionLiterals;
-import tools.refinery.store.reasoning.interpretation.*;
+import tools.refinery.store.reasoning.interpretation.PartialInterpretation;
+import tools.refinery.store.reasoning.interpretation.PartialRelationRewriter;
+import tools.refinery.store.reasoning.interpretation.QueryBasedRelationInterpretationFactory;
+import tools.refinery.store.reasoning.interpretation.QueryBasedRelationRewriter;
 import tools.refinery.store.reasoning.lifting.DnfLifter;
 import tools.refinery.store.reasoning.literal.Concreteness;
 import tools.refinery.store.reasoning.literal.Modality;
@@ -365,7 +368,7 @@ public final class PartialRelationTranslator extends PartialSymbolTranslator<Tru
 			// We checked in the condition that this is safe.
 			@SuppressWarnings("unchecked")
 			var typedStorageSymbol = (Symbol<TruthValue>) storageSymbol;
-			interpretationRefiner = ConcreteRelationRefiner.of(typedStorageSymbol, roundingMode);
+			interpretationRefiner = ConcreteRelationRefiner.of(typedStorageSymbol, query, roundingMode);
 		}
 	}
 

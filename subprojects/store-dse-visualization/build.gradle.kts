@@ -16,5 +16,6 @@ mavenArtifact {
 dependencies {
 	api(project(":refinery-store-query"))
 	implementation(project(":refinery-store-dse"))
+	implementation(project(":refinery-store-transition-system"))
 	implementation(libs.slf4j)
 }

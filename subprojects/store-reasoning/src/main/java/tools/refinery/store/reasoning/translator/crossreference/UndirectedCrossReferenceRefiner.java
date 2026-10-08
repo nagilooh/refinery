@@ -34,6 +34,7 @@ class UndirectedCrossReferenceRefiner extends ConcreteRelationRefiner {
 
 	@Override
 	public void afterCreate() {
+		super.afterCreate();
 		var adapter = getAdapter();
 		typeConstraintRefiner = new TypeConstraintRefiner(adapter, sourceType, sourceType, supersets, supersets);
 	}
@@ -42,13 +43,23 @@ class UndirectedCrossReferenceRefiner extends ConcreteRelationRefiner {
 	public boolean merge(Tuple key, TruthValue value) {
 		int source = key.get(0);
 		int target = key.get(1);
-		var currentValue = get(key);
-		var mergedValue = concretizationAwareMeet(currentValue, value);
-		if (!Objects.equals(currentValue, mergedValue)) {
-			var oldValue = put(key, mergedValue);
+		var oldValue = get(key);
+		var mergedValue = concretizationAwareMeet(oldValue, value);
+		if (!Objects.equals(oldValue, mergedValue)) {
+			put(key, mergedValue);
 			if (source != target) {
-				var inverseOldValue = put(Tuple.of(target, source), mergedValue);
+				var oppositeKey = Tuple.of(target, source);
+				var inverseOldValue = put(oppositeKey, mergedValue);
 				if (!Objects.equals(oldValue, inverseOldValue)) {
+					return false;
+				}
+
+				if (!(notifyRefinementListeners(key, mergedValue, oldValue) &&
+						notifyRefinementListeners(oppositeKey, mergedValue, oldValue))) {
+					return false;
+				}
+			} else {
+				if (!notifyRefinementListeners(key, mergedValue, oldValue)) {
 					return false;
 				}
 			}
@@ -60,13 +71,41 @@ class UndirectedCrossReferenceRefiner extends ConcreteRelationRefiner {
 	}
 
 	@Override
+	public boolean join(Tuple key, TruthValue value) {
+		if (concretizationInProgress()) {
+			return false;
+		}
+
+		int source = key.get(0);
+		int target = key.get(1);
+		var oldValue = get(key);
+		var joinedValue = oldValue.join(value);
+		if (!Objects.equals(oldValue, joinedValue)) {
+			put(key, joinedValue);
+			if (source != target) {
+				var oppositeKey = Tuple.of(target, source);
+				var inverseOldValue = put(oppositeKey, joinedValue);
+				if (!Objects.equals(oldValue, inverseOldValue)) {
+					return false;
+				}
+
+				return notifyAbstractionListeners(key, oldValue, joinedValue) &&
+						notifyAbstractionListeners(oppositeKey, inverseOldValue, joinedValue);
+			} else {
+				return notifyAbstractionListeners(key, oldValue, joinedValue);
+			}
+		}
+		return true;
+	}
+
+	@Override
 	public void afterInitialize(ModelSeed modelSeed) {
 		var linkType = getPartialSymbol();
 		typeConstraintRefiner.mergeFromSeed(linkType, modelSeed);
 	}
 
 	public static Factory<TruthValue, Boolean> of(Symbol<TruthValue> concreteSymbol, UndirectedCrossReferenceInfo info,
-												  RoundingMode roundingMode) {
+	                                              RoundingMode roundingMode) {
 		return (adapter, partialSymbol) -> new UndirectedCrossReferenceRefiner(adapter, partialSymbol, concreteSymbol,
 				info, roundingMode);
 	}

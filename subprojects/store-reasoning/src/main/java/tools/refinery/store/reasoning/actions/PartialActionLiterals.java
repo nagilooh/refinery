@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 The Refinery Authors <https://refinery.tools/>
+ * SPDX-FileCopyrightText: 2023-2026 The Refinery Authors <https://refinery.tools/>
  *
  * SPDX-License-Identifier: EPL-2.0
  */
@@ -43,6 +43,37 @@ public final class PartialActionLiterals {
 	public static MergeActionLiteral<TruthValue, Boolean> remove(PartialRelation partialRelation,
 																 NodeVariable... parameters) {
 		return merge(partialRelation, TruthValue.FALSE, parameters);
+	}
+
+	public static <A extends AbstractValue<A, C>, C> JoinActionLiteral<A, C> join(
+			PartialSymbol<A, C> partialSymbol, A value, NodeVariable... parameters) {
+		return join(partialSymbol, value, List.of(parameters));
+	}
+
+	public static <A extends AbstractValue<A, C>, C> JoinActionLiteral<A, C> join(
+			PartialSymbol<A, C> partialSymbol, A value, List<NodeVariable> parameters) {
+		return new JoinActionLiteral<>(partialSymbol, value, parameters);
+	}
+
+	public static JoinActionLiteral<TruthValue, Boolean> forget(PartialSymbol<TruthValue, Boolean> partialSymbol,
+																NodeVariable... parameters) {
+		return join(partialSymbol, TruthValue.UNKNOWN, parameters);
+	}
+
+	public static <A extends AbstractValue<A, C>, C> ModifyActionLiteral<A, C> modify(
+			PartialSymbol<A, C> partialSymbol, A value, NodeVariable... parameters) {
+		return modify(partialSymbol, value, List.of(parameters));
+	}
+
+	public static <A extends AbstractValue<A, C>, C> ModifyActionLiteral<A, C> modify(
+			PartialSymbol<A, C> partialSymbol, A value, List<NodeVariable> parameters) {
+		return new ModifyActionLiteral<>(partialSymbol, value, parameters);
+	}
+
+	public static <A extends AbstractValue<A, C>, C> ComputedModifyActionLiteral<A, C> modifyComputed(
+			PartialSymbol<A, C> partialSymbol, List<NodeVariable> parameters, FunctionalQuery<A> valueQuery,
+			List<NodeVariable> arguments) {
+		return new ComputedModifyActionLiteral<>(partialSymbol, parameters, valueQuery, arguments);
 	}
 
 	public static FocusActionLiteral focus(NodeVariable parent, NodeVariable child) {

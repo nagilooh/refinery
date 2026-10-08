@@ -43,6 +43,7 @@ public class PredicateTranslator implements ModelStoreConfiguration {
 	private final List<PartialRelation> parameterTypes;
 	private final Set<PartialRelation> supersets;
 	private final Dnf supersetHelper;
+	private PartialRelationTranslator translator;
 
 	public PredicateTranslator(PartialRelation relation, RelationalQuery query, List<PartialRelation> parameterTypes,
 							   Set<PartialRelation> supersets, boolean mutable, TruthValue defaultValue) {
@@ -62,9 +63,13 @@ public class PredicateTranslator implements ModelStoreConfiguration {
 		this.defaultValue = defaultValue;
 	}
 
+	public PartialRelationTranslator getTranslator() {
+		return translator;
+	}
+
 	@Override
 	public void apply(ModelStoreBuilder storeBuilder) {
-		var translator = PartialRelationTranslator.of(relation)
+		translator = PartialRelationTranslator.of(relation)
 				.query(query);
 		if (mutable) {
 			var symbol = Symbol.of(relation.name(), relation.arity(), TruthValue.class, defaultValue);
@@ -91,7 +96,7 @@ public class PredicateTranslator implements ModelStoreConfiguration {
 
 			supersetCandidateMay(storeBuilder, translator);
 
-			translator.refiner(PredicateRefiner.of(symbol, parameterTypes, supersets, RoundingMode.NONE));
+			translator.refiner(PredicateRefiner.of(symbol, parameterTypes, supersets, RoundingMode.NONE, query));
 		} else if (defaultValue.may()) {
 			if (supersets.isEmpty()) {
 				// If all values are permitted, we don't need to check for any forbidden values in the model.

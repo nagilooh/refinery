@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2021-2023 The Refinery Authors <https://refinery.tools/>
+ * SPDX-FileCopyrightText: 2021-2026 The Refinery Authors <https://refinery.tools/>
  *
  * SPDX-License-Identifier: EPL-2.0
  */
@@ -9,6 +9,7 @@ import tools.refinery.store.adapter.ModelStoreAdapter;
 import tools.refinery.visualization.internal.FileFormat;
 
 import java.util.Set;
+import java.util.function.Function;
 
 public interface ModelVisualizerStoreAdapter extends ModelStoreAdapter {
 
@@ -19,4 +20,10 @@ public interface ModelVisualizerStoreAdapter extends ModelStoreAdapter {
 	boolean isRenderStates();
 
 	Set<FileFormat> getFormats();
+
+	Function<Integer, String> getNodeNameProvider();
+
+	boolean hasDesignSpaceExploration();
+
+	boolean hasTransitionSystem();
 }

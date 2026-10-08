@@ -653,9 +653,9 @@ public class ProblemValidator extends AbstractProblemValidator {
 		var binding = builtinAnnotationContext.getParameterBinding(parameter);
 		if (parametricDefinition instanceof RuleDefinition rule) {
 			var kind = rule.getKind();
-			if (binding != ParameterBinding.SINGLE && ProblemUtil.parameterBindingAnnotationsAreForbidden(rule)) {
-				var message = "Parameter binding annotations are not supported in %s rules."
-						.formatted(kind.getName().toLowerCase(Locale.ROOT));
+			if (ProblemUtil.isParameterBindingAnnotationForbidden(rule, binding)) {
+				var message = "%s parameter binding annotations are not supported in %s rules."
+						.formatted(binding, kind.getName().toLowerCase(Locale.ROOT));
 				acceptError(message, parameter, ProblemPackage.Literals.NAMED_ELEMENT__NAME, INSIGNIFICANT_INDEX,
 						INVALID_MODALITY_ISSUE);
 			}

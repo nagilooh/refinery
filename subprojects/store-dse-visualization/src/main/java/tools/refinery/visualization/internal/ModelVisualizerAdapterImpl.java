@@ -5,6 +5,8 @@
  */
 package tools.refinery.visualization.internal;
 
+import tools.refinery.logic.term.cardinalityinterval.CardinalityIntervals;
+import tools.refinery.logic.term.intinterval.IntInterval;
 import tools.refinery.logic.term.truthvalue.TruthValue;
 import tools.refinery.store.dse.transition.DesignSpaceExplorationAdapter;
 import tools.refinery.store.dse.transition.Transformation;
@@ -12,26 +14,52 @@ import tools.refinery.store.dse.transition.statespace.StateSpaceStore;
 import tools.refinery.store.map.Version;
 import tools.refinery.store.model.Interpretation;
 import tools.refinery.store.model.Model;
-import tools.refinery.store.representation.AnySymbol;
+import tools.refinery.store.model.wrapper.InterpretationInterpretationWrapper;
+import tools.refinery.store.model.wrapper.InterpretationWrapper;
+import tools.refinery.store.representation.wrapper.SymbolSymbolWrapper;
+import tools.refinery.store.representation.wrapper.SymbolWrapper;
+import tools.refinery.store.transition.system.TransitionSystemAdapter;
+import tools.refinery.store.transition.system.statespace.Transition;
 import tools.refinery.store.tuple.Tuple;
 import tools.refinery.visualization.ModelVisualizerAdapter;
 import tools.refinery.visualization.ModelVisualizerStoreAdapter;
 
 import java.io.*;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 
 	private final Model model;
 	private final ModelVisualizerStoreAdapterImpl storeAdapter;
-	private final Map<AnySymbol, Interpretation<?>> allInterpretations;
+	private Map<SymbolWrapper, InterpretationWrapper<?>> allInterpretations;
 	private final String outputPath;
 	private final Set<FileFormat> formats;
+	private final Function<Integer, String> nodeNameProvider;
 	private final boolean renderDesignSpace;
 	private final boolean renderStates;
 	private final StateSpaceStore stateSpaceStore;
 	private final List<Transformation> transformations;
+	private final List<Transition> transitions;
+
+	@FunctionalInterface
+	private interface SkipVisualizationPredicate {
+		boolean shouldSkip(SymbolWrapper symbol, Tuple key, Object value);
+	}
+	private final SkipVisualizationPredicate skippedEntry = (symbol, key, value) -> {
+		var name = symbol.name().toLowerCase();
+		if (name.equals("exists") && value.equals(TruthValue.TRUE)) {
+			return true;
+		}
+		if (name.equals("equals") && value.equals(TruthValue.TRUE) && key.get(0) == key.get(1)) {
+			return true;
+		}
+		if (name.equals("count") && (value.equals(CardinalityIntervals.ONE) || value.equals(IntInterval.ONE))) {
+			return true;
+		}
+		return false;
+	};
 
 	private static final Map<Object, String> truthValueToDot = Map.of(
 			TruthValue.TRUE, "1",
@@ -53,6 +81,8 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 		if (formats.isEmpty()) {
 			formats.add(FileFormat.SVG);
 		}
+		var nodeNameProvider = storeAdapter.getNodeNameProvider();
+		this.nodeNameProvider = nodeNameProvider == null ? Object::toString : nodeNameProvider;
 		this.renderDesignSpace = storeAdapter.isRenderDesignSpace();
 		this.renderStates = storeAdapter.isRenderStates();
 
@@ -63,10 +93,20 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 				continue;
 			}
 			var interpretation = (Interpretation<?>) model.getInterpretation(symbol);
-			allInterpretations.put(symbol, interpretation);
+			allInterpretations.put(new SymbolSymbolWrapper(symbol),
+					new InterpretationInterpretationWrapper<>(interpretation));
 		}
 		this.stateSpaceStore = storeAdapter.getStateSpaceStore();
-		this.transformations = model.getAdapter(DesignSpaceExplorationAdapter.class).getTransformations();
+		if (storeAdapter.hasDesignSpaceExploration()) {
+			this.transformations = model.getAdapter(DesignSpaceExplorationAdapter.class).getTransformations();
+		} else {
+			this.transformations = null;
+		}
+		if (storeAdapter.hasTransitionSystem()) {
+			this.transitions = model.getAdapter(TransitionSystemAdapter.class).getTransitions();
+		} else {
+			this.transitions = null;
+		}
 	}
 
 	@Override
@@ -79,9 +119,9 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 		return this.storeAdapter;
 	}
 
-	private String createDotForCurrentModelState() {
+	private String createDotForCurrentModelState(List<String> hiddenRelations) {
 
-		var unaryTupleToInterpretationsMap = new HashMap<Tuple, LinkedHashSet<Interpretation<?>>>();
+		var unaryTupleToInterpretationsMap = new HashMap<Tuple, LinkedHashSet<InterpretationWrapper<?>>>();
 
 		var sb = new StringBuilder();
 
@@ -102,22 +142,31 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 				""");
 
 		for (var entry : allInterpretations.entrySet()) {
-			var key = entry.getKey();
-			var arity = key.arity();
+			var symbol = entry.getKey();
+			if (hiddenRelations.contains(symbol.name())) {
+				continue;
+			}
+			var arity = symbol.arity();
 			var cursor = entry.getValue().getAll();
 			if (arity == 1) {
 				while (cursor.move()) {
+					if (skippedEntry.shouldSkip(symbol, cursor.getKey(), cursor.getValue())) {
+						continue;
+					}
 					unaryTupleToInterpretationsMap.computeIfAbsent(cursor.getKey(), k -> new LinkedHashSet<>())
 							.add(entry.getValue());
 				}
 			} else if (arity == 2) {
 				while (cursor.move()) {
+					if (skippedEntry.shouldSkip(symbol, cursor.getKey(), cursor.getValue())) {
+						continue;
+					}
 					var tuple = cursor.getKey();
 					for (var i = 0; i < tuple.getSize(); i++) {
 						var id = tuple.get(i);
 						unaryTupleToInterpretationsMap.computeIfAbsent(Tuple.of(id), k -> new LinkedHashSet<>());
 					}
-					sb.append(drawEdge(cursor.getKey(), key, entry.getValue()));
+					sb.append(drawEdge(cursor.getKey(), symbol, cursor.getValue()));
 				}
 			}
 		}
@@ -128,14 +177,14 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 		return sb.toString();
 	}
 
-	private StringBuilder drawElement(Map.Entry<Tuple, LinkedHashSet<Interpretation<?>>> entry) {
+	private StringBuilder drawElement(Map.Entry<Tuple, LinkedHashSet<InterpretationWrapper<?>>> entry) {
 		var sb = new StringBuilder();
 
 		var tableStyle =  " CELLSPACING=\"0\" BORDER=\"2\" CELLBORDER=\"0\" CELLPADDING=\"4\" STYLE=\"ROUNDED\"";
 
 		var key = entry.getKey();
 		var id = key.get(0);
-		var mainLabel = String.valueOf(id);
+		var mainLabel = nodeNameProvider.apply(id);
 		var interpretations = entry.getValue();
 		var backgroundColor = toBackgroundColorString(averageColor(interpretations));
 
@@ -178,9 +227,7 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 		return sb;
 	}
 
-	private String drawEdge(Tuple edge, AnySymbol symbol, Interpretation<?> interpretation) {
-		var value = interpretation.get(edge);
-
+	private String drawEdge(Tuple edge, SymbolWrapper symbol, Object value) {
 		if (value == null || value.equals(TruthValue.FALSE) || value.equals(false)) {
 			return "";
 		}
@@ -220,11 +267,11 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 	private Integer[] typeColor(String name) {
 		@SuppressWarnings("squid:S2245")
 		var random = new Random(name.hashCode());
-		return new Integer[] { random.nextInt(128) + 128, random.nextInt(128) + 128, random.nextInt(128) + 128 };
+		return new Integer[]{random.nextInt(128) + 128, random.nextInt(128) + 128, random.nextInt(128) + 128};
 	}
 
-	private Integer[] averageColor(Set<Interpretation<?>> interpretations) {
-		if(interpretations.isEmpty()) {
+	private Integer[] averageColor(Set<InterpretationWrapper<?>> interpretations) {
+		if (interpretations.isEmpty()) {
 			return new Integer[]{256, 256, 256};
 		}
 		// TODO: Only use interpretations where the value is not false (or unknown)
@@ -232,18 +279,17 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 				.map(i -> typeColor(i.getSymbol().name())).toArray(Integer[][]::new);
 
 
-
-		return new Integer[] {
+		return new Integer[]{
 				Arrays.stream(symbols).map(i -> i[0]).collect(Collectors.averagingInt(Integer::intValue)).intValue(),
 				Arrays.stream(symbols).map(i -> i[1]).collect(Collectors.averagingInt(Integer::intValue)).intValue(),
 				Arrays.stream(symbols).map(i -> i[2]).collect(Collectors.averagingInt(Integer::intValue)).intValue()
 		};
 	}
 
-	private String createDotForModelState(Version version) {
+	private String createDotForModelState(Version version, List<String> hiddenRelations) {
 		var currentVersion = model.getState();
 		model.restore(version);
-		var graph = createDotForCurrentModelState();
+		var graph = createDotForCurrentModelState(hiddenRelations);
 		model.restore(currentVersion);
 		return graph;
 	}
@@ -289,7 +335,9 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 				var fromState = this.stateSpaceStore.getStateId(transition.from());
 				var toState = this.stateSpaceStore.getStateId(transition.to());
 				var visitResult = transition.visitResult();
-				var ruleName = this.transformations.get(visitResult.transformation()).getDefinition().rule().getName();
+				var ruleName = this.transitions != null ? this.transitions.get(visitResult.transformation()).toString() :
+						this.transformations.get(visitResult.transformation()).getDefinition().rule().getName();
+				final String activationLabel;
 				var activationReference = new ActivationReference(transition.from(), visitResult.transformation(),
 						visitResult.activation());
 				if (!transition.from().equals(restoredVersion)) {
@@ -297,7 +345,7 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 					restoredVersion = transition.from();
 				}
 				var activationTuple = resolveActivationTuple(activationReference);
-				var activationLabel = activationTuple.toString();
+				activationLabel = activationTuple.toString();
 				var label = ruleName + ", " + activationLabel;
 				transitionsBuilder.append(fromState).append(" -> ").append(toState)
 						.append(" [label=\"").append(transition.id()).append(": ").append(label).append("\"]\n");
@@ -313,17 +361,32 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 		int activationIndex = activationReference.activationIndex();
 
 		Tuple activation;
-		if (transformationIndex < 0 || transformationIndex >= this.transformations.size()) {
-			throw new IllegalStateException("Transformation index %d is out of bounds for state %s"
-					.formatted(transformationIndex, activationReference.fromVersion()));
+		if (this.transitions == null) {
+			if (transformationIndex < 0 || transformationIndex >= this.transformations.size()) {
+				throw new IllegalStateException("Transformation index %d is out of bounds for state %s"
+						.formatted(transformationIndex, activationReference.fromVersion()));
+			}
+			var transformation = this.transformations.get(transformationIndex);
+			int activationCount = transformation.getAllActivationsAsResultSet().size();
+			if (activationIndex < 0 || activationIndex >= activationCount) {
+				throw new IllegalStateException("Activation index %d is out of bounds (size=%d) for transformation %d in state %s"
+						.formatted(activationIndex, activationCount, transformationIndex, activationReference.fromVersion()));
+			}
+			activation = transformation.getActivation(activationIndex);
 		}
-		var transformation = this.transformations.get(transformationIndex);
-		int activationCount = transformation.getAllActivationsAsResultSet().size();
-		if (activationIndex < 0 || activationIndex >= activationCount) {
-			throw new IllegalStateException("Activation index %d is out of bounds (size=%d) for transformation %d in state %s"
-					.formatted(activationIndex, activationCount, transformationIndex, activationReference.fromVersion()));
+		else {
+			if (transformationIndex < 0 || transformationIndex >= this.transitions.size()) {
+				throw new IllegalStateException("Transition index %d is out of bounds for state %s"
+						.formatted(transformationIndex, activationReference.fromVersion()));
+			}
+			var transition = this.transitions.get(transformationIndex);
+			int activationCount = transition.getAllActivationsAsResultSet().size();
+			if (activationIndex < 0 || activationIndex >= activationCount) {
+				throw new IllegalStateException("Activation index %d is out of bounds (size=%d) for transition %d in state %s"
+						.formatted(activationIndex, activationCount, transformationIndex, activationReference.fromVersion()));
+			}
+			activation = transition.getActivation(activationIndex);
 		}
-		activation = transformation.getActivation(activationIndex);
 
 		return activation;
 	}
@@ -363,21 +426,23 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 	}
 
 	@Override
-	public void visualize(StateSpaceStore stateSpaceStore, boolean renderTransitionsToAlreadyVisitedStates) {
-		File filePath = new File(this.outputPath);
+	public void visualize(StateSpaceStore stateSpaceStore, boolean renderTransitionsToAlreadyVisitedStates, String subPath, String name, Map<SymbolWrapper,
+			InterpretationWrapper<?>> interpretations, List<String> hiddenRelations) {
+		var path = subPath == null ? outputPath : outputPath + "/" + subPath;
+		File filePath = new File(path);
 		filePath.mkdirs();
 
 		if (renderStates) {
 			for (var state : this.stateSpaceStore.getStates()) {
 				var stateId = state.id();
 				var stateVersion = state.version();
-				var stateDot = createDotForModelState(stateVersion);
+				var stateDot = createDotForModelState(stateVersion, hiddenRelations);
 				for (var format : this.formats) {
 					if (format == FileFormat.DOT) {
-						saveDot(stateDot, this.outputPath + "/" + stateId + ".dot");
+						saveDot(stateDot, path + "/" + stateId + ".dot");
 					}
 					else {
-						renderDot(stateDot, format, this.outputPath + "/" + stateId + "." + format.getFormat());
+						renderDot(stateDot, format, path + "/" + stateId + "." + format.getFormat());
 					}
 				}
 			}
@@ -386,11 +451,12 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 		if (renderDesignSpace) {
 			var designSpaceDot = buildDesignSpaceDot(renderTransitionsToAlreadyVisitedStates);
 			for (var format : this.formats) {
+				var filename = name == null ? "designSpace" : name;
 				if (format == FileFormat.DOT) {
-					saveDot(designSpaceDot, this.outputPath + "/designSpace.dot");
+					saveDot(designSpaceDot, path + "/" + filename + ".dot");
 				}
 				else {
-					renderDot(designSpaceDot, format, this.outputPath + "/designSpace." + format.getFormat());
+					renderDot(designSpaceDot, format, path + "/" + filename + "." + format.getFormat());
 				}
 			}
 		}

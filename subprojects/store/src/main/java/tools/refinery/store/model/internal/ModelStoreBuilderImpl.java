@@ -52,6 +52,11 @@ public class ModelStoreBuilderImpl implements ModelStoreBuilder {
 	}
 
 	@Override
+	public Optional<AnySymbol> getSymbol(String name) {
+		return allSymbols.stream().filter(s -> name.equals(s.name())).findFirst();
+	}
+
+	@Override
 	public ModelStoreBuilder with(ModelAdapterBuilder adapterBuilder) {
 		for (var existingAdapter : adapters) {
 			if (existingAdapter.getClass().equals(adapterBuilder.getClass())) {

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 The Refinery Authors <https://refinery.tools/>
+ * SPDX-FileCopyrightText: 2024-2026 The Refinery Authors <https://refinery.tools/>
  *
  * SPDX-License-Identifier: EPL-2.0
  */
@@ -25,7 +25,6 @@ import tools.refinery.logic.term.Variable;
 import tools.refinery.logic.term.truthvalue.TruthValue;
 import tools.refinery.store.dse.transition.DecisionRule;
 import tools.refinery.store.dse.transition.Rule;
-import tools.refinery.store.dse.transition.RuleBuilder;
 import tools.refinery.store.dse.transition.actions.ActionLiteral;
 import tools.refinery.store.dse.transition.actions.ActionLiterals;
 import tools.refinery.store.reasoning.ReasoningAdapter;
@@ -35,6 +34,7 @@ import tools.refinery.store.reasoning.representation.PartialFunction;
 import tools.refinery.store.reasoning.representation.PartialRelation;
 import tools.refinery.store.reasoning.theory.TheoryRule;
 import tools.refinery.store.reasoning.translator.multiobject.MultiObjectTranslator;
+import tools.refinery.store.transition.system.statespace.TransitionRule;
 
 import java.util.*;
 
@@ -71,7 +71,7 @@ public class RuleCompiler {
 		}
 		var preparedRule = prepareRule(ruleDefinition, true);
 		var firstConsequent = consequents.getFirst();
-		var wrappedActions = wrapConsequent(firstConsequent, preparedRule);
+		var wrappedActions = wrapConsequent(firstConsequent, preparedRule, false);
 		var parameters = preparedRule.allParameters();
 
 		var moreCommonLiterals = new ArrayList<Literal>();
@@ -106,17 +106,20 @@ public class RuleCompiler {
 		var ruleBuilder = Rule.builder(name)
 				.parameters(parameters)
 				.clause(preconditionWithBlocker.call(CallPolarity.POSITIVE, parameters));
-		buildConsequent(firstConsequent, wrappedActions, preparedRule, ruleBuilder);
+		var actionLiterals = new ArrayList<ActionLiteral>();
+		buildConsequent(firstConsequent, wrappedActions, preparedRule, actionLiterals);
+		ruleBuilder.action(actionLiterals);
 		return ruleBuilder.build();
 	}
 
-	private List<WrappedAction> wrapConsequent(Consequent consequent, PreparedRule preparedRule) {
+	private List<WrappedAction> wrapConsequent(Consequent consequent, PreparedRule preparedRule,
+											   boolean useModifyActions) {
 		return consequent.getActions().stream()
-				.map(action -> wrapAction(action, preparedRule))
+				.map(action -> wrapAction(action, preparedRule, useModifyActions))
 				.toList();
 	}
 
-	private WrappedAction wrapAction(Action action, PreparedRule preparedRule) {
+	private WrappedAction wrapAction(Action action, PreparedRule preparedRule, boolean useModifyActions) {
 		if (!(action instanceof AssertionAction assertionAction)) {
 			throw new TracedException(action, UNKNOWN_ACTION_MESSAGE);
 		}
@@ -129,26 +132,26 @@ public class RuleCompiler {
 				var truthValueTerm = term.asType(TruthValue.class);
 				if (truthValueTerm instanceof ConstantTerm<TruthValue> constantTerm && literals.isEmpty()) {
 					yield new WrappedRelationAction(this, preparedRule, partialRelation, arguments,
-							constantTerm.getValue());
+							constantTerm.getValue(), useModifyActions);
 				}
 				yield new WrappedComputedRelationAction(this, preparedRule, partialRelation, arguments, literals,
-                        truthValueTerm);
+                        truthValueTerm, useModifyActions);
 			}
 			case PartialFunction<?, ?> partialFunction -> wrapAction(arguments, literals, term, partialFunction,
-					preparedRule);
+					preparedRule, useModifyActions);
 		};
 	}
 
 	private <A extends AbstractValue<A, C>, C> WrappedAction wrapAction(
 			List<AssertionArgument> arguments, List<Literal> literals, AnyTerm anyTerm,
-			PartialFunction<A, C> partialFunction, PreparedRule preparedRule) {
+			PartialFunction<A, C> partialFunction, PreparedRule preparedRule, boolean useModifyActions) {
 		var term = anyTerm.asType(partialFunction.abstractDomain().abstractType());
 		if (term instanceof ConstantTerm<A> constantTerm && literals.isEmpty()) {
 			return new WrappedConstantFunctionAction<>(this, preparedRule, partialFunction,
-					arguments, constantTerm.getValue());
+					arguments, constantTerm.getValue(), useModifyActions);
 		}
 		return new WrappedComputedFunctionAction<>(this, preparedRule, partialFunction,
-				arguments, literals, term);
+				arguments, literals, term, useModifyActions);
 	}
 
 	public Collection<Rule> toPropagationRules(String name, RuleDefinition ruleDefinition,
@@ -178,7 +181,7 @@ public class RuleCompiler {
 			}
 			var actionName = getPropagationActionName(name, actionCount, i);
 			try {
-				var wrappedAction = wrapAction(action, preparedRule);
+				var wrappedAction = wrapAction(action, preparedRule, false);
 				var parameters = wrappedAction.getNodeVariables();
 				var moreCommonLiterals = new ArrayList<Literal>();
 				boolean delayed = wrappedAction.toLiterals(false, postConditionModality, moreCommonLiterals);
@@ -257,14 +260,38 @@ public class RuleCompiler {
 		var ruleBuilder = Rule.builder(name)
 				.parameters(parameters)
 				.clause(PartialLiterals.must(precondition.call(CallPolarity.POSITIVE, parameters)));
+		var actionLiterals = new ArrayList<ActionLiteral>();
 		for (var consequent : ruleDefinition.getConsequents()) {
-			var wrappedActions = wrapConsequent(consequent, preparedRule);
+			var wrappedActions = wrapConsequent(consequent, preparedRule, false);
 			for (var action : wrappedActions) {
 				action.setPrecondition(precondition);
 			}
-			buildConsequent(consequent, wrappedActions, preparedRule, ruleBuilder);
+			buildConsequent(consequent, wrappedActions, preparedRule, actionLiterals);
 		}
+		ruleBuilder.action(actionLiterals);
 		return ruleBuilder.build();
+	}
+
+	public TransitionRule toTransitionRule(String name, RuleDefinition ruleDefinition, PartialRelation partialRelation) {
+		var preparedRule = prepareRule(ruleDefinition, true);
+		var nonNewParameters = preparedRule.nonNewParameters();
+		var precondition = preparedRule.buildQuery(name, nonNewParameters, List.of(), queryCompiler);
+		var ruleBuilder = Rule.builder(name)
+				.parameters(nonNewParameters)
+				.clause(precondition.call(CallPolarity.POSITIVE, nonNewParameters));
+		var actionLiterals = new ArrayList<ActionLiteral>();
+		actionLiterals.addAll(preparedRule.getCreateLiterals());
+		actionLiterals.addAll(preparedRule.getDeleteLiterals());
+		for (var consequent : ruleDefinition.getConsequents()) {
+			var wrappedActions = wrapConsequent(consequent, preparedRule, true);
+			for (var action : wrappedActions) {
+				action.setPrecondition(precondition);
+			}
+			buildConsequent(consequent, wrappedActions, preparedRule, actionLiterals);
+		}
+		ruleBuilder.action(actionLiterals);
+		var rule = ruleBuilder.build();
+		return new TransitionRule(partialRelation, rule);
 	}
 
 	private PreparedRule prepareRule(RuleDefinition ruleDefinition, boolean needsExplicitMultiObjectParameters) {
@@ -274,6 +301,8 @@ public class RuleCompiler {
 				.<tools.refinery.language.model.problem.Variable, NodeVariable>newLinkedHashMap(arity);
 		var commonLiterals = new ArrayList<Literal>();
 		var parametersToFocus = new ArrayList<tools.refinery.language.model.problem.Variable>();
+		var parametersToCreate = new ArrayList<tools.refinery.language.model.problem.Variable>();
+		var parametersToDelete = new ArrayList<tools.refinery.language.model.problem.Variable>();
 		for (var problemParameter : problemParameters) {
 			var parameter = Variable.of(problemParameter.getName());
 			parameterMap.put(problemParameter, parameter);
@@ -294,22 +323,27 @@ public class RuleCompiler {
 			}
 			if (binding == ParameterBinding.FOCUS) {
 				parametersToFocus.add(problemParameter);
+			} else if (binding == ParameterBinding.NEW) {
+				parametersToCreate.add(problemParameter);
+			} else if (binding == ParameterBinding.DELETE) {
+				parametersToDelete.add(problemParameter);
 			}
 		}
 		PreparedRule.toMonomorphicMatchingLiterals(parametersToFocus, parameterMap, commonLiterals);
 		return new PreparedRule(ruleDefinition, Collections.unmodifiableSequencedMap(parameterMap),
-				Collections.unmodifiableCollection(parametersToFocus), Collections.unmodifiableList(commonLiterals));
+				Collections.unmodifiableCollection(parametersToFocus),
+				Collections.unmodifiableCollection(parametersToCreate),
+				Collections.unmodifiableCollection(parametersToDelete),
+				Collections.unmodifiableList(commonLiterals));
 	}
 
 	private void buildConsequent(Consequent body, List<WrappedAction> wrappedActions, PreparedRule preparedRule,
-								 RuleBuilder builder) {
+	                             List<ActionLiteral> actionLiterals) {
 		try {
-			var actionLiterals = new ArrayList<ActionLiteral>();
 			var localScope = preparedRule.focusParameters(actionLiterals);
 			for (var action : wrappedActions) {
 				action.toActionLiterals(Concreteness.PARTIAL, actionLiterals, localScope);
 			}
-			builder.action(actionLiterals);
 		} catch (RuntimeException e) {
 			throw TracedException.addTrace(body, e);
 		}

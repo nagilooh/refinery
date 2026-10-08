@@ -43,6 +43,28 @@ import builtin::annotations.
 #pred multi().
 
 /**
+ * Allows a transition rule to create a new object.
+ *
+ * The annotated parameter does not exist before executing the transition,
+ * therefore it is not part of the precondition header. The annotated parameter
+ * is created as a new object when the transition is executed.
+ *
+ * The rule postcondition may refer to this newly created object.
+ */
+#pred new().
+
+/**
+ * Allows a transition rule to delete an object.
+ *
+ * The annotated parameter is part of the precondition header, so it must match
+ * an existing object based on the precondition. The matched object is deleted
+ * when the transition is executed.
+ *
+ * The rule postcondition must not refer to this object.
+ */
+#pred delete().
+
+/**
  * Enables or disables automatic concretization for a relation.
  *
  * Setting `@concretize(false)` also implies `@decide(false)` unless a value
@@ -113,3 +135,11 @@ import builtin::annotations.
  *                    Default value: `1.0`.
  */
 #pred weight(@optional real coefficient, @optional real exponent).
+
+/**
+ * Sets the target predicate for the transition system exploration.
+ *
+ * The target is reached if the annotated predicate has a match in the partial
+ * model.
+ */
+#pred target().

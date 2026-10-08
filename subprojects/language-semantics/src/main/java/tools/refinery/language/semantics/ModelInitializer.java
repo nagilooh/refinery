@@ -1,9 +1,10 @@
 /*
- * SPDX-FileCopyrightText: 2021-2024 The Refinery Authors <https://refinery.tools/>
+ * SPDX-FileCopyrightText: 2021-2026 The Refinery Authors <https://refinery.tools/>
  *
  * SPDX-License-Identifier: EPL-2.0
  */
 package tools.refinery.language.semantics;
+
 
 import com.google.inject.Inject;
 import tools.refinery.language.annotations.AnnotationContext;
@@ -26,6 +27,9 @@ import tools.refinery.logic.AbstractDomain;
 import tools.refinery.logic.AbstractValue;
 import tools.refinery.logic.AnyAbstractDomain;
 import tools.refinery.logic.dnf.InvalidClauseException;
+import tools.refinery.logic.dnf.Query;
+import tools.refinery.logic.literal.CallPolarity;
+import tools.refinery.logic.term.NodeVariable;
 import tools.refinery.logic.term.cardinalityinterval.CardinalityInterval;
 import tools.refinery.logic.term.cardinalityinterval.CardinalityIntervals;
 import tools.refinery.logic.term.truthvalue.TruthValue;
@@ -33,10 +37,14 @@ import tools.refinery.logic.term.uppercardinality.UpperCardinalities;
 import tools.refinery.store.dse.propagation.PropagationBuilder;
 import tools.refinery.store.dse.transition.DesignSpaceExplorationBuilder;
 import tools.refinery.store.dse.transition.Rule;
+import tools.refinery.store.dse.transition.objectives.Criteria;
 import tools.refinery.store.model.ModelStoreBuilder;
 import tools.refinery.store.model.ModelStoreConfiguration;
 import tools.refinery.store.reasoning.ReasoningAdapter;
+import tools.refinery.store.reasoning.literal.Concreteness;
 import tools.refinery.store.reasoning.literal.ConcretenessSpecification;
+import tools.refinery.store.reasoning.lifting.DnfLifter;
+import tools.refinery.store.reasoning.literal.Modality;
 import tools.refinery.store.reasoning.representation.PartialFunction;
 import tools.refinery.store.reasoning.representation.PartialRelation;
 import tools.refinery.store.reasoning.scope.ScopePropagator;
@@ -53,14 +61,15 @@ import tools.refinery.store.reasoning.translator.metamodel.Metamodel;
 import tools.refinery.store.reasoning.translator.metamodel.MetamodelBuilder;
 import tools.refinery.store.reasoning.translator.metamodel.MetamodelTranslator;
 import tools.refinery.store.reasoning.translator.metamodel.ReferenceInfo;
+import tools.refinery.store.reasoning.translator.multiplicity.Multiplicity;
 import tools.refinery.store.reasoning.translator.multiobject.MultiObjectTranslator;
 import tools.refinery.store.reasoning.translator.multiplicity.ConstrainedMultiplicity;
-import tools.refinery.store.reasoning.translator.multiplicity.Multiplicity;
 import tools.refinery.store.reasoning.translator.multiplicity.UnconstrainedMultiplicity;
 import tools.refinery.store.reasoning.translator.predicate.BasePredicateTranslator;
 import tools.refinery.store.reasoning.translator.predicate.PredicateTranslator;
 import tools.refinery.store.reasoning.translator.predicate.ShadowPredicateTranslator;
 import tools.refinery.store.statecoding.StateCoderBuilder;
+import tools.refinery.store.transition.system.TransitionSystemBuilder;
 import tools.refinery.store.tuple.Tuple;
 import tools.refinery.store.tuple.Tuple1;
 
@@ -324,6 +333,7 @@ public class ModelInitializer {
 						collectPartialRelation(enumDeclaration, 1, TruthValue.FALSE, TruthValue.FALSE);
 				case PredicateDefinition predicateDefinition -> collectPredicateDefinitionSymbol(predicateDefinition);
 				case FunctionDefinition functionDefinition -> collectFunctionDefinitionSymbol(functionDefinition);
+				case RuleDefinition ruleDefinition -> collectRuleDefinitionSymbol(ruleDefinition);
 				default -> {
 					// Nothing to collect.
 				}
@@ -374,6 +384,13 @@ public class ModelInitializer {
 		var domainPredicate = functionDefinition.getDomainPredicate();
 		if (domainPredicate != null) {
 			collectPredicateDefinitionSymbol(domainPredicate);
+		}
+	}
+
+	private void collectRuleDefinitionSymbol(RuleDefinition ruleDefinition) {
+		var preconditionPredicate = ruleDefinition.getPreconditionPredicate();
+		if (preconditionPredicate != null) {
+			collectPredicateDefinitionSymbol(preconditionPredicate);
 		}
 	}
 
@@ -730,6 +747,12 @@ public class ModelInitializer {
 						collectPredicateDefinitionTraced(predicateDefinition, storeBuilder);
 				case FunctionDefinition functionDefinition ->
 						collectFunctionDefinitionTraced(functionDefinition, storeBuilder);
+				case RuleDefinition ruleDefinition -> {
+					var preconditionPredicate = ruleDefinition.getPreconditionPredicate();
+					if (preconditionPredicate != null) {
+						collectPredicateDefinitionTraced(ruleDefinition.getPreconditionPredicate(), storeBuilder);
+					}
+				}
 				default -> {
 					// Nothing to collect.
 				}
@@ -744,7 +767,7 @@ public class ModelInitializer {
 			collectPredicateDefinition(predicateDefinition, storeBuilder);
 		} catch (InvalidClauseException e) {
 			int clauseIndex = e.getClauseIndex();
-			var bodies = predicateDefinition.getBodies();
+			var bodies = queryCompiler.getBodies(predicateDefinition);
 			if (clauseIndex < bodies.size()) {
 				throw new TracedException(bodies.get(clauseIndex), e);
 			} else {
@@ -762,6 +785,22 @@ public class ModelInitializer {
 			collectShadowPredicateDefinition(predicateDefinition, storeBuilder);
 		} else {
 			collectComputedPredicateDefinition(predicateDefinition, storeBuilder);
+		}
+
+		if (builtinAnnotationContext.isTarget(predicateDefinition)) {
+			storeBuilder.tryGetAdapter(TransitionSystemBuilder.class)
+					.ifPresent(builder -> {
+						var relation = getPartialRelation(predicateDefinition);
+						var parameterList = new ArrayList<NodeVariable>(relation.arity());
+						for (int i = 0; i < relation.arity(); i++) {
+							parameterList.add(NodeVariable.of());
+						}
+						var query = Query.builder(relation.name())
+								.clause(relation.call(CallPolarity.POSITIVE, parameterList))
+								.build();
+						DnfLifter lifter = new DnfLifter();
+						builder.accept(Criteria.whenHasMatch(lifter.lift(Modality.MAY, Concreteness.PARTIAL, query)));
+					});
 		}
 	}
 
@@ -1080,6 +1119,13 @@ public class ModelInitializer {
 				// Rules not marked for decision or propagation are not invoked automatically.
 				var rule = ruleCompiler.toRule(name, ruleDefinition);
 				problemTrace.putRuleDefinition(ruleDefinition, rule);
+			}
+			case TRANSITION -> {
+				var partialRelation = getPartialRelation(ruleDefinition.getPreconditionPredicate());
+				var rule = ruleCompiler.toTransitionRule(name, ruleDefinition, partialRelation);
+				problemTrace.putRuleDefinition(ruleDefinition, rule.rule());
+				storeBuilder.tryGetAdapter(TransitionSystemBuilder.class)
+						.ifPresent(transitionSystemBuilder -> transitionSystemBuilder.transition(rule));
 			}
 			}
 		} catch (InvalidClauseException e) {

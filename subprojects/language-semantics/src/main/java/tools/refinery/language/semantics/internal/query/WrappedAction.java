@@ -23,12 +23,14 @@ abstract class WrappedAction {
 	private final RuleCompiler ruleCompiler;
 	private final PreparedRule preparedRule;
 	private final List<AssertionArgument> problemArguments;
+	protected final boolean useModifyActions;
 
 	protected WrappedAction(RuleCompiler ruleCompiler, PreparedRule preparedRule,
-							List<AssertionArgument> problemArguments) {
+							List<AssertionArgument> problemArguments, boolean useModifyActions) {
 		this.ruleCompiler = ruleCompiler;
 		this.preparedRule = preparedRule;
 		this.problemArguments = problemArguments;
+		this.useModifyActions = useModifyActions;
 	}
 
 	protected RuleCompiler getRuleCompiler() {
