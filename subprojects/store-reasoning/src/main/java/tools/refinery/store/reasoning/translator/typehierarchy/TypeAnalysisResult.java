@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2021-2023 The Refinery Authors <https://refinery.tools/>
+ * SPDX-FileCopyrightText: 2021-2026 The Refinery Authors <https://refinery.tools/>
  *
  * SPDX-License-Identifier: EPL-2.0
  */
@@ -77,6 +77,15 @@ public final class TypeAnalysisResult {
 		};
 	}
 
+	public InferredType join(InferredType inferredType, TruthValue value) {
+		return switch (value) {
+			case TRUE -> addMay(inferredType);
+			case UNKNOWN -> removeMustAndAddMay(inferredType);
+			case FALSE -> removeMust(inferredType);
+			case ERROR -> inferredType;
+		};
+	}
+
 	private InferredType addMust(InferredType inferredType) {
 		var originalMustTypes = inferredType.mustTypes();
 		if (originalMustTypes.contains(type())) {
@@ -93,6 +102,28 @@ public final class TypeAnalysisResult {
 			mayConcreteTypesResult = originalMayConcreteTypes;
 		}
 		return propagateMust(mustTypes, mayConcreteTypesResult);
+	}
+
+	private InferredType removeMust(InferredType inferredType) {
+		var originalMustTypes = inferredType.mustTypes();
+		if (!originalMustTypes.contains(type())) {
+			return inferredType;
+		}
+		var mustTypes = new HashSet<>(originalMustTypes);
+		mustTypes.remove(type());
+		mustTypes.removeAll(extendedTypeInfo.getAllSupertypes());
+		return propagateMust(mustTypes, inferredType.mayConcreteTypes());
+	}
+
+	private InferredType addMay(InferredType inferredType) {
+		var originalMayConcreteTypes = inferredType.mayConcreteTypes();
+		var mayConcreteTypes = new LinkedHashSet<>(originalMayConcreteTypes);
+		mayConcreteTypes.addAll(extendedTypeInfo.getConcreteSubtypesAndSelf());
+		if (!mayConcreteTypes.addAll(extendedTypeInfo.getConcreteSubtypesAndSelf())) {
+			return inferredType;
+		}
+		return buildExpandedType(inferredType, inferredType.mustTypes(), inferredType.mustTypes(),
+				mayConcreteTypes, originalMayConcreteTypes);
 	}
 
 	private InferredType removeMay(InferredType inferredType) {
@@ -115,6 +146,32 @@ public final class TypeAnalysisResult {
 		var mustTypes = new HashSet<>(originalMustTypes);
 		extendedTypeInfo.addMust(mustTypes);
 		return new InferredType(mustTypes, Set.of(), null);
+	}
+
+	private InferredType removeMustAndAddMay(InferredType inferredType) {
+		var originalMustTypes = inferredType.mustTypes();
+		var mustTypes = new HashSet<>(originalMustTypes);
+		mustTypes.remove(type());
+		mustTypes.removeAll(extendedTypeInfo.getAllSupertypes());
+
+		var originalMayConcreteTypes = inferredType.mayConcreteTypes();
+		var mayConcreteTypes = new LinkedHashSet<>(originalMayConcreteTypes);
+		mayConcreteTypes.addAll(extendedTypeInfo.getConcreteSubtypesAndSelf());
+		return buildExpandedType(inferredType, mustTypes, originalMustTypes, mayConcreteTypes, originalMayConcreteTypes);
+	}
+
+	private InferredType buildExpandedType(InferredType inferredType, Set<PartialRelation> mustTypes,
+								   Set<PartialRelation> originalMustTypes,
+								   Set<PartialRelation> mayConcreteTypes,
+								   Set<PartialRelation> originalMayConcreteTypes) {
+		if (mustTypes.equals(originalMustTypes) && mayConcreteTypes.equals(originalMayConcreteTypes)) {
+			return inferredType;
+		}
+		PartialRelation candidateType = null;
+		if (!mayConcreteTypes.isEmpty()) {
+			candidateType = computeCurrentType(mayConcreteTypes);
+		}
+		return new InferredType(mustTypes, mayConcreteTypes, candidateType);
 	}
 
 	private InferredType propagateMust(Set<PartialRelation> originalMustTypes,

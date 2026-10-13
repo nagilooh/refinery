@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 The Refinery Authors <https://refinery.tools/>
+ * SPDX-FileCopyrightText: 2024-2026 The Refinery Authors <https://refinery.tools/>
  *
  * SPDX-License-Identifier: EPL-2.0
  */
@@ -12,11 +12,10 @@ import tools.refinery.logic.dnf.RelationalQuery;
 import tools.refinery.logic.literal.Literal;
 import tools.refinery.logic.literal.Literals;
 import tools.refinery.logic.term.NodeVariable;
-import tools.refinery.store.dse.modification.DanglingEdges;
-import tools.refinery.store.dse.modification.actions.CreateActionLiteral;
-import tools.refinery.store.dse.modification.actions.DeleteActionLiteral;
 import tools.refinery.store.dse.transition.actions.ActionLiteral;
 import tools.refinery.store.reasoning.ReasoningAdapter;
+import tools.refinery.store.reasoning.actions.CleanupActionLiteral;
+import tools.refinery.store.reasoning.actions.CreateNewActionLiteral;
 import tools.refinery.store.reasoning.actions.PartialActionLiterals;
 import tools.refinery.store.reasoning.literal.PartialLiterals;
 
@@ -90,7 +89,7 @@ record PreparedRule(
 		var literals = new ArrayList<ActionLiteral>(parametersToCreate.size());
 		for (var parameterToCreate : parametersToCreate) {
 			var originalParameter = parameterMap.get(parameterToCreate);
-			literals.add(new CreateActionLiteral(originalParameter));
+			literals.add(new CreateNewActionLiteral(originalParameter));
 		}
 		return literals;
 	}
@@ -99,7 +98,7 @@ record PreparedRule(
 		var literals = new ArrayList<ActionLiteral>(parametersToDelete.size());
 		for (var parameterToDelete : parametersToDelete) {
 			var originalParameter = parameterMap.get(parameterToDelete);
-			literals.add(new DeleteActionLiteral(originalParameter, DanglingEdges.FAIL));
+			literals.add(new CleanupActionLiteral(originalParameter, true));
 		}
 		return literals;
 	}

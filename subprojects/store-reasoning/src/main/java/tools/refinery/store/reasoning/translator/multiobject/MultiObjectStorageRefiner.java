@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 The Refinery Authors <https://refinery.tools/>
+ * SPDX-FileCopyrightText: 2023-2026 The Refinery Authors <https://refinery.tools/>
  *
  * SPDX-License-Identifier: EPL-2.0
  */
@@ -41,5 +41,11 @@ class MultiObjectStorageRefiner implements StorageRefiner {
 	public boolean cleanup(int nodeToDelete) {
 		var previousCount = countInterpretation.put(Tuple.of(nodeToDelete), null);
 		return previousCount.lowerBound() == 0;
+	}
+
+	@Override
+	public boolean createNew(int newNodeId) {
+		countInterpretation.put(Tuple.of(newNodeId), CardinalityIntervals.ONE);
+		return true;
 	}
 }
