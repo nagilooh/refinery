@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2021-2024 The Refinery Authors <https://refinery.tools/>
+ * SPDX-FileCopyrightText: 2021-2026 The Refinery Authors <https://refinery.tools/>
  *
  * SPDX-License-Identifier: EPL-2.0
  */
@@ -163,8 +163,7 @@ class ReasoningAdapterImpl implements ReasoningAdapter {
 	@Override
 	@Nullable
 	public Tuple1 split(int parentNode) {
-		int newNodeId = nodeCountInterpretation.get(Tuple.of());
-		nodeCountInterpretation.put(Tuple.of(), newNodeId + 1);
+		int newNodeId = addNextNodeId();
 		// Avoid creating an iterator object.
 		//noinspection ForLoopReplaceableByForEach
 		for (int i = 0; i < storageRefiners.length; i++) {
@@ -173,6 +172,12 @@ class ReasoningAdapterImpl implements ReasoningAdapter {
 			}
 		}
 		return Tuple.of(newNodeId);
+	}
+
+	private int addNextNodeId() {
+		int newNodeId = nodeCountInterpretation.get(Tuple.of());
+		nodeCountInterpretation.put(Tuple.of(), newNodeId + 1);
+		return newNodeId;
 	}
 
 	@Override
@@ -196,11 +201,11 @@ class ReasoningAdapterImpl implements ReasoningAdapter {
 	}
 
 	@Override
-	public boolean cleanup(int nodeToDelete) {
+	public boolean cleanup(int nodeToDelete, boolean force) {
 		// Avoid creating an iterator object.
 		//noinspection ForLoopReplaceableByForEach
 		for (int i = 0; i < storageRefiners.length; i++) {
-			if (!storageRefiners[i].cleanup(nodeToDelete)) {
+			if (!storageRefiners[i].cleanup(nodeToDelete) && !force) {
 				return false;
 			}
 		}
@@ -211,6 +216,20 @@ class ReasoningAdapterImpl implements ReasoningAdapter {
 		// We mustn't reuse the ID of {@code nodeToDelete} in any circumstance, because clients may depend on stable
 		// node IDs for nodes in the initial partial model.
 		return true;
+	}
+
+	@Override
+	@Nullable
+	public Tuple1 createNew() {
+		int newNodeId = addNextNodeId();
+		// Avoid creating an iterator object.
+		//noinspection ForLoopReplaceableByForEach
+		for (int i = 0; i < storageRefiners.length; i++) {
+			if (!storageRefiners[i].createNew(newNodeId)) {
+				return null;
+			}
+		}
+		return Tuple.of(newNodeId);
 	}
 
 	@Override

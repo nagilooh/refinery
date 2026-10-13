@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 The Refinery Authors <https://refinery.tools/>
+ * SPDX-FileCopyrightText: 2023-2026 The Refinery Authors <https://refinery.tools/>
  *
  * SPDX-License-Identifier: EPL-2.0
  */
@@ -53,6 +53,7 @@ public class TypeHierarchyTranslator implements ModelStoreConfiguration {
 
 		var reasoningBuilder = storeBuilder.getAdapter(ReasoningBuilder.class);
 		reasoningBuilder.initializer(new TypeHierarchyInitializer(typeHierarchy, TYPE_SYMBOL));
+		reasoningBuilder.storageRefiner(TYPE_SYMBOL, TypeHierarchyStorageRefiner.factory(typeHierarchy.getUnknownType()));
 	}
 
 	private ModelStoreConfiguration createPreservedTypeTranslator(PartialRelation type, TypeAnalysisResult result) {

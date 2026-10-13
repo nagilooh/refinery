@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 The Refinery Authors <https://refinery.tools/>
+ * SPDX-FileCopyrightText: 2023-2026 The Refinery Authors <https://refinery.tools/>
  *
  * SPDX-License-Identifier: EPL-2.0
  */
@@ -37,6 +37,16 @@ class InferredTypeRefiner extends AbstractPartialInterpretationRefiner.Concretiz
 		} else {
 			newType = result.merge(currentType, value);
 		}
+		if (!Objects.equals(currentType, newType)) {
+			interpretation.put(key, newType);
+		}
+		return true;
+	}
+
+	@Override
+	public boolean join(Tuple key, TruthValue value) {
+		var currentType = interpretation.get(key);
+		var newType = result.join(currentType, value);
 		if (!Objects.equals(currentType, newType)) {
 			interpretation.put(key, newType);
 		}
