@@ -27,13 +27,58 @@ import tools.refinery.store.statecoding.StateCoderAdapter;
 import tools.refinery.store.transition.system.TransitionSystemAdapter;
 import tools.refinery.store.tuple.Tuple;
 
+import java.io.File;
 import java.math.BigInteger;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import static tools.refinery.logic.term.truthvalue.TruthValue.*;
 
 public class TrainBenchmarkMeasurement extends MeasurementBase {
+
+	Set<Tuple> regionClassSet = new HashSet<>();
+	Set<Tuple> semaphoreClassSet = new HashSet<>();
+	Set<Tuple> routeClassSet = new HashSet<>();
+	Set<Tuple> switchPositionClassSet = new HashSet<>();
+	Set<Tuple> sensorClassSet = new HashSet<>();
+	Set<Tuple> segmentClassSet = new HashSet<>();
+	Set<Tuple> switchClassSet = new HashSet<>();
+	Set<Tuple> railwayContainerClassSet = new HashSet<>();
+	Set<Tuple> trackElementClassSet = new HashSet<>();
+
+	Set<Tuple> sensorsMap = new HashSet<>();
+	Set<Tuple> elementsMap = new HashSet<>();
+	Set<Tuple> followsMap = new HashSet<>();
+	Set<Tuple> requiresMap = new HashSet<>();
+	Set<Tuple> entryMap = new HashSet<>();
+	Set<Tuple> exitMap = new HashSet<>();
+	Set<Tuple> routeMap = new HashSet<>();
+	Set<Tuple> targetMap = new HashSet<>();
+	Set<Tuple> monitoredByMap = new HashSet<>();
+	Set<Tuple> connectsToMap = new HashSet<>();
+	Set<Tuple> semaphoresMap = new HashSet<>();
+	Set<Tuple> straightMap = new HashSet<>();
+	Set<Tuple> divergingMap = new HashSet<>();
+	Set<Tuple> monitorsMap = new HashSet<>();
+	Set<Tuple> positionsMap = new HashSet<>();
+	Set<Tuple> regionsMap = new HashSet<>();
+	Set<Tuple> routesMap = new HashSet<>();
+	Map<Tuple, IntInterval> lengthMap = new HashMap<>();
+
+	Set<Tuple> signalMap = new HashSet<>();
+	Set<Tuple> positionMap = new HashSet<>();
+	Set<Tuple> currentPositionMap = new HashSet<>();
+
+	Map<Tuple, TruthValue> activeMap = new HashMap<>();
+
+	Map<String, Tuple> positionEnumMap = new HashMap<>();
+	Map<String, Tuple> signalEnumMap = new HashMap<>();
+
+	Map<String, Set<Tuple>> classMaps = new HashMap<>();
+	Map<String, Set<Tuple>> relationMaps = new HashMap<>();
+	Map<String, Map<String, Tuple>> enumMaps = new HashMap<>();
+	Map<String, Set<Tuple>> enumAttributeMaps = new HashMap<>();
+	Map<String, Map<Tuple, TruthValue>> booleanAttributeMaps = new HashMap<>();
+	Map<String, Map<Tuple, IntInterval>> intAttributeMaps = new HashMap<>();
 
 //	Classes
 	PartialRelation railwayContainerClass = new PartialRelation("RailwayContainer", 1);
@@ -101,8 +146,8 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 			.type(segmentClass, trackElementClass)
 			.type(switchClass, trackElementClass)
 
-			.type(position)
-			.type(signal)
+			.type(positionEnum)
+			.type(signalEnum)
 
 			.attribute(length, new AttributeInfo(segmentClass, IntInterval.UNKNOWN))
 
@@ -128,13 +173,13 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 					.defaultValue(FALSE))
 			.reference(signal, referenceBuilder -> referenceBuilder
 					.source(semaphoreClass)
-					.target(signal)
+					.target(signalEnum)
 					.multiplicity(CardinalityIntervals.LONE, signalInvalidMultiplicity)
 					.defaultValue(FALSE))
 			.reference(follows, referenceBuilder -> referenceBuilder
 					.source(routeClass)
 					.target(switchPositionClass)
-					.opposite(routeClass)
+					.opposite(route)
 					.defaultValue(FALSE))
 			.reference(requires, referenceBuilder -> referenceBuilder
 					.source(routeClass)
@@ -165,7 +210,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 					.defaultValue(FALSE))
 			.reference(position, referenceBuilder -> referenceBuilder
 					.source(switchPositionClass)
-					.target(position)
+					.target(positionEnum)
 					.multiplicity(CardinalityIntervals.LONE, positionInvalidMultiplicity)
 					.defaultValue(FALSE))
 			.reference(monitoredBy, referenceBuilder -> referenceBuilder
@@ -194,7 +239,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 					.defaultValue(FALSE))
 			.reference(currentPosition, referenceBuilder -> referenceBuilder
 					.source(switchClass)
-					.target(position)
+					.target(positionEnum)
 					.multiplicity(CardinalityIntervals.LONE, currentPositionInvalidMultiplicity)
 					.defaultValue(FALSE))
 			.reference(straight, referenceBuilder -> referenceBuilder
@@ -210,23 +255,6 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 
 	Metamodel metamodel = builder.build();
 
-//
-//    PartialRelation stateTransitionPreconditionPartialRelation = new PartialRelation("stateTransition_precondition", 3);
-//    TransitionRule stateTransition = new TransitionRule(stateTransitionPreconditionPartialRelation,
-//            Rule.of("stateTransition", (builder, t, from, to) -> builder
-//            .clause(
-//                    transition.call(t),
-//					state.call(from),
-//					state.call(to),
-//                    source.call(t, from),
-//                    target.call(t, to),
-//					active.call(from)
-//            )
-//            .action(
-//					PartialActionLiterals.modify(active, FALSE, from),
-//					PartialActionLiterals.modify(active, TRUE, to)
-//            )));
-
     ModelSeed.Builder modelSeedBuilder;
 
 	public void init(int size, boolean visualize) {
@@ -234,6 +262,43 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 		if (visualize) {
 			visualizationOutputPath = "output_visualization/trainbenchmark_" + size;
 		}
+
+		classMaps.put("Region", regionClassSet);
+		classMaps.put("Semaphore", semaphoreClassSet);
+		classMaps.put("Route", routeClassSet);
+		classMaps.put("SwitchPosition", switchPositionClassSet);
+		classMaps.put("Sensor", sensorClassSet);
+		classMaps.put("Segment", segmentClassSet);
+		classMaps.put("Switch", switchClassSet);
+		classMaps.put("RailwayContainerClass", railwayContainerClassSet);
+		classMaps.put("TrackElement", trackElementClassSet);
+		relationMaps.put("sensors", sensorsMap);
+		relationMaps.put("elements", elementsMap);
+		relationMaps.put("follows", followsMap);
+		relationMaps.put("requires", requiresMap);
+		relationMaps.put("entry", entryMap);
+		relationMaps.put("exit", exitMap);
+		relationMaps.put("route", routeMap);
+		relationMaps.put("target", targetMap);
+		relationMaps.put("monitoredBy", monitoredByMap);
+		relationMaps.put("connectsTo", connectsToMap);
+		relationMaps.put("semaphores", semaphoresMap);
+		relationMaps.put("straight", straightMap);
+		relationMaps.put("diverging", divergingMap);
+		relationMaps.put("monitors", monitorsMap);
+		relationMaps.put("positions", positionsMap);
+		relationMaps.put("regions", regionsMap);
+		relationMaps.put("routes", routesMap);
+
+		enumMaps.put("Signal", signalEnumMap);
+		enumMaps.put("Position", positionEnumMap);
+		enumAttributeMaps.put("signal", signalMap);
+		enumAttributeMaps.put("position", positionMap);
+		enumAttributeMaps.put("currentPosition", currentPositionMap);
+
+		intAttributeMaps.put("length", lengthMap);
+
+		booleanAttributeMaps.put("active", activeMap);
 
 		storeBuilder = storeBuilder
 				.with(QueryInterpreterAdapter.builder())
@@ -245,96 +310,243 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 				.with(DesignSpaceExplorationAdapter.builder())
 				.with(ReasoningAdapter.builder())
 				.with(TransitionSystemAdapter.builder()
-//						.transition(stateTransition)
 						.accept(_ -> () -> false) // full state space exploration
 				)
 				.with(new MultiObjectTranslator())
 				.with(new MetamodelTranslator(metamodel))
-//				.with(new PredicateTranslator(stateTransitionPreconditionPartialRelation, stateTransition.rule().getPrecondition(),
-//						List.of(transition, state, state), Set.of(), true, UNKNOWN))
-
 				.with(new BasePredicateTranslator(active, List.of(routeClass), Set.of(), UNKNOWN,
 						new ConcretizationSettings(true, true)));
 
+		String pathToCsvFolder = "input/models/trainbenchmark/size-1"; // Replace with the actual path to your
 
 
-        var nodeCount = 10; // To be adjusted based on the size parameter or other logic
-        modelSeedBuilder = ModelSeed.builder(nodeCount)
-                .seed(MultiObjectTranslator.COUNT_SYMBOL, builder -> builder
-                        .reducedValue(CardinalityIntervals.ONE)
-                )
+		for (var csvFile :
+				new File(pathToCsvFolder).listFiles((dir, name) -> name.startsWith("railway-batch-1") &&
+						name.endsWith(".csv") && classMaps.keySet().stream().anyMatch(name::contains))) {
+			String relationName = csvFile.getName().replace("railway-batch-1-", "").replace(".csv", "");
+			System.out.println("Loading CSV file: " + csvFile.getName() + " for relation: " + relationName);
+			var inputMap = classMaps.get(relationName);
+			try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(csvFile))) {
+				String line;
+				while ((line = br.readLine()) != null) {
+					String[] values = line.split(",");
+					inputMap.add(Tuple.of(Integer.parseInt(values[0])));
+				}
+			} catch (java.io.IOException e) {
+				e.printStackTrace();
+			}
+		}
+		for (var csvFile :
+				new File(pathToCsvFolder).listFiles((dir, name) -> name.startsWith("railway-batch-1") &&
+						name.endsWith(".csv") && relationMaps.keySet().stream().anyMatch(name::contains))) {
+			String relationName = csvFile.getName().replace("railway-batch-1-", "").replace(".csv", "");
+			System.out.println("Loading CSV file: " + csvFile.getName() + " for relation: " + relationName);
+			var inputMap = relationMaps.get(relationName);
+			try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(csvFile))) {
+				String line;
+				while ((line = br.readLine()) != null) {
+					String[] values = line.split(",");
+					inputMap.add(Tuple.of(Integer.parseInt(values[0]), Integer.parseInt(values[1])));
+				}
+			} catch (java.io.IOException e) {
+				e.printStackTrace();
+			}
+		}
+		for (var csvFile :
+				new File(pathToCsvFolder).listFiles((dir, name) -> name.startsWith("railway-batch-1") &&
+						name.endsWith(".csv") && booleanAttributeMaps.keySet().stream().anyMatch(name::contains))) {
+			String relationName = csvFile.getName().replace("railway-batch-1-", "").replace(".csv", "");
+			System.out.println("Loading CSV file: " + csvFile.getName() + " for relation: " + relationName);
+			var inputMap = booleanAttributeMaps.get(relationName);
+			try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(csvFile))) {
+				String line;
+				while ((line = br.readLine()) != null) {
+					String[] values = line.split(",");
+					inputMap.put(Tuple.of(Integer.parseInt(values[0])), of(Boolean.parseBoolean(values[1])));
+				}
+			} catch (java.io.IOException e) {
+				e.printStackTrace();
+			}
+		}
+		for (var csvFile :
+				new File(pathToCsvFolder).listFiles((dir, name) -> name.startsWith("railway-batch-1") &&
+						name.endsWith(".csv") && intAttributeMaps.keySet().stream().anyMatch(name::contains))) {
+			String relationName = csvFile.getName().replace("railway-batch-1-", "").replace(".csv", "");
+			System.out.println("Loading CSV file: " + csvFile.getName() + " for relation: " + relationName);
+			var inputMap = intAttributeMaps.get(relationName);
+			try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(csvFile))) {
+				String line;
+				while ((line = br.readLine()) != null) {
+					String[] values = line.split(",");
+					inputMap.put(Tuple.of(Integer.parseInt(values[0])), IntInterval.of(Integer.parseInt(values[1])));
+				}
+			} catch (java.io.IOException e) {
+				e.printStackTrace();
+			}
+		}
+		var nextId = classMaps.values().stream().flatMap(Set::stream).mapToInt(t -> t.get(0)).max().orElse(0) + 1;
+		signalEnumMap.put("Signal::FAILURE", Tuple.of(nextId++));
+		signalEnumMap.put("Signal::STOP", Tuple.of(nextId++));
+		signalEnumMap.put("Signal::GO", Tuple.of(nextId++));
+		positionEnumMap.put("Position::FAILURE", Tuple.of(nextId++));
+		positionEnumMap.put("Position::STRAIGHT", Tuple.of(nextId++));
+		positionEnumMap.put("Position::DIVERGING", Tuple.of(nextId++));
+		railwayContainerClassSet.add(Tuple.of(nextId++));
+		for (var csvFile :
+				new File(pathToCsvFolder).listFiles((dir, name) -> name.startsWith("railway-batch-1") &&
+						name.endsWith(".csv") && enumAttributeMaps.keySet().stream().anyMatch(name::contains))) {
+			String relationName = csvFile.getName().replace("railway-batch-1-", "").replace(".csv", "");
+			System.out.println("Loading CSV file: " + csvFile.getName() + " for relation: " + relationName);
+			var inputMap = enumAttributeMaps.get(relationName);
+			try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(csvFile))) {
+				String line;
+				while ((line = br.readLine()) != null) {
+					String[] values = line.split(",");
+					var enumValue = signalEnumMap.get(values[1]);
+					if (enumValue == null) {
+						enumValue = positionEnumMap.get(values[1]);
+					}
+					if (enumValue == null) {
+						throw new IllegalArgumentException("Invalid enum value: " + values[1]);
+					}
+					inputMap.add(Tuple.of(Integer.parseInt(values[0]), enumValue.get(0)));
+				}
+			} catch (java.io.IOException e) {
+				e.printStackTrace();
+			}
+		}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+		var nodeCount = nextId;
+		modelSeedBuilder = ModelSeed.builder(nodeCount)
+				.seed(MultiObjectTranslator.COUNT_SYMBOL, builder -> builder
+						.reducedValue(CardinalityIntervals.ONE)
+				)
 				.seed(ContainmentHierarchyTranslator.CONTAINED_SYMBOL, builder ->
 						builder.reducedValue(UNKNOWN))
 				.seed(ContainmentHierarchyTranslator.CONTAINER_SYMBOL, builder ->
 						builder.reducedValue(UNKNOWN))
 				.seed(ContainmentHierarchyTranslator.CONTAINS_SYMBOL, builder ->
 						builder.reducedValue(UNKNOWN))
-        ;
+		;
 
-//		Add seed for each class and reference with values from csv
-		// Example:
-		//
-		//	.seed(source, builder ->
-		//	        {
-		//				builder.put(Tuple.of(t1, redState), TruthValue.TRUE);
-		//				builder.put(Tuple.of(t2, redYellowState), TruthValue.TRUE);
-		//				builder.put(Tuple.of(t3, greenState), TruthValue.TRUE);
-		//				builder.put(Tuple.of(t4, yellowState), TruthValue.TRUE);
-		//				builder.reducedValue(TruthValue.FALSE);
-		//	        }
-		//	)
-
-//		Iterate over csv files in folder and add seeds for each class and reference based on the data in the csv files
-		// For example, if you have a csv file for routes, you can read the file and add seeds for the routes reference
-		// Similarly, you can read other csv files and add seeds for other classes and references
-		// You can use a library like OpenCSV or Apache Commons CSV to read the csv files
-
-		String pathToCsvFolder = "/input/models/trainbenchmark/size-1"; // Replace with the actual path to your
-		// CSV folder
-		for (var csvFile :
-				new java.io.File(pathToCsvFolder).listFiles((dir, name) -> name.startsWith("railway-batch-1") && name.endsWith(".csv"))) {
-			String relationName = csvFile.getName().replace(".csv", "");
-//			find the corresponding PartialRelation for the relationName
-			PartialRelation parialRelation = null;
-			switch (relationName) {
-//				case "RailwayContainer" -> parialRelation = railwayContainerClass;
-//				case "Region" -> parialRelation = regionClass;
-//				case "Semaphore" -> parialRelation = semaphoreClass;
-//				case "Route" -> parialRelation = routeClass;
-//				case "SwitchPosition" -> parialRelation = switchPositionClass;
-//				case "TrackElement" -> parialRelation = trackElementClass;
-
-
-				case "connectsTo" -> parialRelation = connectsTo;
-				case "entry" -> parialRelation = entry;
-				case "exit" -> parialRelation = exit;
-				case "follows" -> parialRelation = follows;
-				case "monitoredBy" -> parialRelation = monitoredBy;
-				case "Region" -> parialRelation = regionClass;
-				case "requires" -> parialRelation = requires;
-				case "Route" -> parialRelation = routeClass;
-				case "Segment" -> parialRelation = segmentClass;
-				case "Semaphore" -> parialRelation = semaphoreClass;
-				case "Sensor" -> parialRelation = sensorClass;
-				case "Switch" -> parialRelation = switchClass;
-				case "SwitchPosition" -> parialRelation = switchPositionClass;
-				case "target" -> parialRelation = target;
-			}
-			modelSeedBuilder.seed(parialRelation, builder -> {
-				try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(csvFile))) {
-					String line;
-					while ((line = br.readLine()) != null) {
-						String[] values = line.split(",");
-						builder.put(Tuple.of(Integer.parseInt(values[0])), TruthValue.TRUE);
-					}
-				} catch (java.io.IOException e) {
-					e.printStackTrace();
+		for (var entry : classMaps.entrySet()) {
+			String relationName = entry.getKey();
+			Set<Tuple> tuples = entry.getValue();
+			var partialRelation = switch (relationName) {
+				case "Region" -> regionClass;
+				case "Semaphore" -> semaphoreClass;
+				case "Route" -> routeClass;
+				case "SwitchPosition" -> switchPositionClass;
+				case "Sensor" -> sensorClass;
+				case "Segment" -> segmentClass;
+				case "Switch" -> switchClass;
+				case "RailwayContainerClass" -> railwayContainerClass;
+				case "TrackElement" -> trackElementClass;
+				default -> throw new IllegalArgumentException("Unknown relation name: " + relationName);
+			};
+			modelSeedBuilder.seed(partialRelation, builder -> {
+				for (var tuple : tuples) {
+					builder.put(tuple, TRUE);
 				}
-				builder.reducedValue(TruthValue.FALSE);
+				builder.reducedValue(UNKNOWN);
 			});
 		}
 
-//        System.out.println("building model seed with " + nodeCount + " nodes");
+		for (var mapEntry : relationMaps.entrySet()) {
+			String relationName = mapEntry.getKey();
+			Set<Tuple> tuples = mapEntry.getValue();
+			var partialRelation = switch (relationName) {
+				case "sensors" -> sensors;
+				case "elements" -> elements;
+				case "follows" -> follows;
+				case "requires" -> requires;
+				case "entry" -> entry;
+				case "exit" -> exit;
+				case "route" -> route;
+				case "target" -> target;
+				case "monitoredBy" -> monitoredBy;
+				case "connectsTo" -> connectsTo;
+				case "semaphores" -> semaphores;
+				case "straight" -> straight;
+				case "diverging" -> diverging;
+				case "monitors" -> monitors;
+				case "positions" -> positions;
+				case "regions" -> regions;
+				case "routes" -> routes;
+				default -> throw new IllegalArgumentException("Unknown relation name: " + relationName);
+			};
+			modelSeedBuilder.seed(partialRelation, builder -> {
+				for (var tuple : tuples) {
+					builder.put(tuple, TRUE);
+				}
+				builder.reducedValue(FALSE);
+			});
+		}
+
+		for (var entry : enumMaps.entrySet()) {
+			String relationName = entry.getKey();
+			Map<String, Tuple> tuples = entry.getValue();
+			var partialRelation = switch (relationName) {
+				case "Signal" -> signalEnum;
+				case "Position" -> positionEnum;
+				default -> throw new IllegalArgumentException("Unknown relation name: " + relationName);
+			};
+			modelSeedBuilder.seed(partialRelation, builder -> {
+				for (var tupleEntry : tuples.entrySet()) {
+					builder.put(tupleEntry.getValue(), TRUE);
+				}
+				builder.reducedValue(UNKNOWN);
+			});
+		}
+
+		for (var mapEntry : enumAttributeMaps.entrySet()) {
+			String relationName = mapEntry.getKey();
+			Set<Tuple> tuples = mapEntry.getValue();
+			var partialRelation = switch (relationName) {
+				case "signal" -> signal;
+				case "position" -> position;
+				case "currentPosition" -> currentPosition;
+				default -> throw new IllegalArgumentException("Unknown relation name: " + relationName);
+			};
+			modelSeedBuilder.seed(partialRelation, builder -> {
+				for (var tuple : tuples) {
+					builder.put(tuple, TRUE);
+				}
+				builder.reducedValue(FALSE);
+			});
+		}
+
+		for (var mapEntry : booleanAttributeMaps.entrySet()) {
+			String relationName = mapEntry.getKey();
+			Map<Tuple, TruthValue> tuples = mapEntry.getValue();
+			if (!relationName.equals("active")) {
+				throw new IllegalArgumentException("Unknown relation name: " + relationName);
+			}
+			var partialRelation = active;
+			modelSeedBuilder.seed(partialRelation, builder -> {
+				for (var tupleEntry : tuples.entrySet()) {
+					builder.put(tupleEntry.getKey(), tupleEntry.getValue());
+				}
+				builder.reducedValue(FALSE);
+			});
+		}
+
+		for (var mapEntry : intAttributeMaps.entrySet()) {
+			String relationName = mapEntry.getKey();
+			Map<Tuple, IntInterval> tuples = mapEntry.getValue();
+			if (!relationName.equals("length")) {
+				throw new IllegalArgumentException("Unknown relation name: " + relationName);
+			}
+			var partialRelation = length;
+			modelSeedBuilder.seed(partialRelation, builder -> {
+				for (var tupleEntry : tuples.entrySet()) {
+					builder.put(tupleEntry.getKey(), tupleEntry.getValue());
+				}
+				builder.reducedValue(IntInterval.UNKNOWN);
+			});
+		}
         this.modelSeed = this.modelSeedBuilder.build();
 		super.init();
     }
