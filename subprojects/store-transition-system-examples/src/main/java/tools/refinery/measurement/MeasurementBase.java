@@ -27,7 +27,7 @@ import java.util.Random;
  * activation collection).
  */
 public abstract class MeasurementBase implements MeasurementCase {
-    protected boolean visualize = true;
+    protected boolean visualize = false;
 
     protected ModelStore store;
     protected ModelQueryAdapter queryEngine;

@@ -26,9 +26,9 @@ public class TrainBenchmarkTextMeasurement extends MeasurementBase {
 	public void init(int size, boolean visualize) throws IOException {
 		this.visualize = visualize;
 		if (visualize) {
-			visualizationOutputPath = "output_visualization/trainbenchmark_test_injectConnectedSegments" + size;
+			visualizationOutputPath = "output_visualization/trainbenchmark_size_" + size;
 		}
-		var problem = loader.loadFile("input/models/tests/trainbenchmark-injectConnectedSegments.problem");
+		var problem = loader.loadFile("input/models/trainbenchmark/size-" + size + "/railway-batch-" + size + ".problem");
 
 		storeBuilder = storeBuilder
 				.with(QueryInterpreterAdapter.builder())

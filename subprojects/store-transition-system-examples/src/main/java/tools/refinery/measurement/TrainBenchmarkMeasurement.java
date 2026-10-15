@@ -35,6 +35,8 @@ import static tools.refinery.logic.term.truthvalue.TruthValue.*;
 
 public class TrainBenchmarkMeasurement extends MeasurementBase {
 
+	String fileNamePrefix = "railway-batch-";
+
 	Set<Tuple> regionClassSet = new HashSet<>();
 	Set<Tuple> semaphoreClassSet = new HashSet<>();
 	Set<Tuple> routeClassSet = new HashSet<>();
@@ -122,7 +124,6 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 	PartialRelation requiresInvalidMultiplicity = new PartialRelation("requires::invalidMultiplicity", 1);
 	PartialRelation entryInvalidMultiplicity = new PartialRelation("entry::invalidMultiplicity", 1);
 	PartialRelation exitInvalidMultiplicity = new PartialRelation("exit::invalidMultiplicity", 1);
-	PartialRelation routeInvalidMultiplicity = new PartialRelation("route::invalidMultiplicity", 1);
 	PartialRelation targetInvalidMultiplicity = new PartialRelation("target::invalidMultiplicity", 1);
 	PartialRelation positionInvalidMultiplicity = new PartialRelation("position::invalidMultiplicity", 1);
 	PartialRelation currentPositionInvalidMultiplicity = new PartialRelation("currentPosition::invalidMultiplicity", 1);
@@ -135,7 +136,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 	PartialRelation active = new PartialRelation("active", 1);
 
 
-	MetamodelBuilder builder = Metamodel.builder()
+	MetamodelBuilder metamodelBuilder = Metamodel.builder()
 			.type(railwayContainerClass)
 			.type(regionClass)
 			.type(semaphoreClass)
@@ -179,6 +180,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 			.reference(follows, referenceBuilder -> referenceBuilder
 					.source(routeClass)
 					.target(switchPositionClass)
+					.containment(true)
 					.opposite(route)
 					.defaultValue(FALSE))
 			.reference(requires, referenceBuilder -> referenceBuilder
@@ -200,7 +202,6 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 					.source(switchPositionClass)
 					.target(routeClass)
 					.opposite(follows)
-					.multiplicity(CardinalityIntervals.LONE, routeInvalidMultiplicity)
 					.defaultValue(FALSE))
 			.reference(target, referenceBuilder -> referenceBuilder
 					.source(switchPositionClass)
@@ -253,7 +254,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 					.multiplicity(CardinalityIntervals.LONE, divergingInvalidMultiplicity)
 					.defaultValue(FALSE));
 
-	Metamodel metamodel = builder.build();
+	Metamodel metamodel = metamodelBuilder.build();
 
     ModelSeed.Builder modelSeedBuilder;
 
@@ -262,6 +263,8 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 		if (visualize) {
 			visualizationOutputPath = "output_visualization/trainbenchmark_" + size;
 		}
+
+		fileNamePrefix = fileNamePrefix + size;
 
 		classMaps.put("Region", regionClassSet);
 		classMaps.put("Semaphore", semaphoreClassSet);
@@ -317,14 +320,13 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 				.with(new BasePredicateTranslator(active, List.of(routeClass), Set.of(), UNKNOWN,
 						new ConcretizationSettings(true, true)));
 
-		String pathToCsvFolder = "input/models/trainbenchmark/size-1"; // Replace with the actual path to your
+		String pathToCsvFolder = "input/models/trainbenchmark/size-" + size;
 
 
 		for (var csvFile :
-				new File(pathToCsvFolder).listFiles((dir, name) -> name.startsWith("railway-batch-1") &&
-						name.endsWith(".csv") && classMaps.keySet().stream().anyMatch(name::contains))) {
-			String relationName = csvFile.getName().replace("railway-batch-1-", "").replace(".csv", "");
-			System.out.println("Loading CSV file: " + csvFile.getName() + " for relation: " + relationName);
+				Objects.requireNonNull(new File(pathToCsvFolder).listFiles((dir, name) -> name.startsWith(fileNamePrefix) &&
+						name.endsWith(".csv") && classMaps.keySet().stream().anyMatch(name::contains)))) {
+			String relationName = csvFile.getName().replace(fileNamePrefix + "-", "").replace(".csv", "");
 			var inputMap = classMaps.get(relationName);
 			try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(csvFile))) {
 				String line;
@@ -337,10 +339,9 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 			}
 		}
 		for (var csvFile :
-				new File(pathToCsvFolder).listFiles((dir, name) -> name.startsWith("railway-batch-1") &&
-						name.endsWith(".csv") && relationMaps.keySet().stream().anyMatch(name::contains))) {
-			String relationName = csvFile.getName().replace("railway-batch-1-", "").replace(".csv", "");
-			System.out.println("Loading CSV file: " + csvFile.getName() + " for relation: " + relationName);
+				Objects.requireNonNull(new File(pathToCsvFolder).listFiles((dir, name) -> name.startsWith(fileNamePrefix) &&
+						name.endsWith(".csv") && relationMaps.keySet().stream().anyMatch(name::contains)))) {
+			String relationName = csvFile.getName().replace(fileNamePrefix + "-", "").replace(".csv", "");
 			var inputMap = relationMaps.get(relationName);
 			try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(csvFile))) {
 				String line;
@@ -353,10 +354,9 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 			}
 		}
 		for (var csvFile :
-				new File(pathToCsvFolder).listFiles((dir, name) -> name.startsWith("railway-batch-1") &&
-						name.endsWith(".csv") && booleanAttributeMaps.keySet().stream().anyMatch(name::contains))) {
-			String relationName = csvFile.getName().replace("railway-batch-1-", "").replace(".csv", "");
-			System.out.println("Loading CSV file: " + csvFile.getName() + " for relation: " + relationName);
+				Objects.requireNonNull(new File(pathToCsvFolder).listFiles((dir, name) -> name.startsWith(fileNamePrefix) &&
+						name.endsWith(".csv") && booleanAttributeMaps.keySet().stream().anyMatch(name::contains)))) {
+			String relationName = csvFile.getName().replace(fileNamePrefix + "-", "").replace(".csv", "");
 			var inputMap = booleanAttributeMaps.get(relationName);
 			try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(csvFile))) {
 				String line;
@@ -369,10 +369,9 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 			}
 		}
 		for (var csvFile :
-				new File(pathToCsvFolder).listFiles((dir, name) -> name.startsWith("railway-batch-1") &&
-						name.endsWith(".csv") && intAttributeMaps.keySet().stream().anyMatch(name::contains))) {
-			String relationName = csvFile.getName().replace("railway-batch-1-", "").replace(".csv", "");
-			System.out.println("Loading CSV file: " + csvFile.getName() + " for relation: " + relationName);
+				Objects.requireNonNull(new File(pathToCsvFolder).listFiles((dir, name) -> name.startsWith(fileNamePrefix) &&
+						name.endsWith(".csv") && intAttributeMaps.keySet().stream().anyMatch(name::contains)))) {
+			String relationName = csvFile.getName().replace(fileNamePrefix + "-", "").replace(".csv", "");
 			var inputMap = intAttributeMaps.get(relationName);
 			try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(csvFile))) {
 				String line;
@@ -393,10 +392,9 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 		positionEnumMap.put("Position::DIVERGING", Tuple.of(nextId++));
 		railwayContainerClassSet.add(Tuple.of(nextId++));
 		for (var csvFile :
-				new File(pathToCsvFolder).listFiles((dir, name) -> name.startsWith("railway-batch-1") &&
-						name.endsWith(".csv") && enumAttributeMaps.keySet().stream().anyMatch(name::contains))) {
-			String relationName = csvFile.getName().replace("railway-batch-1-", "").replace(".csv", "");
-			System.out.println("Loading CSV file: " + csvFile.getName() + " for relation: " + relationName);
+				Objects.requireNonNull(new File(pathToCsvFolder).listFiles((dir, name) -> name.startsWith(fileNamePrefix) &&
+						name.endsWith(".csv") && enumAttributeMaps.keySet().stream().anyMatch(name::contains)))) {
+			String relationName = csvFile.getName().replace(fileNamePrefix + "-", "").replace(".csv", "");
 			var inputMap = enumAttributeMaps.get(relationName);
 			try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(csvFile))) {
 				String line;
@@ -454,29 +452,52 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 			});
 		}
 
+
 		for (var mapEntry : relationMaps.entrySet()) {
 			String relationName = mapEntry.getKey();
 			Set<Tuple> tuples = mapEntry.getValue();
 			var partialRelation = switch (relationName) {
+				case "monitors" -> monitors;
 				case "sensors" -> sensors;
 				case "elements" -> elements;
+				case "positions" -> positions;
 				case "follows" -> follows;
+				case "semaphores" -> semaphores;
+				case "regions" -> regions;
+				case "routes" -> routes;
+				case "route" -> route;
+				default -> null;
+			};
+			if (partialRelation == null) {
+				continue;
+			}
+			modelSeedBuilder.seed(partialRelation, builder -> {
+				for (var tuple : tuples) {
+					builder.put(tuple, TRUE);
+				}
+				builder.reducedValue(UNKNOWN);
+			});
+		}
+
+
+
+		for (var mapEntry : relationMaps.entrySet()) {
+			String relationName = mapEntry.getKey();
+			Set<Tuple> tuples = mapEntry.getValue();
+			var partialRelation = switch (relationName) {
 				case "requires" -> requires;
 				case "entry" -> entry;
 				case "exit" -> exit;
-				case "route" -> route;
 				case "target" -> target;
 				case "monitoredBy" -> monitoredBy;
 				case "connectsTo" -> connectsTo;
-				case "semaphores" -> semaphores;
 				case "straight" -> straight;
 				case "diverging" -> diverging;
-				case "monitors" -> monitors;
-				case "positions" -> positions;
-				case "regions" -> regions;
-				case "routes" -> routes;
-				default -> throw new IllegalArgumentException("Unknown relation name: " + relationName);
+				default -> null;
 			};
+			if (partialRelation == null) {
+				continue;
+			}
 			modelSeedBuilder.seed(partialRelation, builder -> {
 				for (var tuple : tuples) {
 					builder.put(tuple, TRUE);
@@ -529,7 +550,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 				for (var tupleEntry : tuples.entrySet()) {
 					builder.put(tupleEntry.getKey(), tupleEntry.getValue());
 				}
-				builder.reducedValue(FALSE);
+				builder.reducedValue(UNKNOWN);
 			});
 		}
 
