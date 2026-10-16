@@ -198,6 +198,39 @@ public final class DnfBuilder {
 				Variable.of("d3", type3), Variable.of("d4", type4)));
 	}
 
+	public DnfBuilder clause(ClauseCallback5Data0 callback) {
+		return clause(callback.toLiterals(Variable.of("v1"), Variable.of("v2"), Variable.of("v3"), Variable.of("v4"),
+				Variable.of("v5")));
+	}
+
+	public <T> DnfBuilder clause(Class<T> type1, ClauseCallback5Data1<T> callback) {
+		return clause(callback.toLiterals(Variable.of("v1"), Variable.of("v2"), Variable.of("v3"), Variable.of("v4"),
+				Variable.of("d1", type1)));
+	}
+
+	public <T1, T2> DnfBuilder clause(Class<T1> type1, Class<T2> type2, ClauseCallback5Data2<T1, T2> callback) {
+		return clause(callback.toLiterals(Variable.of("v1"), Variable.of("v2"), Variable.of("v3"), Variable.of("d1",
+				type1), Variable.of("d2", type2)));
+	}
+
+	public <T1, T2, T3> DnfBuilder clause(Class<T1> type1, Class<T2> type2, Class<T3> type3,
+										  ClauseCallback5Data3<T1, T2, T3> callback) {
+		return clause(callback.toLiterals(Variable.of("v1"), Variable.of("v2"), Variable.of("d1", type1),
+				Variable.of("d2", type2), Variable.of("d3", type3)));
+	}
+
+	public <T1, T2, T3, T4> DnfBuilder clause(Class<T1> type1, Class<T2> type2, Class<T3> type3, Class<T4> type4,
+											  ClauseCallback5Data4<T1, T2, T3, T4> callback) {
+		return clause(callback.toLiterals(Variable.of("v1"), Variable.of("d1", type1), Variable.of("d2", type2),
+				Variable.of("d3", type3), Variable.of("d4", type4)));
+	}
+
+	public <T1, T2, T3, T4, T5> DnfBuilder clause(Class<T1> type1, Class<T2> type2, Class<T3> type3, Class<T4> type4,
+												  Class<T5> type5, ClauseCallback5Data5<T1, T2, T3, T4, T5> callback) {
+		return clause(callback.toLiterals(Variable.of("d1", type1), Variable.of("d2", type2),
+				Variable.of("d3", type3), Variable.of("d4", type4), Variable.of("d5", type5)));
+	}
+
 	public DnfBuilder clause(Literal... literals) {
 		clause(List.of(literals));
 		return this;

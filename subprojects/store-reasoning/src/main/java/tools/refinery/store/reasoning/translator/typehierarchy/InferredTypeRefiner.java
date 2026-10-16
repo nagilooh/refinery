@@ -50,6 +50,13 @@ class InferredTypeRefiner extends AbstractPartialInterpretationRefiner.Concretiz
 		if (!Objects.equals(currentType, newType)) {
 			interpretation.put(key, newType);
 		}
+		if (hasAbstractionListeners()) {
+			var currentValue = currentType.getTruthValue(result);
+			var newValue = newType.getTruthValue(result);
+			if (!Objects.equals(currentValue, newValue)) {
+				return notifyAbstractionListeners(key, currentValue, newValue);
+			}
+		}
 		return true;
 	}
 

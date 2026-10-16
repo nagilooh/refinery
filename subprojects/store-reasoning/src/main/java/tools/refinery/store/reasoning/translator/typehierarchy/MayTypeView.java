@@ -16,6 +16,6 @@ class MayTypeView extends InferredTypeView {
 
 	@Override
 	protected boolean doFilter(Tuple key, InferredType value) {
-		return value.mayConcreteTypes().contains(type);
+		return value.isMayConcrete(type);
 	}
 }
