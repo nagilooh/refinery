@@ -35,6 +35,10 @@ class WrappedConstantFunctionAction<A extends AbstractValue<A, C>, C> extends Wr
 
 	@Override
 	protected ActionLiteral getActionLiteral(Concreteness concreteness, List<NodeVariable> arguments) {
-		return PartialActionLiterals.merge(getPartialFunction(), value, arguments);
+		var partialFunction = getPartialFunction();
+		if (useModifyActions) {
+			return PartialActionLiterals.modify(partialFunction, value, arguments);
+		}
+		return PartialActionLiterals.merge(partialFunction, value, arguments);
 	}
 }

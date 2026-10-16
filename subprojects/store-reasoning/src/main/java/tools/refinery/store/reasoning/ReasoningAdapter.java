@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2021-2024 The Refinery Authors <https://refinery.tools/>
+ * SPDX-FileCopyrightText: 2021-2026 The Refinery Authors <https://refinery.tools/>
  *
  * SPDX-License-Identifier: EPL-2.0
  */
@@ -48,13 +48,21 @@ public interface ReasoningAdapter extends ModelAdapter {
 	}
 
 	<A extends AbstractValue<A, C>, C> PartialInterpretationRefiner<A, C> getRefiner(PartialSymbol<A, C> partialSymbol);
+
 	@Nullable
 	Tuple1 split(int parentMultiObject);
 
 	@Nullable
 	Tuple1 focus(int parentObject);
 
-	boolean cleanup(int nodeToDelete);
+	@Nullable
+	Tuple1 createNew();
+
+	default boolean cleanup(int nodeToDelete) {
+		return cleanup(nodeToDelete, false);
+	}
+
+	boolean cleanup(int nodeToDelete, boolean force);
 
 	int getNodeCount();
 

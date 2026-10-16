@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 The Refinery Authors <https://refinery.tools/>
+ * SPDX-FileCopyrightText: 2023-2026 The Refinery Authors <https://refinery.tools/>
  *
  * SPDX-License-Identifier: EPL-2.0
  */
@@ -17,6 +17,10 @@ public class DefaultStorageRefiner<T> implements StorageRefiner {
 
 	public DefaultStorageRefiner(Symbol<T> symbol, Model model) {
 		interpretation = model.getInterpretation(symbol);
+	}
+
+	protected Interpretation<T> getInterpretation() {
+		return interpretation;
 	}
 
 	@Override

@@ -775,7 +775,7 @@ public class ProblemValidator extends AbstractProblemValidator {
 		}
 		int consequentCount = consequents.size();
 		for (var entry : useCounts.entrySet()) {
-			if (entry.getValue() < consequentCount) {
+			if (entry.getValue() < consequentCount && builtinAnnotationContext.getParameterBinding(entry.getKey()) != ParameterBinding.DELETE) {
 				var parameter = entry.getKey();
 				var message = "Unused rule parameter '%s'.".formatted(parameter.getName());
 				acceptWarning(message, parameter, ProblemPackage.Literals.NAMED_ELEMENT__NAME, 0,

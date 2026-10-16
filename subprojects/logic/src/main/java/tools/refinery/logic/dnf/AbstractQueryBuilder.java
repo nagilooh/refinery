@@ -163,6 +163,39 @@ public abstract class AbstractQueryBuilder<T extends AbstractQueryBuilder<T>> {
 		return self();
 	}
 
+	public T clause(ClauseCallback5Data0 callback) {
+		dnfBuilder.clause(callback);
+		return self();
+	}
+
+	public <U1> T clause(Class<U1> type1, ClauseCallback5Data1<U1> callback) {
+		dnfBuilder.clause(type1, callback);
+		return self();
+	}
+
+	public <U1, U2> T clause(Class<U1> type1, Class<U2> type2, ClauseCallback5Data2<U1, U2> callback) {
+		dnfBuilder.clause(type1, type2, callback);
+		return self();
+	}
+
+	public <U1, U2, U3> T clause(Class<U1> type1, Class<U2> type2, Class<U3> type3,
+								 ClauseCallback5Data3<U1, U2, U3> callback) {
+		dnfBuilder.clause(type1, type2, type3, callback);
+		return self();
+	}
+
+	public <U1, U2, U3, U4> T clause(Class<U1> type1, Class<U2> type2, Class<U3> type3, Class<U4> type4,
+									 ClauseCallback5Data4<U1, U2, U3, U4> callback) {
+		dnfBuilder.clause(type1, type2, type3, type4, callback);
+		return self();
+	}
+
+	public <U1, U2, U3, U4, U5> T clause(Class<U1> type1, Class<U2> type2, Class<U3> type3, Class<U4> type4,
+										 Class<U5> type5, ClauseCallback5Data5<U1, U2, U3, U4, U5> callback) {
+		dnfBuilder.clause(type1, type2, type3, type4, type5, callback);
+		return self();
+	}
+
 	public T clause(Literal... literals) {
 		dnfBuilder.clause(literals);
 		return self();
