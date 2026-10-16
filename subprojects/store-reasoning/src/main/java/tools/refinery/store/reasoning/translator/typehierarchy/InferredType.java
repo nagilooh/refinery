@@ -5,6 +5,7 @@
  */
 package tools.refinery.store.reasoning.translator.typehierarchy;
 
+import tools.refinery.logic.term.truthvalue.TruthValue;
 import tools.refinery.store.reasoning.representation.PartialRelation;
 
 import java.util.Collections;
@@ -36,6 +37,23 @@ public final class InferredType {
 
 	public boolean isMayConcrete(PartialRelation partialRelation) {
 		return mayConcreteTypes.contains(partialRelation);
+	}
+
+	public boolean isMust(TypeAnalysisResult result) {
+		return isMust(result.type());
+	}
+
+	public boolean isMay(TypeAnalysisResult result) {
+		for (var concreteSubtype : result.getConcreteSubtypesAndSelf()) {
+			if (isMayConcrete(concreteSubtype)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public TruthValue getTruthValue(TypeAnalysisResult result) {
+		return TruthValue.of(isMay(result), isMust(result));
 	}
 
 	public Set<PartialRelation> mustTypes() {

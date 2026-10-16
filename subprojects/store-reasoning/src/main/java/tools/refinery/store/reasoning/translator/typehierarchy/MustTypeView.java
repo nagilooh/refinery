@@ -16,6 +16,6 @@ class MustTypeView extends InferredTypeView {
 
 	@Override
 	protected boolean doFilter(Tuple key, InferredType value) {
-		return value.mustTypes().contains(type);
+		return value.isMust(type);
 	}
 }

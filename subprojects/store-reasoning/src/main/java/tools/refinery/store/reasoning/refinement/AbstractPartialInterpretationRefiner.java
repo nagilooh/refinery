@@ -45,6 +45,10 @@ public abstract class AbstractPartialInterpretationRefiner<A extends AbstractVal
 		abstractionListeners.remove(listener);
 	}
 
+	protected boolean hasAbstractionListeners() {
+		return !abstractionListeners.isEmpty();
+	}
+
 	protected boolean notifyAbstractionListeners(Tuple key, A fromValue, A toValue) {
 		for (var listener : abstractionListeners) {
 			if (!listener.join(key, fromValue, toValue)) {
