@@ -448,7 +448,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 	PartialRelation injectSemaphoreNeighborPreconditionPartialRelation = new PartialRelation(
 			"injectSemaphoreNeighbor_precondition", 2);
 	TransitionRule injectSemaphoreNeighbor = new TransitionRule(injectSemaphoreNeighborPreconditionPartialRelation,
-			Rule.of("injectRouteSensor", (builder, semaphore, route) -> builder
+			Rule.of("injectSemaphoreNeighbor", (builder, semaphore, route) -> builder
 					.clause(
 							semaphoreClass.call(semaphore),
 							routeClass.call(route),
@@ -461,7 +461,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 	PartialRelation repairSemaphoreNeighborPreconditionPartialRelation = new PartialRelation(
 			"repairSemaphoreNeighbor_precondition", 2);
 	TransitionRule repairSemaphoreNeighbor = new TransitionRule(repairSemaphoreNeighborPreconditionPartialRelation,
-			Rule.of("repairRouteSensor", (builder, semaphore, route2) -> builder
+			Rule.of("repairSemaphoreNeighbor", (builder, semaphore, route2) -> builder
 					.clause((route1, sensor1, sensor2, te1, te2) -> List.of(
 							exit.call(route1, semaphore),
 							requires.call(route1, sensor1),
