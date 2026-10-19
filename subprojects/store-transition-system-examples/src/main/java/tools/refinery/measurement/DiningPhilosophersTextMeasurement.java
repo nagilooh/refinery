@@ -22,7 +22,7 @@ public class DiningPhilosophersTextMeasurement extends MeasurementBase {
 	@Inject
 	private ModelInitializer modelInitializer;
 
-	public void init(int size, boolean visualize) throws IOException {
+	public void init(int size, MeasurementScenario scenario, boolean visualize) throws IOException {
 		this.visualize = visualize;
 		if (visualize) {
 			visualizationOutputPath = "output_visualization/dining_philosophers_" + size;

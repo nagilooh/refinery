@@ -141,7 +141,7 @@ public class VehicleMovingMeasurement extends MeasurementBase {
 
 ModelSeed.Builder modelSeedBuilder;
 
-    public void init(int size, boolean visualize) {
+    public void init(int size, MeasurementScenario scenario, boolean visualize) {
 		this.visualize = visualize;
 		if (visualize) {
 			visualizationOutputPath = "output_visualization/statechart_" + size;
