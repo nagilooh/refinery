@@ -77,8 +77,8 @@ public abstract class MeasurementBase implements MeasurementCase {
 		if (visualize) {
 			stateSpaceStore.addState(currentVersion, stateCoderAdapter.calculateModelCode(), false, false);
 		}
-        List<Activation> activations = getActivations();
         for (int i = 0; i < steps; i++) {
+			List<Activation> activations = getActivations();
 			if (activations.isEmpty()) {
 				System.out.println("No more activations available, stopping exploration.");
 				return MeasurementResult.NO_MORE_TRANSITIONS;
@@ -91,7 +91,6 @@ public abstract class MeasurementBase implements MeasurementCase {
 			}
             var randomActivation = activations.get((random.nextInt(activations.size())));
             step(randomActivation);
-            activations = getActivations();
         }
 		return MeasurementResult.MAX_STEPS_REACHED;
     }
