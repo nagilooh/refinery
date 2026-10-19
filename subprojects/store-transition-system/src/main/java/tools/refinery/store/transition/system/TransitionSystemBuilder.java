@@ -10,7 +10,19 @@ import tools.refinery.store.dse.transition.objectives.Criterion;
 import tools.refinery.store.dse.transition.statespace.StateSpaceStore;
 import tools.refinery.store.transition.system.statespace.TransitionRule;
 
+import java.util.Collection;
+import java.util.List;
+
 public interface TransitionSystemBuilder extends ModelAdapterBuilder {
+
+	default TransitionSystemBuilder transitions(TransitionRule... rules) {
+		return transitions(List.of(rules));
+	}
+
+	default TransitionSystemBuilder transitions(Collection<TransitionRule> rules) {
+		rules.forEach(this::transition);
+		return this;
+	}
 
 	TransitionSystemBuilder transition(TransitionRule rule);
 
