@@ -101,42 +101,78 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 	Map<String, Map<Tuple, TruthValue>> booleanAttributeMaps = new HashMap<>();
 	Map<String, Map<Tuple, IntInterval>> intAttributeMaps = new HashMap<>();
 
+	static final String RailwayContainerClassName = "RailwayContainer";
+	static final String RegionClassName = "Region";
+	static final String SemaphoreClassName = "Semaphore";
+	static final String RouteClassName = "Route";
+	static final String SwitchPositionClassName = "SwitchPosition";
+	static final String TrackElementClassName = "TrackElement";
+	static final String SensorClassName = "Sensor";
+	static final String SegmentClassName = "Segment";
+	static final String SwitchClassName = "Switch";
+	static final String PositionEnumName = "Position";
+	static final String SignalEnumName = "Signal";
+
+	static final String routesRelationName = "routes";
+	static final String regionsRelationName = "regions";
+	static final String sensorsRelationName = "sensors";
+	static final String elementsRelationName = "elements";
+	static final String signalRelationName = "signal";
+	static final String followsRelationName = "follows";
+	static final String requiresRelationName = "requires";
+	static final String entryRelationName = "entry";
+	static final String exitRelationName = "exit";
+	static final String routeRelationName = "route";
+	static final String targetRelationName = "target";
+	static final String positionRelationName = "position";
+	static final String monitoredByRelationName = "monitoredBy";
+	static final String connectsToRelationName = "connectsTo";
+	static final String monitorsRelationName = "monitors";
+	static final String semaphoresRelationName = "semaphores";
+	static final String positionsRelationName = "positions";
+	static final String currentPositionRelationName = "currentPosition";
+	static final String straightRelationName = "straight";
+	static final String divergingRelationName = "diverging";
+
+	static final String lengthAttributeName = "length";
+	static final String activeAttributeName = "active";
+
 //	Classes
-	PartialRelation railwayContainerClass = new PartialRelation("RailwayContainer", 1);
-	PartialRelation regionClass = new PartialRelation("Region", 1);
-	PartialRelation semaphoreClass = new PartialRelation("Semaphore", 1);
-	PartialRelation routeClass = new PartialRelation("Route", 1);
-	PartialRelation switchPositionClass = new PartialRelation("SwitchPosition", 1);
-	PartialRelation trackElementClass = new PartialRelation("TrackElement", 1);
-	PartialRelation sensorClass = new PartialRelation("Sensor", 1);
-	PartialRelation segmentClass = new PartialRelation("Segment", 1);
-	PartialRelation switchClass = new PartialRelation("Switch", 1);
+	PartialRelation railwayContainerClass = new PartialRelation(RailwayContainerClassName, 1);
+	PartialRelation regionClass = new PartialRelation(RegionClassName, 1);
+	PartialRelation semaphoreClass = new PartialRelation(SemaphoreClassName, 1);
+	PartialRelation routeClass = new PartialRelation(RouteClassName, 1);
+	PartialRelation switchPositionClass = new PartialRelation(SwitchPositionClassName, 1);
+	PartialRelation trackElementClass = new PartialRelation(TrackElementClassName, 1);
+	PartialRelation sensorClass = new PartialRelation(SensorClassName, 1);
+	PartialRelation segmentClass = new PartialRelation(SegmentClassName, 1);
+	PartialRelation switchClass = new PartialRelation(SwitchClassName, 1);
 
 //	Enums
-	PartialRelation positionEnum = new PartialRelation("Position", 1);
-	PartialRelation signalEnum = new PartialRelation("Signal", 1);
+	PartialRelation positionEnum = new PartialRelation(PositionEnumName, 1);
+	PartialRelation signalEnum = new PartialRelation(SignalEnumName, 1);
 
 //	References
-	PartialRelation routes = new PartialRelation("routes", 2);
-	PartialRelation regions = new PartialRelation("regions", 2);
-	PartialRelation sensors = new PartialRelation("sensors", 2);
-	PartialRelation elements = new PartialRelation("elements", 2);
-	PartialRelation signal = new PartialRelation("signal", 2);
-	PartialRelation follows = new PartialRelation("follows", 2);
-	PartialRelation requires = new PartialRelation("requires", 2);
-	PartialRelation entry = new PartialRelation("entry", 2);
-	PartialRelation exit = new PartialRelation("exit", 2);
-	PartialRelation route = new PartialRelation("route", 2);
-	PartialRelation target = new PartialRelation("target", 2);
-	PartialRelation position = new PartialRelation("position", 2);
-	PartialRelation monitoredBy = new PartialRelation("monitoredBy", 2);
-	PartialRelation connectsTo = new PartialRelation("connectsTo", 2);
-	PartialRelation monitors = new PartialRelation("monitors", 2);
-	PartialRelation semaphores = new PartialRelation("semaphores", 2);
-	PartialRelation positions = new PartialRelation("positions", 2);
-	PartialRelation currentPosition = new PartialRelation("currentPosition", 2);
-	PartialRelation straight = new PartialRelation("straight", 2);
-	PartialRelation diverging = new PartialRelation("diverging", 2);
+	PartialRelation routes = new PartialRelation(routesRelationName, 2);
+	PartialRelation regions = new PartialRelation(regionsRelationName, 2);
+	PartialRelation sensors = new PartialRelation(sensorsRelationName, 2);
+	PartialRelation elements = new PartialRelation(elementsRelationName, 2);
+	PartialRelation signal = new PartialRelation(signalRelationName, 2);
+	PartialRelation follows = new PartialRelation(followsRelationName, 2);
+	PartialRelation requires = new PartialRelation(requiresRelationName, 2);
+	PartialRelation entry = new PartialRelation(entryRelationName, 2);
+	PartialRelation exit = new PartialRelation(exitRelationName, 2);
+	PartialRelation route = new PartialRelation(routeRelationName, 2);
+	PartialRelation target = new PartialRelation(targetRelationName, 2);
+	PartialRelation position = new PartialRelation(positionRelationName, 2);
+	PartialRelation monitoredBy = new PartialRelation(monitoredByRelationName, 2);
+	PartialRelation connectsTo = new PartialRelation(connectsToRelationName, 2);
+	PartialRelation monitors = new PartialRelation(monitorsRelationName, 2);
+	PartialRelation semaphores = new PartialRelation(semaphoresRelationName, 2);
+	PartialRelation positions = new PartialRelation(positionsRelationName, 2);
+	PartialRelation currentPosition = new PartialRelation(currentPositionRelationName, 2);
+	PartialRelation straight = new PartialRelation(straightRelationName, 2);
+	PartialRelation diverging = new PartialRelation(divergingRelationName, 2);
 
 
 	PartialRelation signalInvalidMultiplicity = new PartialRelation("signal::invalidMultiplicity", 1);
@@ -150,9 +186,9 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 	PartialRelation divergingInvalidMultiplicity = new PartialRelation("diverging::invalidMultiplicity", 1);
 
 
-	PartialFunction<IntInterval, BigInteger> length = PartialSymbol.of("length", 1, IntIntervalDomain.INSTANCE);
+	PartialFunction<IntInterval, BigInteger> length = PartialSymbol.of(lengthAttributeName, 1, IntIntervalDomain.INSTANCE);
 
-	PartialRelation active = new PartialRelation("active", 1);
+	PartialRelation active = new PartialRelation(activeAttributeName, 1);
 
 
 	MetamodelBuilder metamodelBuilder = Metamodel.builder()
@@ -521,42 +557,42 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 
 		fileNamePrefix = fileNamePrefix + size;
 
-		classMaps.put("Region", regionClassSet);
-		classMaps.put("Semaphore", semaphoreClassSet);
-		classMaps.put("Route", routeClassSet);
-		classMaps.put("SwitchPosition", switchPositionClassSet);
-		classMaps.put("Sensor", sensorClassSet);
-		classMaps.put("Segment", segmentClassSet);
-		classMaps.put("Switch", switchClassSet);
-		classMaps.put("RailwayContainerClass", railwayContainerClassSet);
-		classMaps.put("TrackElement", trackElementClassSet);
-		relationMaps.put("sensors", sensorsMap);
-		relationMaps.put("elements", elementsMap);
-		relationMaps.put("follows", followsMap);
-		relationMaps.put("requires", requiresMap);
-		relationMaps.put("entry", entryMap);
-		relationMaps.put("exit", exitMap);
-		relationMaps.put("route", routeMap);
-		relationMaps.put("target", targetMap);
-		relationMaps.put("monitoredBy", monitoredByMap);
-		relationMaps.put("connectsTo", connectsToMap);
-		relationMaps.put("semaphores", semaphoresMap);
-		relationMaps.put("straight", straightMap);
-		relationMaps.put("diverging", divergingMap);
-		relationMaps.put("monitors", monitorsMap);
-		relationMaps.put("positions", positionsMap);
-		relationMaps.put("regions", regionsMap);
-		relationMaps.put("routes", routesMap);
+		classMaps.put(RegionClassName, regionClassSet);
+		classMaps.put(SemaphoreClassName, semaphoreClassSet);
+		classMaps.put(RouteClassName, routeClassSet);
+		classMaps.put(SwitchPositionClassName, switchPositionClassSet);
+		classMaps.put(SensorClassName, sensorClassSet);
+		classMaps.put(SegmentClassName, segmentClassSet);
+		classMaps.put(SwitchClassName, switchClassSet);
+		classMaps.put(RailwayContainerClassName, railwayContainerClassSet);
+		classMaps.put(TrackElementClassName, trackElementClassSet);
+		relationMaps.put(sensorsRelationName, sensorsMap);
+		relationMaps.put(elementsRelationName, elementsMap);
+		relationMaps.put(followsRelationName, followsMap);
+		relationMaps.put(requiresRelationName, requiresMap);
+		relationMaps.put(entryRelationName, entryMap);
+		relationMaps.put(exitRelationName, exitMap);
+		relationMaps.put(routeRelationName, routeMap);
+		relationMaps.put(targetRelationName, targetMap);
+		relationMaps.put(monitoredByRelationName, monitoredByMap);
+		relationMaps.put(connectsToRelationName, connectsToMap);
+		relationMaps.put(semaphoresRelationName, semaphoresMap);
+		relationMaps.put(straightRelationName, straightMap);
+		relationMaps.put(divergingRelationName, divergingMap);
+		relationMaps.put(monitorsRelationName, monitorsMap);
+		relationMaps.put(positionsRelationName, positionsMap);
+		relationMaps.put(regionsRelationName, regionsMap);
+		relationMaps.put(routesRelationName, routesMap);
 
-		enumMaps.put("Signal", signalEnumMap);
-		enumMaps.put("Position", positionEnumMap);
-		enumAttributeMaps.put("signal", signalMap);
-		enumAttributeMaps.put("position", positionMap);
-		enumAttributeMaps.put("currentPosition", currentPositionMap);
+		enumMaps.put(SignalEnumName, signalEnumMap);
+		enumMaps.put(PositionEnumName, positionEnumMap);
+		enumAttributeMaps.put(signalRelationName, signalMap);
+		enumAttributeMaps.put(positionRelationName, positionMap);
+		enumAttributeMaps.put(currentPositionRelationName, currentPositionMap);
 
-		intAttributeMaps.put("length", lengthMap);
+		intAttributeMaps.put(lengthAttributeName, lengthMap);
 
-		booleanAttributeMaps.put("active", activeMap);
+		booleanAttributeMaps.put(activeAttributeName, activeMap);
 
 		storeBuilder = storeBuilder
 				.with(QueryInterpreterAdapter.builder()
@@ -751,15 +787,15 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 			String relationName = entry.getKey();
 			Set<Tuple> tuples = entry.getValue();
 			var partialRelation = switch (relationName) {
-				case "Region" -> regionClass;
-				case "Semaphore" -> semaphoreClass;
-				case "Route" -> routeClass;
-				case "SwitchPosition" -> switchPositionClass;
-				case "Sensor" -> sensorClass;
-				case "Segment" -> segmentClass;
-				case "Switch" -> switchClass;
-				case "RailwayContainerClass" -> railwayContainerClass;
-				case "TrackElement" -> trackElementClass;
+				case RegionClassName -> regionClass;
+				case SemaphoreClassName -> semaphoreClass;
+				case RouteClassName -> routeClass;
+				case SwitchPositionClassName -> switchPositionClass;
+				case SensorClassName -> sensorClass;
+				case SegmentClassName -> segmentClass;
+				case SwitchClassName -> switchClass;
+				case RailwayContainerClassName -> railwayContainerClass;
+				case TrackElementClassName -> trackElementClass;
 				default -> throw new IllegalArgumentException("Unknown relation name: " + relationName);
 			};
 			modelSeedBuilder.seed(partialRelation, builder -> {
@@ -775,15 +811,15 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 			String relationName = mapEntry.getKey();
 			Set<Tuple> tuples = mapEntry.getValue();
 			var partialRelation = switch (relationName) {
-				case "monitors" -> monitors;
-				case "sensors" -> sensors;
-				case "elements" -> elements;
-				case "positions" -> positions;
-				case "follows" -> follows;
-				case "semaphores" -> semaphores;
-				case "regions" -> regions;
-				case "routes" -> routes;
-				case "route" -> route;
+				case monitorsRelationName -> monitors;
+				case sensorsRelationName -> sensors;
+				case elementsRelationName -> elements;
+				case positionsRelationName -> positions;
+				case followsRelationName -> follows;
+				case semaphoresRelationName -> semaphores;
+				case regionsRelationName -> regions;
+				case routesRelationName -> routes;
+				case routeRelationName -> route;
 				default -> null;
 			};
 			if (partialRelation == null) {
@@ -803,14 +839,14 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 			String relationName = mapEntry.getKey();
 			Set<Tuple> tuples = mapEntry.getValue();
 			var partialRelation = switch (relationName) {
-				case "requires" -> requires;
-				case "entry" -> entry;
-				case "exit" -> exit;
-				case "target" -> target;
-				case "monitoredBy" -> monitoredBy;
-				case "connectsTo" -> connectsTo;
-				case "straight" -> straight;
-				case "diverging" -> diverging;
+				case requiresRelationName -> requires;
+				case entryRelationName -> entry;
+				case exitRelationName -> exit;
+				case targetRelationName -> target;
+				case monitoredByRelationName -> monitoredBy;
+				case connectsToRelationName -> connectsTo;
+				case straightRelationName -> straight;
+				case divergingRelationName -> diverging;
 				default -> null;
 			};
 			if (partialRelation == null) {
@@ -828,8 +864,8 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 			String relationName = entry.getKey();
 			Map<String, Tuple> tuples = entry.getValue();
 			var partialRelation = switch (relationName) {
-				case "Signal" -> signalEnum;
-				case "Position" -> positionEnum;
+				case SignalEnumName -> signalEnum;
+				case PositionEnumName -> positionEnum;
 				default -> throw new IllegalArgumentException("Unknown relation name: " + relationName);
 			};
 			modelSeedBuilder.seed(partialRelation, builder -> {
@@ -844,9 +880,9 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 			String relationName = mapEntry.getKey();
 			Set<Tuple> tuples = mapEntry.getValue();
 			var partialRelation = switch (relationName) {
-				case "signal" -> signal;
-				case "position" -> position;
-				case "currentPosition" -> currentPosition;
+				case signalRelationName -> signal;
+				case positionRelationName -> position;
+				case currentPositionRelationName -> currentPosition;
 				default -> throw new IllegalArgumentException("Unknown relation name: " + relationName);
 			};
 			modelSeedBuilder.seed(partialRelation, builder -> {
@@ -860,7 +896,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 		for (var mapEntry : booleanAttributeMaps.entrySet()) {
 			String relationName = mapEntry.getKey();
 			Map<Tuple, TruthValue> tuples = mapEntry.getValue();
-			if (!relationName.equals("active")) {
+			if (!relationName.equals(activeAttributeName)) {
 				throw new IllegalArgumentException("Unknown relation name: " + relationName);
 			}
 			var partialRelation = active;
@@ -875,7 +911,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 		for (var mapEntry : intAttributeMaps.entrySet()) {
 			String relationName = mapEntry.getKey();
 			Map<Tuple, IntInterval> tuples = mapEntry.getValue();
-			if (!relationName.equals("length")) {
+			if (!relationName.equals(lengthAttributeName)) {
 				throw new IllegalArgumentException("Unknown relation name: " + relationName);
 			}
 			var partialRelation = length;
