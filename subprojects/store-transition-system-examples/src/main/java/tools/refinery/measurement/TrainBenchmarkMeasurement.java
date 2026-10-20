@@ -1,6 +1,9 @@
 package tools.refinery.measurement;
 
 import tools.refinery.logic.dnf.Query;
+import tools.refinery.logic.dnf.QueryBuilder;
+import tools.refinery.logic.dnf.RelationalQuery;
+import tools.refinery.logic.term.NodeVariable;
 import tools.refinery.logic.term.Variable;
 import tools.refinery.logic.term.abstractdomain.AbstractDomainTerms;
 import tools.refinery.logic.term.cardinalityinterval.CardinalityIntervals;
@@ -12,11 +15,16 @@ import tools.refinery.store.dse.modification.ModificationAdapter;
 import tools.refinery.store.dse.propagation.PropagationAdapter;
 import tools.refinery.store.dse.transition.DesignSpaceExplorationAdapter;
 import tools.refinery.store.dse.transition.Rule;
+import tools.refinery.store.dse.transition.objectives.Criterion;
+import tools.refinery.store.query.ModelQueryAdapter;
+import tools.refinery.store.query.ModelQueryBuilder;
 import tools.refinery.store.query.interpreter.QueryInterpreterAdapter;
 import tools.refinery.store.reasoning.ReasoningAdapter;
+import tools.refinery.store.reasoning.ReasoningBuilder;
 import tools.refinery.store.reasoning.actions.*;
 import tools.refinery.store.reasoning.interpretation.PartialNeighborhoodCalculator;
 import tools.refinery.store.reasoning.literal.Concreteness;
+import tools.refinery.store.reasoning.literal.Modality;
 import tools.refinery.store.reasoning.representation.PartialFunction;
 import tools.refinery.store.reasoning.representation.PartialRelation;
 import tools.refinery.store.reasoning.representation.PartialSymbol;
@@ -42,11 +50,11 @@ import java.util.stream.IntStream;
 
 import static tools.refinery.logic.literal.Literals.not;
 import static tools.refinery.logic.term.truthvalue.TruthValue.*;
-import static tools.refinery.store.reasoning.literal.PartialLiterals.partialCheck;
+import static tools.refinery.store.reasoning.literal.PartialLiterals.*;
 
 public class TrainBenchmarkMeasurement extends MeasurementBase {
 
-	String fileNamePrefix = "railway-batch-";
+	String fileNamePrefix = "railway-";
 
 	int firstFreeId = 0;
 	int POSITION_FAILURE = firstFreeId++;
@@ -311,6 +319,25 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 
 	Metamodel metamodel = metamodelBuilder.build();
 
+	PartialRelation posLengthPartialRelation = new PartialRelation("posLength", 1);
+	RelationalQuery posLength;
+	RelationalQuery posLengthLifted;
+	PartialRelation switchMonitoredPartialRelation = new PartialRelation("switchMonitored", 1);
+	RelationalQuery switchMonitored;
+	RelationalQuery switchMonitoredLifted;
+	PartialRelation routeSensorPartialRelation = new PartialRelation("routeSensor", 4);
+	RelationalQuery routeSensor;
+	RelationalQuery routeSensorLifted;
+	PartialRelation switchSetPartialRelation = new PartialRelation("switchSet", 1);
+	RelationalQuery switchSet;
+	RelationalQuery switchSetLifted;
+	PartialRelation connectedSegmentsPartialRelation = new PartialRelation("connectedSegments", 6);
+	RelationalQuery connectedSegments;
+	RelationalQuery connectedSegmentsLifted;
+	PartialRelation semaphoreNeighborPartialRelation = new PartialRelation("semaphoreNeighbor", 2);
+	RelationalQuery semaphoreNeighbor;
+	RelationalQuery semaphoreNeighborLifted;
+
 	PartialRelation injectConnectedSegmentsPreconditionPartialRelation = new PartialRelation("injectConnectedSegments_precondition", 3);
 	TransitionRule injectConnectedSegments = new TransitionRule(injectConnectedSegmentsPreconditionPartialRelation,
 			Rule.of("injectConnectedSegments", (builder, sensor, segment1,  segment3) -> builder
@@ -403,11 +430,11 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 									length,
 									List.of(segment),
 									Query.of(IntInterval.class, (builder2, segment2, output) -> builder2.clause(
-											segmentClass.call(segment2),
+											must(segmentClass.call(segment2)),
 											output.assign(IntIntervalTerms.add(
 													IntIntervalTerms.mul(
 															IntIntervalTerms.constant(IntInterval.of(-1)),
-															length.call(segment2)
+															length.call(Concreteness.PARTIAL, segment2)
 													),
 													IntIntervalTerms.constant(IntInterval.ONE)
 											)))),
@@ -480,7 +507,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 	PartialRelation injectSwitchMonitoredPreconditionPartialRelation = new PartialRelation(
 			"injectSwitchMonitored_precondition", 2);
 	TransitionRule injectSwitchMonitored = new TransitionRule(injectSwitchMonitoredPreconditionPartialRelation,
-			Rule.of("injectRouteSensor", (builder, sw, sensor) -> builder
+			Rule.of("injectSwitchMonitored", (builder, sw, sensor) -> builder
 					.clause(
 							switchClass.call(sw),
 							sensorClass.call(sensor),
@@ -493,7 +520,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 	PartialRelation repairSwitchMonitoredPreconditionPartialRelation = new PartialRelation(
 			"repairSwitchMonitored_precondition", 1);
 	TransitionRule repairSwitchMonitored = new TransitionRule(repairSwitchMonitoredPreconditionPartialRelation,
-			Rule.of("repairRouteSensor", (builder, sw) -> builder
+			Rule.of("repairSwitchMonitored", (builder, sw) -> builder
 					.clause(
 							switchClass.call(sw),
 							not(monitoredBy.call(sw, Variable.of()))
@@ -549,13 +576,121 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 
     ModelSeed.Builder modelSeedBuilder;
 
+	Map<PartialRelation, TransitionRule> simulateRules = new HashMap<>();
+	Map<PartialRelation, TransitionRule> injectRules = new HashMap<>();
+	Map<PartialRelation, TransitionRule> repairRules = new HashMap<>();
+
+	Criterion acceptanceCriterion = _ -> () -> false;
+
 	public void init(int size, MeasurementScenario scenario, boolean visualize) {
 		this.visualize = visualize;
 		if (visualize) {
 			visualizationOutputPath = "output_visualization/trainbenchmark_" + size + "_modelSeed";
 		}
 
-		fileNamePrefix = fileNamePrefix + size;
+		fileNamePrefix = fileNamePrefix + scenario.toString().toLowerCase() + "-" + size;
+		System.out.println(fileNamePrefix);
+
+
+		posLength = Query.of("posLength", (builder, segment) -> builder
+				.clause(
+						segmentClass.call(segment),
+						partialCheck(AbstractDomainTerms.lessEq(
+								IntIntervalDomain.INSTANCE,
+								length.call(Concreteness.PARTIAL, segment),
+								IntIntervalTerms.constant(IntInterval.ZERO)
+						))
+				));
+
+		switchMonitored = Query.of("switchMonitored", (builder, sw) -> builder
+				.clause(
+						switchClass.call(sw),
+						not(monitoredBy.call(sw, Variable.of()))
+				));
+
+		routeSensor = Query.of("routeSensor", (builder, route, sensor, swP, sw) -> builder
+				.clause(
+						routeClass.call(route),
+						sensorClass.call(sensor),
+						monitoredBy.call(sw, sensor),
+						target.call(swP, sw),
+						follows.call(route, swP),
+						not(requires.call(route, sensor)
+						)));
+
+		switchSet = Query.of("switchSet", (builder, semaphore, route, swP, sw) -> builder
+				.clause((GO, swCurrentPosition, swpPosition) -> List.of(
+						switchClass.call(sw),
+						positionEnum.call(swCurrentPosition),
+						positionEnum.call(swpPosition),
+						GO.isConstant(this.SIGNAL_GO),
+
+						active.call(route),
+						entry.call(route, semaphore),
+						follows.call(route, swP),
+						target.call(swP, sw),
+
+						signal.call(semaphore, GO),
+						position.call(swP, swpPosition),
+						currentPosition.call(sw, swCurrentPosition),
+						swCurrentPosition.notEquivalent(swpPosition)
+				)));
+
+		semaphoreNeighbor = Query.of("semaphoreNeighbor", (builder, route1, route2) -> builder
+				.clause((semaphore, sensor1, sensor2, te1, te2) -> List.of(
+						exit.call(route1, semaphore),
+						requires.call(route1, sensor1),
+						monitoredBy.call(te1, sensor1),
+						connectsTo.call(te1, te2),
+						monitoredBy.call(te2, sensor2),
+						requires.call(route2, sensor2),
+						not(entry.call(route2, semaphore)),
+						route1.notEquivalent(route2)
+				)));
+
+		QueryBuilder queryBuilder = Query.builder("connectedSegments");
+		NodeVariable parameterSensor = queryBuilder.parameter("sensor");
+		NodeVariable parameterSegment1 = queryBuilder.parameter("segment1");
+		NodeVariable parameterSegment2 = queryBuilder.parameter("segment2");
+		NodeVariable parameterSegment3 = queryBuilder.parameter("segment3");
+		NodeVariable parameterSegment4 = queryBuilder.parameter("segment4");
+		NodeVariable parameterSegment5 = queryBuilder.parameter("segment5");
+		NodeVariable parameterSegment6 = queryBuilder.parameter("segment6");
+		queryBuilder.clause(
+				segmentClass.call(parameterSegment1),
+				segmentClass.call(parameterSegment2),
+				segmentClass.call(parameterSegment3),
+				segmentClass.call(parameterSegment4),
+				segmentClass.call(parameterSegment5),
+				segmentClass.call(parameterSegment6),
+				connectsTo.call(parameterSegment1, parameterSegment2),
+				connectsTo.call(parameterSegment2, parameterSegment3),
+				connectsTo.call(parameterSegment3, parameterSegment4),
+				connectsTo.call(parameterSegment4, parameterSegment5),
+				connectsTo.call(parameterSegment5, parameterSegment6),
+				monitoredBy.call(parameterSegment1, parameterSensor),
+				monitoredBy.call(parameterSegment2, parameterSensor),
+				monitoredBy.call(parameterSegment3, parameterSensor),
+				monitoredBy.call(parameterSegment4, parameterSensor),
+				monitoredBy.call(parameterSegment5, parameterSensor),
+				monitoredBy.call(parameterSegment6, parameterSensor),
+				parameterSegment1.notEquivalent(parameterSegment2),
+				parameterSegment1.notEquivalent(parameterSegment3),
+				parameterSegment1.notEquivalent(parameterSegment4),
+				parameterSegment1.notEquivalent(parameterSegment5),
+				parameterSegment1.notEquivalent(parameterSegment6),
+				parameterSegment2.notEquivalent(parameterSegment3),
+				parameterSegment2.notEquivalent(parameterSegment4),
+				parameterSegment2.notEquivalent(parameterSegment5),
+				parameterSegment2.notEquivalent(parameterSegment6),
+				parameterSegment3.notEquivalent(parameterSegment4),
+				parameterSegment3.notEquivalent(parameterSegment5),
+				parameterSegment3.notEquivalent(parameterSegment6),
+				parameterSegment4.notEquivalent(parameterSegment5),
+				parameterSegment4.notEquivalent(parameterSegment6),
+				parameterSegment5.notEquivalent(parameterSegment6)
+		);
+		connectedSegments = queryBuilder.build();
 
 		classMaps.put(RegionClassName, regionClassSet);
 		classMaps.put(SemaphoreClassName, semaphoreClassSet);
@@ -595,8 +730,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 		booleanAttributeMaps.put(activeAttributeName, activeMap);
 
 		storeBuilder = storeBuilder
-				.with(QueryInterpreterAdapter.builder()
-						.queries())
+				.with(QueryInterpreterAdapter.builder())
 				.with(PropagationAdapter.builder())
 				.with(StateCoderAdapter.builder()
 						.individuals(IntStream.range(0, firstFreeId).mapToObj(Tuple::of).toList())
@@ -605,74 +739,104 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 				.with(ModificationAdapter.builder())
 				.with(DesignSpaceExplorationAdapter.builder())
 				.with(ReasoningAdapter.builder())
-				.with(TransitionSystemAdapter.builder()
-						.transition(injectConnectedSegments)
-						.transition(repairConnectedSegments)
-						.transition(injectPosLength)
-						.transition(repairPosLength)
-						.transition(injectRouteSensor)
-						.transition(repairRouteSensor)
-						.transition(injectSemaphoreNeighbor)
-						.transition(repairSemaphoreNeighbor)
-						.transition(injectSwitchMonitored)
-						.transition(repairSwitchMonitored)
-						.transition(injectSwitchSet)
-						.transition(repairSwitchSet)
-						.accept(_ -> () -> false) // full state space exploration
-				)
 				.with(new MultiObjectTranslator())
 				.with(new MetamodelTranslator(metamodel))
 				.with(new BasePredicateTranslator(active, List.of(routeClass), Set.of(), UNKNOWN,
 						new ConcretizationSettings(true, true)))
+		;
+		var reasoningBuilder = storeBuilder.getAdapter(ReasoningBuilder.class);
+		var modelQueryBuilder = storeBuilder.getAdapter(ModelQueryBuilder.class);
+
+		posLengthLifted = reasoningBuilder.lift(Modality.MUST, Concreteness.PARTIAL, posLength);
+		switchMonitoredLifted = reasoningBuilder.lift(Modality.MUST, Concreteness.PARTIAL, switchMonitored);
+		routeSensorLifted = reasoningBuilder.lift(Modality.MUST, Concreteness.PARTIAL, routeSensor);
+		switchSetLifted = reasoningBuilder.lift(Modality.MUST, Concreteness.PARTIAL, switchSet);
+		semaphoreNeighborLifted = reasoningBuilder.lift(Modality.MUST, Concreteness.PARTIAL, semaphoreNeighbor);
+		connectedSegmentsLifted = reasoningBuilder.lift(Modality.MUST, Concreteness.PARTIAL, connectedSegments);
+
+		modelQueryBuilder.queries(
+				posLengthLifted,
+				switchMonitoredLifted,
+				routeSensorLifted,
+				switchSetLifted,
+				semaphoreNeighborLifted,
+				connectedSegmentsLifted
+		);
+
+
+		switch (scenario) {
+		case SIMULATE -> {
+		}
+		case INJECT -> storeBuilder = storeBuilder
+				.with(TransitionSystemAdapter.builder()
+						.transition(injectConnectedSegments)
+						.transition(injectPosLength)
+						.transition(injectRouteSensor)
+						.transition(injectSemaphoreNeighbor)
+						.transition(injectSwitchMonitored)
+						.transition(injectSwitchSet)
+						.accept(_ -> () -> false) // full state space exploration
+				)
 				.with(new PredicateTranslator(
 						injectConnectedSegmentsPreconditionPartialRelation,
 						injectConnectedSegments.rule().getPrecondition(),
 						List.of(sensorClass, segmentClass, segmentClass), Set.of(), true, UNKNOWN))
 				.with(new PredicateTranslator(
-						repairConnectedSegmentsPreconditionPartialRelation,
-						repairConnectedSegments.rule().getPrecondition(),
-						List.of(segmentClass, segmentClass, segmentClass), Set.of(), true, UNKNOWN))
-				.with(new PredicateTranslator(
 						injectPosLengthPreconditionPartialRelation,
 						injectPosLength.rule().getPrecondition(),
-						List.of(segmentClass), Set.of(), true, UNKNOWN))
-				.with(new PredicateTranslator(
-						repairPosLengthPreconditionPartialRelation,
-						repairPosLength.rule().getPrecondition(),
 						List.of(segmentClass), Set.of(), true, UNKNOWN))
 				.with(new PredicateTranslator(
 						injectRouteSensorPreconditionPartialRelation,
 						injectRouteSensor.rule().getPrecondition(),
 						List.of(routeClass, sensorClass), Set.of(), true, UNKNOWN))
 				.with(new PredicateTranslator(
-						repairRouteSensorPreconditionPartialRelation,
-						repairRouteSensor.rule().getPrecondition(),
-						List.of(routeClass, sensorClass), Set.of(), true, UNKNOWN))
-				.with(new PredicateTranslator(
 						injectSemaphoreNeighborPreconditionPartialRelation,
 						injectSemaphoreNeighbor.rule().getPrecondition(),
-						List.of(semaphoreClass, routeClass), Set.of(), true, UNKNOWN))
-				.with(new PredicateTranslator(
-						repairSemaphoreNeighborPreconditionPartialRelation,
-						repairSemaphoreNeighbor.rule().getPrecondition(),
 						List.of(semaphoreClass, routeClass), Set.of(), true, UNKNOWN))
 				.with(new PredicateTranslator(
 						injectSwitchMonitoredPreconditionPartialRelation,
 						injectSwitchMonitored.rule().getPrecondition(),
 						List.of(switchClass, sensorClass), Set.of(), true, UNKNOWN))
 				.with(new PredicateTranslator(
+						injectSwitchSetPreconditionPartialRelation,
+						injectSwitchSet.rule().getPrecondition(),
+						List.of(switchClass, positionEnum, positionEnum), Set.of(), true, UNKNOWN));
+		case REPAIR -> storeBuilder = storeBuilder
+				.with(TransitionSystemAdapter.builder()
+						.transition(repairConnectedSegments)
+						.transition(repairPosLength)
+						.transition(repairRouteSensor)
+						.transition(repairSemaphoreNeighbor)
+						.transition(repairSwitchMonitored)
+						.transition(repairSwitchSet)
+						.accept(_ -> () -> false) // full state space exploration
+				)
+				.with(new PredicateTranslator(
+						repairConnectedSegmentsPreconditionPartialRelation,
+						repairConnectedSegments.rule().getPrecondition(),
+						List.of(segmentClass, segmentClass, segmentClass), Set.of(), true, UNKNOWN))
+				.with(new PredicateTranslator(
+						repairPosLengthPreconditionPartialRelation,
+						repairPosLength.rule().getPrecondition(),
+						List.of(segmentClass), Set.of(), true, UNKNOWN))
+				.with(new PredicateTranslator(
+						repairRouteSensorPreconditionPartialRelation,
+						repairRouteSensor.rule().getPrecondition(),
+						List.of(routeClass, sensorClass), Set.of(), true, UNKNOWN))
+				.with(new PredicateTranslator(
+						repairSemaphoreNeighborPreconditionPartialRelation,
+						repairSemaphoreNeighbor.rule().getPrecondition(),
+						List.of(semaphoreClass, routeClass), Set.of(), true, UNKNOWN))
+				.with(new PredicateTranslator(
 						repairSwitchMonitoredPreconditionPartialRelation,
 						repairSwitchMonitored.rule().getPrecondition(),
 						List.of(switchClass), Set.of(), true, UNKNOWN))
 				.with(new PredicateTranslator(
-						injectSwitchSetPreconditionPartialRelation,
-						injectSwitchSet.rule().getPrecondition(),
-						List.of(switchClass, positionEnum, positionEnum), Set.of(), true, UNKNOWN))
-				.with(new PredicateTranslator(
 						repairSwitchSetPreconditionPartialRelation,
 						repairSwitchSet.rule().getPrecondition(),
-						List.of(switchClass, positionEnum, positionEnum), Set.of(), true, UNKNOWN))
-		;
+						List.of(switchClass, positionEnum, positionEnum), Set.of(), true, UNKNOWN));
+		default -> throw new IllegalArgumentException("Invalid scenario for this measurement: " + scenario);
+		}
 
 		String pathToCsvFolder = "input/models/trainbenchmark/size-" + size;
 
@@ -771,6 +935,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 
 		// TODO: This is a hack to get the number of nodes in the model. We should find a better way to do this.
 		var nodeCount = classMaps.values().stream().flatMap(Set::stream).mapToInt(t -> t.get(0)).max().orElse(0) + 1;
+		System.out.println(nodeCount);
 		modelSeedBuilder = ModelSeed.builder(nodeCount)
 				.seed(MultiObjectTranslator.COUNT_SYMBOL, builder -> builder
 						.reducedValue(CardinalityIntervals.ONE)
@@ -832,7 +997,6 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 				builder.reducedValue(UNKNOWN);
 			});
 		}
-
 
 
 		for (var mapEntry : relationMaps.entrySet()) {
@@ -923,26 +1087,84 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 			});
 		}
 
-		modelSeedBuilder.seed(injectConnectedSegmentsPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
-		modelSeedBuilder.seed(repairConnectedSegmentsPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
-		modelSeedBuilder.seed(injectPosLengthPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
-		modelSeedBuilder.seed(repairPosLengthPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
-		modelSeedBuilder.seed(injectRouteSensorPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
-		modelSeedBuilder.seed(repairRouteSensorPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
-		modelSeedBuilder.seed(injectSemaphoreNeighborPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
-		modelSeedBuilder.seed(repairSemaphoreNeighborPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
-		modelSeedBuilder.seed(injectSwitchMonitoredPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
-		modelSeedBuilder.seed(repairSwitchMonitoredPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
-		modelSeedBuilder.seed(injectSwitchSetPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
-		modelSeedBuilder.seed(repairSwitchSetPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
+		switch (scenario) {
+		case SIMULATE -> {
 
-        this.modelSeed = this.modelSeedBuilder.build();
+		}
+		case INJECT -> {
+			modelSeedBuilder.seed(injectConnectedSegmentsPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
+			modelSeedBuilder.seed(injectPosLengthPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
+			modelSeedBuilder.seed(injectRouteSensorPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
+			modelSeedBuilder.seed(injectSemaphoreNeighborPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
+			modelSeedBuilder.seed(injectSwitchMonitoredPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
+			modelSeedBuilder.seed(injectSwitchSetPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
+
+		}
+		case REPAIR -> {
+			modelSeedBuilder.seed(repairConnectedSegmentsPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
+			modelSeedBuilder.seed(repairPosLengthPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
+			modelSeedBuilder.seed(repairRouteSensorPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
+			modelSeedBuilder.seed(repairSemaphoreNeighborPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
+			modelSeedBuilder.seed(repairSwitchMonitoredPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
+			modelSeedBuilder.seed(repairSwitchSetPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
+		}
+
+		}
+
+		this.modelSeed = this.modelSeedBuilder.build();
 		super.init();
-    }
+	}
 
 	@Override
 	protected boolean renderTransitionsToAlreadyVisitedStates() {
 		return true;
+	}
+
+	public MeasurementResult runQueries(int steps) {
+		var queryAdapter = model.getAdapter(ModelQueryAdapter.class);
+		var resultSetPosLength = queryAdapter.getResultSet(posLengthLifted);
+		var resultSetSwitchMonitored = queryAdapter.getResultSet(switchMonitoredLifted);
+		var resultSetRouteSensor = queryAdapter.getResultSet(routeSensorLifted);
+		var resultSetSwitchSet = queryAdapter.getResultSet(switchSetLifted);
+		var resultSetSemaphoreNeighbor = queryAdapter.getResultSet(semaphoreNeighborLifted);
+		var resultSetConnectedSegments = queryAdapter.getResultSet(connectedSegmentsLifted);
+		System.out.println("Result set sizes:");
+		System.out.println("posLength: " + resultSetPosLength.size());
+		System.out.println("switchMonitored: " + resultSetSwitchMonitored.size());
+		System.out.println("routeSensor: " + resultSetRouteSensor.size());
+		System.out.println("switchSet: " + resultSetSwitchSet.size());
+		System.out.println("semaphoreNeighbor: " + resultSetSemaphoreNeighbor.size());
+		System.out.println("connectedSegments: " + resultSetConnectedSegments.size());
+		var transitions = tsAdapter.getTransitions();
+		var transformationIndex = 0;
+		for (var transition : transitions) {
+			for (int i = 0; i < steps; i++) {
+				List<Activation> activations = new ArrayList<>();
+				var activationCursor = transition.getAllActivationsAsResultSet().getAll();
+				var tupleIndex = 0;
+				while (activationCursor.move()) {
+					var activation = new Activation(transition, activationCursor.getKey(), transformationIndex, tupleIndex);
+					activations.add(activation);
+					tupleIndex++;
+				}
+				if (activations.isEmpty()) {
+					System.out.println("Transition " + transition + " has no " +
+							"activations at step " + i);
+					break;
+				}
+				var randomActivation = activations.get((random.nextInt(activations.size())));
+				step(randomActivation);
+			}
+			transformationIndex++;
+		}
+		System.out.println("Result set sizes:");
+		System.out.println("posLength: " + resultSetPosLength.size());
+		System.out.println("switchMonitored: " + resultSetSwitchMonitored.size());
+		System.out.println("routeSensor: " + resultSetRouteSensor.size());
+		System.out.println("switchSet: " + resultSetSwitchSet.size());
+		System.out.println("semaphoreNeighbor: " + resultSetSemaphoreNeighbor.size());
+		System.out.println("connectedSegments: " + resultSetConnectedSegments.size());
+		return MeasurementResult.MAX_STEPS_REACHED;
 	}
 }
 

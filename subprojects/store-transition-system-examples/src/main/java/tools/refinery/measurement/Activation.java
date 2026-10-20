@@ -7,7 +7,7 @@ import tools.refinery.store.tuple.Tuple;
 public record Activation(Transition transformation, Tuple tuple, int transformationIndex, int tupleIndex) {
     @Override
     public String toString() {
-        return String.format("%s%s%n", transformation.toString(), tuple);
+        return String.format("%s%s", transformation.toString(), tuple);
     }
 
     public boolean fire() {
