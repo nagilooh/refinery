@@ -1,12 +1,7 @@
 package tools.refinery.measurement;
 
-import tools.refinery.logic.dnf.Query;
-import tools.refinery.logic.dnf.RelationalQuery;
 import tools.refinery.logic.term.cardinalityinterval.CardinalityIntervals;
 import tools.refinery.logic.term.truthvalue.TruthValue;
-import tools.refinery.logic.term.truthvalue.TruthValueDomain;
-import tools.refinery.logic.term.truthvalue.TruthValueMayTerm;
-import tools.refinery.logic.term.truthvalue.TruthValueTerms;
 import tools.refinery.store.dse.modification.ModificationAdapter;
 import tools.refinery.store.dse.propagation.PropagationAdapter;
 import tools.refinery.store.dse.transition.DesignSpaceExplorationAdapter;
@@ -16,13 +11,9 @@ import tools.refinery.store.reasoning.ReasoningAdapter;
 import tools.refinery.store.reasoning.actions.PartialActionLiterals;
 import tools.refinery.store.reasoning.interpretation.PartialNeighborhoodCalculator;
 import tools.refinery.store.reasoning.literal.Concreteness;
-import tools.refinery.store.reasoning.literal.CountLowerBoundLiteral;
-import tools.refinery.store.reasoning.representation.PartialFunction;
 import tools.refinery.store.reasoning.representation.PartialRelation;
-import tools.refinery.store.reasoning.representation.PartialSymbol;
 import tools.refinery.store.reasoning.seed.ModelSeed;
 import tools.refinery.store.reasoning.translator.ConcretizationSettings;
-import tools.refinery.store.reasoning.translator.attribute.AttributeInfo;
 import tools.refinery.store.reasoning.translator.containment.ContainmentHierarchyTranslator;
 import tools.refinery.store.reasoning.translator.metamodel.Metamodel;
 import tools.refinery.store.reasoning.translator.metamodel.MetamodelBuilder;
@@ -40,7 +31,7 @@ import java.util.Set;
 
 import static tools.refinery.logic.term.truthvalue.TruthValue.*;
 
-public class StatechartMeasurement extends MeasurementBase {
+public class StatechartTrafficLightMeasurement extends MeasurementBase {
 
     PartialRelation state = new PartialRelation("State", 1);
 	PartialRelation initialState = new PartialRelation("InitialState", 1);

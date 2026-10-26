@@ -15,7 +15,7 @@ import tools.refinery.store.transition.system.strategy.TransitionSystemStoreMana
 
 import java.io.IOException;
 
-public class StatechartTextMeasurement extends MeasurementBase {
+public class StatechartTrafficLightTextMeasurement extends MeasurementBase {
 	@Inject
 	private ProblemLoader loader;
 
