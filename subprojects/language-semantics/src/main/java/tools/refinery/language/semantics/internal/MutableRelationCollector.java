@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 The Refinery Authors <https://refinery.tools/>
+ * SPDX-FileCopyrightText: 2024-2026 The Refinery Authors <https://refinery.tools/>
  *
  * SPDX-License-Identifier: EPL-2.0
  */
@@ -50,16 +50,46 @@ public class MutableRelationCollector {
 		}
 		for (var conjunction : ruleDefinition.getPreconditions()) {
 			for (var literal : conjunction.getLiterals()) {
-				switch (literal) {
-				case Atom atom -> {
+				if (Objects.requireNonNull(literal) instanceof Atom atom) {
 					var atomRelation = atom.getRelation();
-					if (atomRelation != null) {
-						mutablePredicates.add(atomRelation);
+					if (Objects.requireNonNull(atomRelation) instanceof PredicateDefinition predicateDefinition) {
+						makePredicateMutable(predicateDefinition);
 					}
 				}
-				default -> {
-					// Do nothing
+				if (Objects.requireNonNull(literal) instanceof NegationExpr negation) {
+					var body = negation.getBody();
+					if (Objects.requireNonNull(body) instanceof Atom atom) {
+						var atomRelation = atom.getRelation();
+						if (Objects.requireNonNull(atomRelation) instanceof PredicateDefinition predicateDefinition) {
+							makePredicateMutable(predicateDefinition);
+						}
+					}
 				}
+			}
+		}
+	}
+
+	private void makePredicateMutable(PredicateDefinition predicateDefinition) {
+		mutablePredicates.add(predicateDefinition);
+		for (var body : predicateDefinition.getBodies()) {
+			for (var literal : body.getLiterals()) {
+				if (Objects.requireNonNull(literal) instanceof Atom atom) {
+					var atomRelation = atom.getRelation();
+					if (atomRelation == null) {
+						continue;
+					}
+					if (atomRelation instanceof PredicateDefinition nestedPredicateDefinition) {
+						makePredicateMutable(nestedPredicateDefinition);
+					}
+				}
+				if (Objects.requireNonNull(literal) instanceof NegationExpr negation) {
+					var negationBody = negation.getBody();
+					if (Objects.requireNonNull(negationBody) instanceof Atom atom) {
+						var atomRelation = atom.getRelation();
+						if (Objects.requireNonNull(atomRelation) instanceof PredicateDefinition negatedPredicateDefinition) {
+							makePredicateMutable(negatedPredicateDefinition);
+						}
+					}
 				}
 			}
 		}
