@@ -1,16 +1,15 @@
 package tools.refinery.measurement;
 
-import tools.refinery.store.dse.transition.Transformation;
-import tools.refinery.store.transition.system.statespace.Transition;
+import org.jspecify.annotations.NonNull;
 import tools.refinery.store.tuple.Tuple;
 
-public record Activation(Transition transformation, Tuple tuple, int transformationIndex, int tupleIndex) {
+public record Activation(MeasuredTransitionRule transition, Tuple tuple, int transitionIndex, int tupleIndex) {
     @Override
-    public String toString() {
-        return String.format("%s%s", transformation.toString(), tuple);
+    public @NonNull String toString() {
+        return String.format("%s%s", transition.transition().toString(), tuple);
     }
 
     public boolean fire() {
-        return transformation.fireAction(tuple);
+        return transition.fire(tuple);
     }
 }

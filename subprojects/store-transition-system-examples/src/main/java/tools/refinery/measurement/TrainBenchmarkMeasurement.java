@@ -588,9 +588,8 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 			visualizationOutputPath = "output_visualization/trainbenchmark_" + size + "_modelSeed";
 		}
 
-		fileNamePrefix = fileNamePrefix + scenario.toString().toLowerCase() + "-" + size;
+		fileNamePrefix = fileNamePrefix + scenario.toString().toLowerCase() + "-" + size + "-";
 		System.out.println(fileNamePrefix);
-
 
 		posLength = Query.of("posLength", (builder, segment) -> builder
 				.clause(
@@ -745,7 +744,6 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 						new ConcretizationSettings(true, true)))
 		;
 		var reasoningBuilder = storeBuilder.getAdapter(ReasoningBuilder.class);
-		var modelQueryBuilder = storeBuilder.getAdapter(ModelQueryBuilder.class);
 
 		posLengthLifted = reasoningBuilder.lift(Modality.MUST, Concreteness.PARTIAL, posLength);
 		switchMonitoredLifted = reasoningBuilder.lift(Modality.MUST, Concreteness.PARTIAL, switchMonitored);
@@ -754,20 +752,19 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 		semaphoreNeighborLifted = reasoningBuilder.lift(Modality.MUST, Concreteness.PARTIAL, semaphoreNeighbor);
 		connectedSegmentsLifted = reasoningBuilder.lift(Modality.MUST, Concreteness.PARTIAL, connectedSegments);
 
-		modelQueryBuilder.queries(
-				posLengthLifted,
-				switchMonitoredLifted,
-				routeSensorLifted,
-				switchSetLifted,
-				semaphoreNeighborLifted,
-				connectedSegmentsLifted
-		);
+		queries.add(posLengthLifted);
+		queries.add(switchMonitoredLifted);
+		queries.add(routeSensorLifted);
+		queries.add(switchSetLifted);
+		queries.add(semaphoreNeighborLifted);
+		queries.add(connectedSegmentsLifted);
 
 
 		switch (scenario) {
 		case SIMULATE -> {
 		}
-		case INJECT -> storeBuilder = storeBuilder
+		case INJECT -> {
+			storeBuilder = storeBuilder
 				.with(TransitionSystemAdapter.builder()
 						.transition(injectConnectedSegments)
 						.transition(injectPosLength)
@@ -801,44 +798,60 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 						injectSwitchSetPreconditionPartialRelation,
 						injectSwitchSet.rule().getPrecondition(),
 						List.of(switchClass, positionEnum, positionEnum), Set.of(), true, UNKNOWN));
-		case REPAIR -> storeBuilder = storeBuilder
-				.with(TransitionSystemAdapter.builder()
-						.transition(repairConnectedSegments)
-						.transition(repairPosLength)
-						.transition(repairRouteSensor)
-						.transition(repairSemaphoreNeighbor)
-						.transition(repairSwitchMonitored)
-						.transition(repairSwitchSet)
-						.accept(_ -> () -> false) // full state space exploration
-				)
-				.with(new PredicateTranslator(
-						repairConnectedSegmentsPreconditionPartialRelation,
-						repairConnectedSegments.rule().getPrecondition(),
-						List.of(segmentClass, segmentClass, segmentClass), Set.of(), true, UNKNOWN))
-				.with(new PredicateTranslator(
-						repairPosLengthPreconditionPartialRelation,
-						repairPosLength.rule().getPrecondition(),
-						List.of(segmentClass), Set.of(), true, UNKNOWN))
-				.with(new PredicateTranslator(
-						repairRouteSensorPreconditionPartialRelation,
-						repairRouteSensor.rule().getPrecondition(),
-						List.of(routeClass, sensorClass), Set.of(), true, UNKNOWN))
-				.with(new PredicateTranslator(
-						repairSemaphoreNeighborPreconditionPartialRelation,
-						repairSemaphoreNeighbor.rule().getPrecondition(),
-						List.of(semaphoreClass, routeClass), Set.of(), true, UNKNOWN))
-				.with(new PredicateTranslator(
-						repairSwitchMonitoredPreconditionPartialRelation,
-						repairSwitchMonitored.rule().getPrecondition(),
-						List.of(switchClass), Set.of(), true, UNKNOWN))
-				.with(new PredicateTranslator(
-						repairSwitchSetPreconditionPartialRelation,
-						repairSwitchSet.rule().getPrecondition(),
-						List.of(switchClass, positionEnum, positionEnum), Set.of(), true, UNKNOWN));
+			fireOneTransitionRules.add(injectConnectedSegments.rule().getName());
+			fireOneTransitionRules.add(injectPosLength.rule().getName());
+			fireOneTransitionRules.add(injectRouteSensor.rule().getName());
+			fireOneTransitionRules.add(injectSemaphoreNeighbor.rule().getName());
+			fireOneTransitionRules.add(injectSwitchSet.rule().getName());
+			fireAllTransitionRules.add(injectSwitchMonitored.rule().getName());
+		}
+		case REPAIR -> {
+			storeBuilder = storeBuilder
+					.with(TransitionSystemAdapter.builder()
+							.transition(repairConnectedSegments)
+							.transition(repairPosLength)
+							.transition(repairRouteSensor)
+							.transition(repairSemaphoreNeighbor)
+							.transition(repairSwitchMonitored)
+							.transition(repairSwitchSet)
+							.accept(_ -> () -> false) // full state space exploration
+					)
+					.with(new PredicateTranslator(
+							repairConnectedSegmentsPreconditionPartialRelation,
+							repairConnectedSegments.rule().getPrecondition(),
+							List.of(segmentClass, segmentClass, segmentClass), Set.of(), true, UNKNOWN))
+					.with(new PredicateTranslator(
+							repairPosLengthPreconditionPartialRelation,
+							repairPosLength.rule().getPrecondition(),
+							List.of(segmentClass), Set.of(), true, UNKNOWN))
+					.with(new PredicateTranslator(
+							repairRouteSensorPreconditionPartialRelation,
+							repairRouteSensor.rule().getPrecondition(),
+							List.of(routeClass, sensorClass), Set.of(), true, UNKNOWN))
+					.with(new PredicateTranslator(
+							repairSemaphoreNeighborPreconditionPartialRelation,
+							repairSemaphoreNeighbor.rule().getPrecondition(),
+							List.of(semaphoreClass, routeClass), Set.of(), true, UNKNOWN))
+					.with(new PredicateTranslator(
+							repairSwitchMonitoredPreconditionPartialRelation,
+							repairSwitchMonitored.rule().getPrecondition(),
+							List.of(switchClass), Set.of(), true, UNKNOWN))
+					.with(new PredicateTranslator(
+							repairSwitchSetPreconditionPartialRelation,
+							repairSwitchSet.rule().getPrecondition(),
+							List.of(switchClass, positionEnum, positionEnum), Set.of(), true, UNKNOWN));
+
+			fireOneTransitionRules.add(repairConnectedSegments.rule().getName());
+			fireOneTransitionRules.add(repairPosLength.rule().getName());
+			fireOneTransitionRules.add(repairRouteSensor.rule().getName());
+			fireOneTransitionRules.add(repairSemaphoreNeighbor.rule().getName());
+			fireOneTransitionRules.add(repairSwitchMonitored.rule().getName());
+			fireOneTransitionRules.add(repairSwitchSet.rule().getName());
+		}
 		default -> throw new IllegalArgumentException("Invalid scenario for this measurement: " + scenario);
 		}
 
-		String pathToCsvFolder = "input/models/trainbenchmark/size-" + size;
+		String pathToCsvFolder = "input/models/trainbenchmark2";
 
 		signalEnumMap.put("Signal::FAILURE", Tuple.of(SIGNAL_FAILURE));
 		signalEnumMap.put("Signal::STOP", Tuple.of(SIGNAL_STOP));
@@ -851,7 +864,8 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 		for (var csvFile :
 				Objects.requireNonNull(new File(pathToCsvFolder).listFiles((dir, name) -> name.startsWith(fileNamePrefix) &&
 						name.endsWith(".csv") && classMaps.keySet().stream().anyMatch(name::contains)))) {
-			String relationName = csvFile.getName().replace(fileNamePrefix + "-", "").replace(".csv", "");
+			String relationName = csvFile.getName().replace(fileNamePrefix, "").replace(".csv", "");
+			System.out.println("Loading class: " + relationName);
 			var inputMap = classMaps.get(relationName);
 			try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(csvFile))) {
 				String line;
@@ -866,7 +880,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 		for (var csvFile :
 				Objects.requireNonNull(new File(pathToCsvFolder).listFiles((dir, name) -> name.startsWith(fileNamePrefix) &&
 						name.endsWith(".csv") && relationMaps.keySet().stream().anyMatch(name::contains)))) {
-			String relationName = csvFile.getName().replace(fileNamePrefix + "-", "").replace(".csv", "");
+			String relationName = csvFile.getName().replace(fileNamePrefix, "").replace(".csv", "");
 			var inputMap = relationMaps.get(relationName);
 			try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(csvFile))) {
 				String line;
@@ -881,7 +895,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 		for (var csvFile :
 				Objects.requireNonNull(new File(pathToCsvFolder).listFiles((dir, name) -> name.startsWith(fileNamePrefix) &&
 						name.endsWith(".csv") && booleanAttributeMaps.keySet().stream().anyMatch(name::contains)))) {
-			String relationName = csvFile.getName().replace(fileNamePrefix + "-", "").replace(".csv", "");
+			String relationName = csvFile.getName().replace(fileNamePrefix, "").replace(".csv", "");
 			var inputMap = booleanAttributeMaps.get(relationName);
 			try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(csvFile))) {
 				String line;
@@ -896,7 +910,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 		for (var csvFile :
 				Objects.requireNonNull(new File(pathToCsvFolder).listFiles((dir, name) -> name.startsWith(fileNamePrefix) &&
 						name.endsWith(".csv") && intAttributeMaps.keySet().stream().anyMatch(name::contains)))) {
-			String relationName = csvFile.getName().replace(fileNamePrefix + "-", "").replace(".csv", "");
+			String relationName = csvFile.getName().replace(fileNamePrefix, "").replace(".csv", "");
 			var inputMap = intAttributeMaps.get(relationName);
 			try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(csvFile))) {
 				String line;
@@ -911,7 +925,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 		for (var csvFile :
 				Objects.requireNonNull(new File(pathToCsvFolder).listFiles((dir, name) -> name.startsWith(fileNamePrefix) &&
 						name.endsWith(".csv") && enumAttributeMaps.keySet().stream().anyMatch(name::contains)))) {
-			String relationName = csvFile.getName().replace(fileNamePrefix + "-", "").replace(".csv", "");
+			String relationName = csvFile.getName().replace(fileNamePrefix, "").replace(".csv", "");
 			var inputMap = enumAttributeMaps.get(relationName);
 			try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(csvFile))) {
 				String line;
@@ -1135,12 +1149,11 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 		System.out.println("switchSet: " + resultSetSwitchSet.size());
 		System.out.println("semaphoreNeighbor: " + resultSetSemaphoreNeighbor.size());
 		System.out.println("connectedSegments: " + resultSetConnectedSegments.size());
-		var transitions = tsAdapter.getTransitions();
 		var transformationIndex = 0;
-		for (var transition : transitions) {
+		for (var transition : measuredTransitionRules) {
 			for (int i = 0; i < steps; i++) {
 				List<Activation> activations = new ArrayList<>();
-				var activationCursor = transition.getAllActivationsAsResultSet().getAll();
+				var activationCursor = transition.transition().getAllActivationsAsResultSet().getAll();
 				var tupleIndex = 0;
 				while (activationCursor.move()) {
 					var activation = new Activation(transition, activationCursor.getKey(), transformationIndex, tupleIndex);
@@ -1153,7 +1166,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 					break;
 				}
 				var randomActivation = activations.get((random.nextInt(activations.size())));
-				step(randomActivation);
+				fireTransition(randomActivation);
 			}
 			transformationIndex++;
 		}
