@@ -56,6 +56,15 @@ public class MutableRelationCollector {
 						makePredicateMutable(predicateDefinition);
 					}
 				}
+				if (Objects.requireNonNull(literal) instanceof NegationExpr negation) {
+					var body = negation.getBody();
+					if (Objects.requireNonNull(body) instanceof Atom atom) {
+						var atomRelation = atom.getRelation();
+						if (Objects.requireNonNull(atomRelation) instanceof PredicateDefinition predicateDefinition) {
+							makePredicateMutable(predicateDefinition);
+						}
+					}
+				}
 			}
 		}
 	}
@@ -71,6 +80,15 @@ public class MutableRelationCollector {
 					}
 					if (atomRelation instanceof PredicateDefinition nestedPredicateDefinition) {
 						makePredicateMutable(nestedPredicateDefinition);
+					}
+				}
+				if (Objects.requireNonNull(literal) instanceof NegationExpr negation) {
+					var negationBody = negation.getBody();
+					if (Objects.requireNonNull(negationBody) instanceof Atom atom) {
+						var atomRelation = atom.getRelation();
+						if (Objects.requireNonNull(atomRelation) instanceof PredicateDefinition negatedPredicateDefinition) {
+							makePredicateMutable(negatedPredicateDefinition);
+						}
 					}
 				}
 			}
