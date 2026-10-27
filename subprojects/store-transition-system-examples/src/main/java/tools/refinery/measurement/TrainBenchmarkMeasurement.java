@@ -1,8 +1,10 @@
 package tools.refinery.measurement;
 
+import sun.misc.Signal;
 import tools.refinery.logic.dnf.Query;
 import tools.refinery.logic.dnf.QueryBuilder;
 import tools.refinery.logic.dnf.RelationalQuery;
+import tools.refinery.logic.literal.EquivalenceLiteral;
 import tools.refinery.logic.term.NodeVariable;
 import tools.refinery.logic.term.Variable;
 import tools.refinery.logic.term.abstractdomain.AbstractDomainTerms;
@@ -15,6 +17,7 @@ import tools.refinery.store.dse.modification.ModificationAdapter;
 import tools.refinery.store.dse.propagation.PropagationAdapter;
 import tools.refinery.store.dse.transition.DesignSpaceExplorationAdapter;
 import tools.refinery.store.dse.transition.Rule;
+import tools.refinery.store.dse.transition.RuleBuilder;
 import tools.refinery.store.dse.transition.objectives.Criterion;
 import tools.refinery.store.query.ModelQueryAdapter;
 import tools.refinery.store.query.ModelQueryBuilder;
@@ -73,6 +76,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 	Set<Tuple> switchClassSet = new HashSet<>();
 	Set<Tuple> railwayContainerClassSet = new HashSet<>();
 	Set<Tuple> trackElementClassSet = new HashSet<>();
+	Set<Tuple> trainClassSet = new HashSet<>();
 
 	Set<Tuple> sensorsMap = new HashSet<>();
 	Set<Tuple> elementsMap = new HashSet<>();
@@ -91,6 +95,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 	Set<Tuple> positionsMap = new HashSet<>();
 	Set<Tuple> regionsMap = new HashSet<>();
 	Set<Tuple> routesMap = new HashSet<>();
+	Set<Tuple> locationMap = new HashSet<>();
 	Map<Tuple, IntInterval> lengthMap = new HashMap<>();
 
 	Set<Tuple> signalMap = new HashSet<>();
@@ -120,6 +125,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 	static final String SwitchClassName = "Switch";
 	static final String PositionEnumName = "Position";
 	static final String SignalEnumName = "Signal";
+	static final String TrainClassName = "Train";
 
 	static final String routesRelationName = "routes";
 	static final String regionsRelationName = "regions";
@@ -141,6 +147,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 	static final String currentPositionRelationName = "currentPosition";
 	static final String straightRelationName = "straight";
 	static final String divergingRelationName = "diverging";
+	static final String locationRelationName = "location";
 
 	static final String lengthAttributeName = "length";
 	static final String activeAttributeName = "active";
@@ -155,6 +162,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 	PartialRelation sensorClass = new PartialRelation(SensorClassName, 1);
 	PartialRelation segmentClass = new PartialRelation(SegmentClassName, 1);
 	PartialRelation switchClass = new PartialRelation(SwitchClassName, 1);
+	PartialRelation trainClass = new PartialRelation(TrainClassName, 1);
 
 //	Enums
 	PartialRelation positionEnum = new PartialRelation(PositionEnumName, 1);
@@ -181,6 +189,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 	PartialRelation currentPosition = new PartialRelation(currentPositionRelationName, 2);
 	PartialRelation straight = new PartialRelation(straightRelationName, 2);
 	PartialRelation diverging = new PartialRelation(divergingRelationName, 2);
+	PartialRelation location = new PartialRelation(locationRelationName, 2);
 
 
 	PartialRelation signalInvalidMultiplicity = new PartialRelation("signal::invalidMultiplicity", 1);
@@ -192,6 +201,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 	PartialRelation currentPositionInvalidMultiplicity = new PartialRelation("currentPosition::invalidMultiplicity", 1);
 	PartialRelation straightInvalidMultiplicity = new PartialRelation("straight::invalidMultiplicity", 1);
 	PartialRelation divergingInvalidMultiplicity = new PartialRelation("diverging::invalidMultiplicity", 1);
+	PartialRelation locationInvalidMultiplicity = new PartialRelation("location::invalidMultiplicity", 1);
 
 
 	PartialFunction<IntInterval, BigInteger> length = PartialSymbol.of(lengthAttributeName, 1, IntIntervalDomain.INSTANCE);
@@ -209,6 +219,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 			.type(sensorClass)
 			.type(segmentClass, trackElementClass)
 			.type(switchClass, trackElementClass)
+			.type(trainClass)
 
 			.type(positionEnum)
 			.type(signalEnum)
@@ -315,6 +326,11 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 					.source(switchClass)
 					.target(trackElementClass)
 					.multiplicity(CardinalityIntervals.LONE, divergingInvalidMultiplicity)
+					.defaultValue(FALSE))
+			.reference(location, referenceBuilder -> referenceBuilder
+					.source(trainClass)
+					.target(trackElementClass)
+					.multiplicity(CardinalityIntervals.LONE, locationInvalidMultiplicity)
 					.defaultValue(FALSE));
 
 	Metamodel metamodel = metamodelBuilder.build();
@@ -574,11 +590,131 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 							PartialActionLiterals.modify(currentPosition, TRUE, sw, swpPosition)
 					)));
 
-    ModelSeed.Builder modelSeedBuilder;
+	RelationalQuery routeExit = Query.of("routeExit", (builder, route, segment) -> builder
+			.clause(semaphore -> List.of(
+					routeClass.call(route),
+					segmentClass.call(segment),
+					exit.call(route, semaphore),
+					semaphores.call(segment, semaphore)
+			)));
 
-	Map<PartialRelation, TransitionRule> simulateRules = new HashMap<>();
-	Map<PartialRelation, TransitionRule> injectRules = new HashMap<>();
-	Map<PartialRelation, TransitionRule> repairRules = new HashMap<>();
+	RelationalQuery activeRouteExit = Query.of("activeRouteExit", (builder, route, segment) -> builder
+			.clause(
+					active.call(route),
+					routeExit.call(route, segment)
+			));
+
+	RelationalQuery routeEntry = Query.of("routeEntry", (builder, route, segment) -> builder
+			.clause(semaphore -> List.of(
+					routeClass.call(route),
+					segmentClass.call(segment),
+					entry.call(route, semaphore),
+					semaphores.call(segment, semaphore)
+			)));
+
+	RelationalQuery activeRouteEntry = Query.of("activeRouteEntry", (builder, route, segment) -> builder
+			.clause(
+					active.call(route),
+					routeEntry.call(route, segment)
+			));
+
+	RelationalQuery activeRouteSwitch = Query.of("activeRouteSwitch", (builder, route, sw) -> builder
+			.clause(swP -> List.of(
+					routeClass.call(route),
+					switchClass.call(sw),
+					active.call(route),
+					follows.call(route, swP),
+					target.call(swP, sw)
+			)));
+
+	PartialRelation activateRoutePreconditionPartialRelation = new PartialRelation("activateRoute_precondition", 1);
+	TransitionRule activateRoute = new TransitionRule(activateRoutePreconditionPartialRelation,
+			Rule.of("activateRoute", (builder, route) -> builder
+					.clause(segment -> List.of(
+							routeClass.call(route),
+							not(active.call(route)),
+							routeEntry.call(route, segment),
+							not(activeRouteEntry.call(Variable.of(), segment))
+					))
+					.action(
+							PartialActionLiterals.modify(active, TRUE, route)
+					)));
+
+	PartialRelation placeTrainOnRoutePreconditionPartialRelation = new PartialRelation(
+			"placeTrainOnRoute_precondition", 3);
+	TransitionRule placeTrainOnRoute = new TransitionRule(placeTrainOnRoutePreconditionPartialRelation,
+			Rule.of("placeTrainOnRoute", (builder, entrySegment, semaphore, STOP) -> builder
+					.clause((route, GO) -> List.of(
+							GO.isConstant(this.SIGNAL_GO),
+							STOP.isConstant(this.SIGNAL_STOP),
+							segmentClass.call(entrySegment),
+							semaphoreClass.call(semaphore),
+							active.call(route),
+							semaphores.call(entrySegment, semaphore),
+							entry.call(route, semaphore),
+							signal.call(semaphore, GO)
+					))
+					.action((train) -> List.of(
+							new CreateNewActionLiteral(train),
+							PartialActionLiterals.modify(location, TRUE, train, entrySegment),
+							PartialActionLiterals.modify(signal, TRUE, semaphore, STOP)
+					))));
+
+	PartialRelation changeSwitchPreconditionPartialRelation = new PartialRelation("changeSwitch_precondition", 3);
+	TransitionRule changeSwitch = new TransitionRule(changeSwitchPreconditionPartialRelation,
+			Rule.of("changeSwitch", (builder, sw, currentPos, pos) -> builder
+					.clause(
+							switchClass.call(sw),
+							positionEnum.call(currentPos),
+							positionEnum.call(pos),
+							not(activeRouteSwitch.call(Variable.of(), sw)),
+							currentPosition.call(sw, currentPos),
+							currentPos.notEquivalent(pos)
+					)
+					.action(
+							PartialActionLiterals.modify(currentPosition, FALSE, sw, currentPos),
+							PartialActionLiterals.modify(currentPosition, TRUE, sw, pos)
+					)));
+
+	PartialRelation moveTrainOnRoutePreconditionPartialRelation = new PartialRelation("moveTrainOnRoute_precondition"
+			, 3);
+	TransitionRule moveTrainOnRoute = new TransitionRule(moveTrainOnRoutePreconditionPartialRelation,
+			Rule.of("moveTrainOnRoute", (builder, train, from, to) -> builder
+					.clause(
+							trainClass.call(train),
+							trackElementClass.call(from),
+							trackElementClass.call(to),
+							location.call(train, from),
+							not(activeRouteExit.call(Variable.of(), to))
+					)
+					.action(
+							PartialActionLiterals.modify(location, FALSE, train, from),
+							PartialActionLiterals.modify(location, TRUE, train, to)
+					)));
+
+	PartialRelation activateNextRoutePreconditionPartialRelation = new PartialRelation("activateNextRoute_precondition", 1);
+	TransitionRule activateNextRoute = new TransitionRule(activateNextRoutePreconditionPartialRelation,
+			Rule.of("activateNextRoute", (builder, newRoute) -> builder
+					.clause((oldRoute, from, to, semaphore, GO) -> List.of(
+							GO.isConstant(this.SIGNAL_GO),
+							routeClass.call(oldRoute),
+							active.call(oldRoute),
+							not(active.call(newRoute)),
+							connectsTo.call(from, to),
+							location.call(Variable.of(), from),
+							exit.call(oldRoute, semaphore),
+							semaphores.call(to, semaphore),
+							routeEntry.call(newRoute, to),
+							signal.call(semaphore, GO)
+					))
+					.action(
+							PartialActionLiterals.modify(active, TRUE, newRoute)
+					)));
+
+	PartialRelation moveTrainToNextRoutePreconditionPartialRelation;
+	TransitionRule moveTrainToNextRoute;
+
+    ModelSeed.Builder modelSeedBuilder;
 
 	Criterion acceptanceCriterion = _ -> () -> false;
 
@@ -691,6 +827,62 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 		);
 		connectedSegments = queryBuilder.build();
 
+
+
+		QueryBuilder moveTrainToNextRoutePreconditionQueryBuilder = Query.builder("moveTrainToNextRoutePrecondition");
+		moveTrainToNextRoutePreconditionQueryBuilder.clause(
+				segmentClass.call(parameterSegment1),
+				segmentClass.call(parameterSegment2),
+				segmentClass.call(parameterSegment3)
+		);
+
+
+		moveTrainToNextRoutePreconditionPartialRelation = new PartialRelation("moveTrainToNextRoute_precondition", 8);
+
+		RuleBuilder moveTrainToNextRouteRuleBuilder = Rule.builder("moveTrainToNextRoute");
+		NodeVariable parameterTrain = moveTrainToNextRouteRuleBuilder.parameter("train");
+		NodeVariable parameterFrom = moveTrainToNextRouteRuleBuilder.parameter("from");
+		NodeVariable parameterTo = moveTrainToNextRouteRuleBuilder.parameter("to");
+		NodeVariable parameterOldRoute = moveTrainToNextRouteRuleBuilder.parameter("oldRoute");
+		NodeVariable parameterOldSemaphore = moveTrainToNextRouteRuleBuilder.parameter("oldSemaphore");
+		NodeVariable parameterNewSemaphore = moveTrainToNextRouteRuleBuilder.parameter("newSemaphore");
+		NodeVariable parameterGO = moveTrainToNextRouteRuleBuilder.parameter("GO");
+		NodeVariable parameterSTOP = moveTrainToNextRouteRuleBuilder.parameter("STOP");
+
+		moveTrainToNextRouteRuleBuilder
+				.clause((newRoute, oldEntry) -> List.of(
+						parameterGO.isConstant(this.SIGNAL_GO),
+						parameterSTOP.isConstant(this.SIGNAL_STOP),
+						trainClass.call(parameterTrain),
+						trackElementClass.call(parameterFrom),
+						trackElementClass.call(parameterTo),
+						routeClass.call(parameterOldRoute),
+						semaphoreClass.call(parameterOldSemaphore),
+						semaphoreClass.call(parameterNewSemaphore),
+						active.call(newRoute),
+						connectsTo.call(parameterFrom, parameterTo),
+						location.call(parameterTrain, parameterFrom),
+						exit.call(parameterOldRoute, parameterNewSemaphore),
+						semaphores.call(parameterTo, parameterNewSemaphore),
+						routeEntry.call(newRoute, parameterTo),
+						routeEntry.call(parameterOldRoute, parameterOldSemaphore),
+						semaphores.call(oldEntry, parameterOldSemaphore)
+				))
+				.action(
+						PartialActionLiterals.modify(location, FALSE, parameterTrain, parameterFrom),
+						PartialActionLiterals.modify(location, TRUE, parameterTrain, parameterTo),
+						PartialActionLiterals.modify(active, FALSE, parameterOldRoute),
+						PartialActionLiterals.modify(signal, FALSE, parameterOldSemaphore, parameterSTOP),
+						PartialActionLiterals.modify(signal, TRUE, parameterOldSemaphore, parameterGO),
+						PartialActionLiterals.modify(signal, FALSE, parameterNewSemaphore, parameterGO),
+						PartialActionLiterals.modify(signal, TRUE, parameterNewSemaphore, parameterSTOP)
+				);
+
+		var moveTrainToNextRouteRule = moveTrainToNextRouteRuleBuilder.build();
+
+		moveTrainToNextRoute = new TransitionRule(moveTrainToNextRoutePreconditionPartialRelation,
+				moveTrainToNextRouteRule);
+
 		classMaps.put(RegionClassName, regionClassSet);
 		classMaps.put(SemaphoreClassName, semaphoreClassSet);
 		classMaps.put(RouteClassName, routeClassSet);
@@ -700,6 +892,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 		classMaps.put(SwitchClassName, switchClassSet);
 		classMaps.put(RailwayContainerClassName, railwayContainerClassSet);
 		classMaps.put(TrackElementClassName, trackElementClassSet);
+		classMaps.put(TrainClassName, trainClassSet);
 		relationMaps.put(sensorsRelationName, sensorsMap);
 		relationMaps.put(elementsRelationName, elementsMap);
 		relationMaps.put(followsRelationName, followsMap);
@@ -717,6 +910,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 		relationMaps.put(positionsRelationName, positionsMap);
 		relationMaps.put(regionsRelationName, regionsMap);
 		relationMaps.put(routesRelationName, routesMap);
+		relationMaps.put(locationRelationName, locationMap);
 
 		enumMaps.put(SignalEnumName, signalEnumMap);
 		enumMaps.put(PositionEnumName, positionEnumMap);
@@ -762,6 +956,53 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 
 		switch (scenario) {
 		case SIMULATE -> {
+			storeBuilder = storeBuilder
+				.with(TransitionSystemAdapter.builder()
+						.transition(activateRoute)
+						.transition(placeTrainOnRoute)
+						.transition(changeSwitch)
+						.transition(moveTrainOnRoute)
+						.transition(activateNextRoute)
+						.transition(moveTrainToNextRoute)
+						.accept(_ -> () -> false) // full state space exploration
+				)
+				.with(new PredicateTranslator(
+						activateRoutePreconditionPartialRelation,
+						activateRoute.rule().getPrecondition(),
+						List.of(routeClass), Set.of(), true, UNKNOWN))
+				.with(new PredicateTranslator(
+						placeTrainOnRoutePreconditionPartialRelation,
+						placeTrainOnRoute.rule().getPrecondition(),
+						List.of(segmentClass, semaphoreClass, signalEnum), Set.of(), true, UNKNOWN))
+				.with(new PredicateTranslator(
+						changeSwitchPreconditionPartialRelation,
+						changeSwitch.rule().getPrecondition(),
+						List.of(switchClass, positionEnum, positionEnum), Set.of(), true, UNKNOWN))
+				.with(new PredicateTranslator(
+						moveTrainOnRoutePreconditionPartialRelation,
+						moveTrainOnRoute.rule().getPrecondition(),
+						List.of(trainClass, trackElementClass, trackElementClass), Set.of(), true, UNKNOWN))
+				.with(new PredicateTranslator(
+						activateNextRoutePreconditionPartialRelation,
+						activateNextRoute.rule().getPrecondition(),
+						List.of(routeClass), Set.of(), true, UNKNOWN))
+				.with(new PredicateTranslator(
+						moveTrainToNextRoutePreconditionPartialRelation,
+						moveTrainToNextRoute.rule().getPrecondition(),
+						List.of(trainClass, trackElementClass, trackElementClass, routeClass, semaphoreClass,
+								semaphoreClass, signalEnum, signalEnum),
+						Set.of(), true, UNKNOWN))
+					.with(new PredicateTranslator(
+							repairSwitchSetPreconditionPartialRelation,
+							repairSwitchSet.rule().getPrecondition(),
+							List.of(switchClass, positionEnum, positionEnum), Set.of(), true, UNKNOWN));
+			fireOneTransitionRules.add(activateRoute.rule().getName());
+			fireOneTransitionRules.add(placeTrainOnRoute.rule().getName());
+			fireOneTransitionRules.add(changeSwitch.rule().getName());
+			fireOneTransitionRules.add(moveTrainOnRoute.rule().getName());
+			fireOneTransitionRules.add(activateNextRoute.rule().getName());
+			fireOneTransitionRules.add(moveTrainToNextRoute.rule().getName());
+			fireOneTransitionRules.add(repairSwitchSet.rule().getName());
 		}
 		case INJECT -> {
 			storeBuilder = storeBuilder
@@ -1103,6 +1344,12 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 
 		switch (scenario) {
 		case SIMULATE -> {
+			modelSeedBuilder.seed(injectConnectedSegmentsPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
+			modelSeedBuilder.seed(injectPosLengthPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
+			modelSeedBuilder.seed(injectRouteSensorPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
+			modelSeedBuilder.seed(injectSemaphoreNeighborPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
+			modelSeedBuilder.seed(injectSwitchMonitoredPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
+			modelSeedBuilder.seed(injectSwitchSetPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
 
 		}
 		case INJECT -> {
