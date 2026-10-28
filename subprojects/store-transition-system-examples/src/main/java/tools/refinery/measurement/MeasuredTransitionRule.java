@@ -1,5 +1,6 @@
 package tools.refinery.measurement;
 
+import tools.refinery.store.query.resultset.ResultSet;
 import tools.refinery.store.transition.system.statespace.Transition;
 import tools.refinery.store.tuple.Tuple;
 
@@ -58,6 +59,20 @@ public record MeasuredTransitionRule(Transition transition, TransitionType trans
 				continue;
 			}
 			activations.add(activation);
+		}
+		return activations;
+	}
+
+	public ResultSet<Boolean> getAllActivations() {
+		return transition.getAllActivationsAsResultSet();
+	}
+
+	public List<Tuple> getAllActivationsAsList() {
+		var activations = new ArrayList<Tuple>();
+		var resultSet = transition.getAllActivationsAsResultSet();
+		var activationCursor = resultSet.getAll();
+		while (activationCursor.move()) {
+			activations.add(activationCursor.getKey());
 		}
 		return activations;
 	}

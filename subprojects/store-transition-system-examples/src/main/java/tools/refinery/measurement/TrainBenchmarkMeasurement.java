@@ -720,11 +720,20 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 
 	public void init(int size, MeasurementScenario scenario, boolean visualize) {
 		this.visualize = visualize;
+		this.scenario = scenario;
+		this.size = size;
+
 		if (visualize) {
 			visualizationOutputPath = "output_visualization/trainbenchmark_" + size + "_modelSeed";
 		}
 
-		fileNamePrefix = fileNamePrefix + scenario.toString().toLowerCase() + "-" + size + "-";
+		var filenameScenario = scenario.toString().toLowerCase();
+		filenameScenario = switch (filenameScenario) {
+			case "query" -> "repair";
+			case "simulate" -> "batch";
+			default -> filenameScenario;
+		};
+		fileNamePrefix = fileNamePrefix + filenameScenario + "-" + size + "-";
 		System.out.println(fileNamePrefix);
 
 		posLength = Query.of("posLength", (builder, segment) -> builder
@@ -955,6 +964,11 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 
 
 		switch (scenario) {
+		case QUERY -> {
+			// no additional transitions or translators needed
+			storeBuilder = storeBuilder
+					.with(TransitionSystemAdapter.builder());
+		}
 		case SIMULATE -> {
 			storeBuilder = storeBuilder
 				.with(TransitionSystemAdapter.builder()
@@ -964,6 +978,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 						.transition(moveTrainOnRoute)
 						.transition(activateNextRoute)
 						.transition(moveTrainToNextRoute)
+						.transition(repairSwitchSet)
 						.accept(_ -> () -> false) // full state space exploration
 				)
 				.with(new PredicateTranslator(
@@ -990,12 +1005,11 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 						moveTrainToNextRoutePreconditionPartialRelation,
 						moveTrainToNextRoute.rule().getPrecondition(),
 						List.of(trainClass, trackElementClass, trackElementClass, routeClass, semaphoreClass,
-								semaphoreClass, signalEnum, signalEnum),
-						Set.of(), true, UNKNOWN))
-					.with(new PredicateTranslator(
-							repairSwitchSetPreconditionPartialRelation,
-							repairSwitchSet.rule().getPrecondition(),
-							List.of(switchClass, positionEnum, positionEnum), Set.of(), true, UNKNOWN));
+								semaphoreClass, signalEnum, signalEnum), Set.of(), true, UNKNOWN))
+				.with(new PredicateTranslator(
+						repairSwitchSetPreconditionPartialRelation,
+						repairSwitchSet.rule().getPrecondition(),
+						List.of(switchClass, positionEnum, positionEnum), Set.of(), true, UNKNOWN));
 			fireOneTransitionRules.add(activateRoute.rule().getName());
 			fireOneTransitionRules.add(placeTrainOnRoute.rule().getName());
 			fireOneTransitionRules.add(changeSwitch.rule().getName());
@@ -1216,6 +1230,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 				case SwitchClassName -> switchClass;
 				case RailwayContainerClassName -> railwayContainerClass;
 				case TrackElementClassName -> trackElementClass;
+				case TrainClassName -> trainClass;
 				default -> throw new IllegalArgumentException("Unknown relation name: " + relationName);
 			};
 			modelSeedBuilder.seed(partialRelation, builder -> {
@@ -1266,6 +1281,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 				case connectsToRelationName -> connectsTo;
 				case straightRelationName -> straight;
 				case divergingRelationName -> diverging;
+				case locationRelationName -> location;
 				default -> null;
 			};
 			if (partialRelation == null) {
@@ -1344,13 +1360,13 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 
 		switch (scenario) {
 		case SIMULATE -> {
-			modelSeedBuilder.seed(injectConnectedSegmentsPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
-			modelSeedBuilder.seed(injectPosLengthPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
-			modelSeedBuilder.seed(injectRouteSensorPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
-			modelSeedBuilder.seed(injectSemaphoreNeighborPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
-			modelSeedBuilder.seed(injectSwitchMonitoredPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
-			modelSeedBuilder.seed(injectSwitchSetPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
-
+			modelSeedBuilder.seed(activateRoutePreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
+			modelSeedBuilder.seed(placeTrainOnRoutePreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
+			modelSeedBuilder.seed(changeSwitchPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
+			modelSeedBuilder.seed(moveTrainOnRoutePreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
+			modelSeedBuilder.seed(activateNextRoutePreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
+			modelSeedBuilder.seed(moveTrainToNextRoutePreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
+			modelSeedBuilder.seed(repairSwitchSetPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
 		}
 		case INJECT -> {
 			modelSeedBuilder.seed(injectConnectedSegmentsPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
@@ -1397,7 +1413,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 		System.out.println("semaphoreNeighbor: " + resultSetSemaphoreNeighbor.size());
 		System.out.println("connectedSegments: " + resultSetConnectedSegments.size());
 		var transformationIndex = 0;
-		for (var transition : measuredTransitionRules) {
+		for (var transition : measuredTransitionRules.values()) {
 			for (int i = 0; i < steps; i++) {
 				List<Activation> activations = new ArrayList<>();
 				var activationCursor = transition.transition().getAllActivationsAsResultSet().getAll();
@@ -1425,6 +1441,94 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 		System.out.println("semaphoreNeighbor: " + resultSetSemaphoreNeighbor.size());
 		System.out.println("connectedSegments: " + resultSetConnectedSegments.size());
 		return MeasurementResult.MAX_STEPS_REACHED;
+	}
+
+	@Override
+	public void run(int steps) {
+		switch (scenario) {
+		case QUERY -> runQueries(steps);
+		case SIMULATE -> simulate(steps);
+		case INJECT, REPAIR -> transformAndRecheck(steps);
+		default -> throw new IllegalArgumentException("Invalid scenario for this measurement: " + scenario);
+		}
+	}
+
+	private void simulate(int steps) {
+		var activateRouteTransition = measuredTransitionRules.get("activateRoute");
+		var repairSwitchSetTransition = measuredTransitionRules.get("repairSwitchSet");
+		var placeTrainOnRouteTransition = measuredTransitionRules.get("placeTrainOnRoute");
+		var changeSwitchTransition = measuredTransitionRules.get("changeSwitch");
+		var moveTrainOnRouteTransition = measuredTransitionRules.get("moveTrainOnRoute");
+		var activateNextRouteTransition = measuredTransitionRules.get("activateNextRoute");
+		var moveTrainToNextRouteTransition = measuredTransitionRules.get("moveTrainToNextRoute");
+
+		// TODO: Should we count the setup as steps? Or each firing of repairSwitchSetTransition as a step?
+		// activate some routes (How many?)
+		int routesToActivate = 2;
+		var activations = activateRouteTransition.getAllActivationsAsList();
+		// Select routesToActivate random activations, make sure they are not the same activation
+		for (int i = 0; i < routesToActivate && !activations.isEmpty(); i++) {
+			var randomActivation = activations.get(random.nextInt(activations.size()));
+			System.out.println("Firing rule activateRoute, randomActivation: " + randomActivation);
+			activateRouteTransition.fire(randomActivation);
+			activations.remove(randomActivation);
+			propagationAdapter.propagate();
+			queryEngine.flushChanges();
+		}
+
+		// Fire all activations of repairSwitchSetTransition
+		for (Tuple activation : repairSwitchSetTransition.getAllActivationsAsList()) {
+			System.out.println("Firing rule repairSwitchSet, activation: " + activation);
+			repairSwitchSetTransition.fire(activation);
+		}
+		propagationAdapter.propagate();
+		queryEngine.flushChanges();
+
+		// Place a train on all active routes
+		for (Tuple activation : placeTrainOnRouteTransition.getAllActivationsAsList()) {
+			System.out.println("Firing rule placeTrainOnRoute, activation: " + activation);
+			placeTrainOnRouteTransition.fire(activation);
+		}
+		propagationAdapter.propagate();
+		queryEngine.flushChanges();
+
+		// Simulation loop
+		int i = 0;
+		while (i < steps) {
+			System.out.println("Step " + i + " of " + steps);
+			List<MeasuredTransitionRule> transitions = List.of(
+					changeSwitchTransition,
+					moveTrainOnRouteTransition,
+					activateNextRouteTransition,
+					moveTrainToNextRouteTransition
+			);
+			// Randomly select a transition to fire
+			var transitionToFire = transitions.get(random.nextInt(transitions.size()));
+			var activationsToFire = transitionToFire.getAllActivationsAsList();
+			System.out.println("Firing rule " + transitionToFire.transition().toString());
+			if (activationsToFire.isEmpty()) {
+				i++;
+				continue;
+			}
+			var randomActivation = activationsToFire.get(random.nextInt(activationsToFire.size()));
+			System.out.println("Firing rule " + transitionToFire.transition().toString() + ", activation: " + randomActivation);
+			transitionToFire.fire(randomActivation);
+			propagationAdapter.propagate();
+			queryEngine.flushChanges();
+
+			// Fire all activations of repairSwitchSetTransition
+			// TODO: Where should we fire this? After every transition? Or only after certain transitions?
+			//  For now, let's fire it after every transition.
+			//  Should we count this as a step? Or each firing of repairSwitchSetTransition as a step?
+			for (Tuple activation : repairSwitchSetTransition.getAllActivationsAsList()) {
+				System.out.println("Firing rule repairSwitchSet, activation: " + activation);
+				repairSwitchSetTransition.fire(activation);
+			}
+			propagationAdapter.propagate();
+			queryEngine.flushChanges();
+			i++;
+		}
+
 	}
 }
 

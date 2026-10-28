@@ -31,9 +31,11 @@ import java.util.*;
  */
 public abstract class MeasurementBase implements MeasurementCase {
     protected boolean visualize = false;
+	protected MeasurementScenario scenario;
+	protected int size;
 
 	protected List<RelationalQuery> queries = new ArrayList<>();
-	protected List<MeasuredTransitionRule> measuredTransitionRules = new ArrayList<>();
+	protected Map<String, MeasuredTransitionRule> measuredTransitionRules = new HashMap<>();
 	protected List<String> fireOneTransitionRules = new ArrayList<>();
 	protected List<String> fireAllTransitionRules = new ArrayList<>();
 
@@ -99,7 +101,7 @@ public abstract class MeasurementBase implements MeasurementCase {
 			} else {
 				throw new RuntimeException("Missing transition type for transition: " + transition.toString());
 			}
-			measuredTransitionRules.add(new MeasuredTransitionRule(transition, transitionType));
+			measuredTransitionRules.put(transition.toString(), new MeasuredTransitionRule(transition, transitionType));
 			transitionTimes.put(transition, new ArrayList<>());
 			propagationTimes.put(transition, new ArrayList<>());
 		}
@@ -107,7 +109,7 @@ public abstract class MeasurementBase implements MeasurementCase {
 
 	public void transformAndRecheck(int steps) {
 		for (int i = 0; i < measuredTransitionRules.size(); i++) {
-			var transition = measuredTransitionRules.get(i);
+			var transition = measuredTransitionRules.values().stream().toList().get(i);
 			for (int step = 0; step < steps; step++) {
 				var activationCursor = transition.transition().getAllActivationsAsResultSet().getAll();
 				List<Activation> activationList = new ArrayList<>();
@@ -138,7 +140,7 @@ public abstract class MeasurementBase implements MeasurementCase {
      */
 	// TODO: handle transitions, where multiple rules must be fired. E.g. in the Train Benchmark,
 	//  'injectSwitchMonitored'  requires deleting all edges of 'switch' to sensors.
-    public MeasurementResult run(int steps) {
+    public void run(int steps) {
 		if (visualize) {
 			stateSpaceStore.addState(currentVersion, stateCoderAdapter.calculateModelCode(), false, false);
 		}
@@ -146,7 +148,7 @@ public abstract class MeasurementBase implements MeasurementCase {
 			List<Activation> activations = getActivations();
 			if (activations.isEmpty()) {
 				System.out.println("No more activations available, stopping exploration.");
-				return MeasurementResult.NO_MORE_TRANSITIONS;
+//				return MeasurementResult.NO_MORE_TRANSITIONS;
 			}
 			var repairActivations =
 					activations.stream().filter(a -> a.transition().toString().contains("repair")).toList();
@@ -157,7 +159,7 @@ public abstract class MeasurementBase implements MeasurementCase {
             var randomActivation = activations.get((random.nextInt(activations.size())));
             fireTransition(randomActivation);
         }
-		return MeasurementResult.MAX_STEPS_REACHED;
+//		return MeasurementResult.MAX_STEPS_REACHED;
     }
 
     /**
@@ -233,7 +235,7 @@ public abstract class MeasurementBase implements MeasurementCase {
     protected List<Activation> getActivations() {
         List<Activation> activationList = new ArrayList<>();
         var transformationIndex = 0;
-        for (var transition : measuredTransitionRules) {
+        for (var transition : measuredTransitionRules.values()) {
             var activationCursor = transition.transition().getAllActivationsAsResultSet().getAll();
             var tupleIndex = 0;
             while (activationCursor.move()) {
