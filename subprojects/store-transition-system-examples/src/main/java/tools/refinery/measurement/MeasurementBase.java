@@ -65,7 +65,7 @@ public abstract class MeasurementBase implements MeasurementCase {
 			storeBuilder = storeBuilder.with(ModelVisualizerAdapter.builder()
 					.withOutputPath(visualizationOutputPath)
 					.withFormat(FileFormat.DOT)
-					.withFormat(FileFormat.SVG)
+//					.withFormat(FileFormat.SVG)
 					.saveStates()
 					.saveDesignSpace()
 			);
@@ -167,6 +167,7 @@ public abstract class MeasurementBase implements MeasurementCase {
      */
     public void finish() {
         if (visualize) {
+			System.out.println("Visualizing final state space to: " + visualizationOutputPath);
             modelVisualizerAdapter.visualize(stateSpaceStore, renderTransitionsToAlreadyVisitedStates());
         }
         model.close();
@@ -219,12 +220,12 @@ public abstract class MeasurementBase implements MeasurementCase {
 		propagationTimes.get(activation.transition().transition()).add(propagationEndTime - propagationStartTime);
 		// TODO: This should be moved to "recheck" phase
         dseAdapter.checkAccept();
-        this.currentVersion = model.commit();
-        if (visualize) {
-            stateSpaceStore.addState(currentVersion, stateCoderAdapter.calculateModelCode(), false, false);
-            stateSpaceStore.addTransition(lastVersion, this.currentVersion, new ActivationStore.VisitResult(
-                    true, true, activation.transitionIndex(), activation.tupleIndex()));
-        }
+		if (visualize) {
+			this.currentVersion = model.commit();
+			stateSpaceStore.addState(currentVersion, stateCoderAdapter.calculateModelCode(), false, false);
+			stateSpaceStore.addTransition(lastVersion, this.currentVersion, new ActivationStore.VisitResult(
+					true, true, activation.transitionIndex(), activation.tupleIndex()));
+		}
 		// TODO: This should be measured either in the transition time or in the recheck phase.
         queryEngine.flushChanges();
     }
@@ -240,7 +241,7 @@ public abstract class MeasurementBase implements MeasurementCase {
             var tupleIndex = 0;
             while (activationCursor.move()) {
 				var activation = new Activation(transition, activationCursor.getKey(), transformationIndex, tupleIndex);
-//				System.out.println("Activation found: " + activation);
+				System.out.println("Activation found: " + activation);
                 activationList.add(activation);
                 tupleIndex++;
             }

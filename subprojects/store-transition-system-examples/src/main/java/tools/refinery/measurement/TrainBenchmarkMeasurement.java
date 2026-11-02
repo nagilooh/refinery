@@ -19,6 +19,8 @@ import tools.refinery.store.dse.transition.DesignSpaceExplorationAdapter;
 import tools.refinery.store.dse.transition.Rule;
 import tools.refinery.store.dse.transition.RuleBuilder;
 import tools.refinery.store.dse.transition.objectives.Criterion;
+import tools.refinery.store.dse.transition.statespace.ActivationStore;
+import tools.refinery.store.map.Version;
 import tools.refinery.store.query.ModelQueryAdapter;
 import tools.refinery.store.query.ModelQueryBuilder;
 import tools.refinery.store.query.interpreter.QueryInterpreterAdapter;
@@ -685,6 +687,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 							trackElementClass.call(from),
 							trackElementClass.call(to),
 							location.call(train, from),
+							connectsTo.call(from, to),
 							not(activeRouteExit.call(Variable.of(), to))
 					)
 					.action(
@@ -874,7 +877,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 						exit.call(parameterOldRoute, parameterNewSemaphore),
 						semaphores.call(parameterTo, parameterNewSemaphore),
 						routeEntry.call(newRoute, parameterTo),
-						routeEntry.call(parameterOldRoute, parameterOldSemaphore),
+						routeEntry.call(parameterOldRoute, oldEntry),
 						semaphores.call(oldEntry, parameterOldSemaphore)
 				))
 				.action(
@@ -1462,40 +1465,55 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 		var activateNextRouteTransition = measuredTransitionRules.get("activateNextRoute");
 		var moveTrainToNextRouteTransition = measuredTransitionRules.get("moveTrainToNextRoute");
 
-		// TODO: Should we count the setup as steps? Or each firing of repairSwitchSetTransition as a step?
-		// activate some routes (How many?)
-		int routesToActivate = 2;
-		var activations = activateRouteTransition.getAllActivationsAsList();
-		// Select routesToActivate random activations, make sure they are not the same activation
-		for (int i = 0; i < routesToActivate && !activations.isEmpty(); i++) {
-			var randomActivation = activations.get(random.nextInt(activations.size()));
-			System.out.println("Firing rule activateRoute, randomActivation: " + randomActivation);
-			activateRouteTransition.fire(randomActivation);
-			activations.remove(randomActivation);
-			propagationAdapter.propagate();
-			queryEngine.flushChanges();
-		}
-
-		// Fire all activations of repairSwitchSetTransition
-		for (Tuple activation : repairSwitchSetTransition.getAllActivationsAsList()) {
-			System.out.println("Firing rule repairSwitchSet, activation: " + activation);
-			repairSwitchSetTransition.fire(activation);
+//		// TODO: Should we count the setup as steps? Or each firing of repairSwitchSetTransition as a step?
+//		// activate some routes (How many?)
+//		int routesToActivate = 2;
+//		var activations = activateRouteTransition.getAllActivationsAsList();
+//		// Select routesToActivate random activations, make sure they are not the same activation
+//		for (int i = 0; i < routesToActivate && !activations.isEmpty(); i++) {
+//			var randomActivation = activations.get(random.nextInt(activations.size()));
+//			System.out.println("Firing rule activateRoute, randomActivation: " + randomActivation);
+//			activateRouteTransition.fire(randomActivation);
+//			activations.remove(randomActivation);
+//			propagationAdapter.propagate();
+//			queryEngine.flushChanges();
+//		}
+//
+//		// Fire all activations of repairSwitchSetTransition
+//		for (Tuple activation : repairSwitchSetTransition.getAllActivationsAsList()) {
+//			System.out.println("Firing rule repairSwitchSet, activation: " + activation);
+//			repairSwitchSetTransition.fire(activation);
+//		}
+//		propagationAdapter.propagate();
+//		queryEngine.flushChanges();
+//
+		// Place a train on some active routes
+		var placeTrainOnRouteActivations = activateRouteTransition.getAllActivationsAsList();
+		var numActivations = placeTrainOnRouteActivations.size();
+		var firedActivations = new HashSet<Integer>();
+		for (int i = 0; i < numActivations / 3; i++) {
+			if (firedActivations.contains(i)) {
+				i--; // Skip this iteration
+				continue;
+			}
+			var nextActivationId = random.nextInt(numActivations);
+			var nextActivation = placeTrainOnRouteActivations.get(nextActivationId);
+			System.out.println("Firing rule placeTrainOnRoute, activation: " + nextActivation);
+			placeTrainOnRouteTransition.fire(nextActivation);
+			firedActivations.add(nextActivationId);
 		}
 		propagationAdapter.propagate();
 		queryEngine.flushChanges();
 
-		// Place a train on all active routes
-		for (Tuple activation : placeTrainOnRouteTransition.getAllActivationsAsList()) {
-			System.out.println("Firing rule placeTrainOnRoute, activation: " + activation);
-			placeTrainOnRouteTransition.fire(activation);
-		}
-		propagationAdapter.propagate();
-		queryEngine.flushChanges();
 
+		Version lastVersion = null;
+		if (visualize) {
+			stateSpaceStore.addState(currentVersion, stateCoderAdapter.calculateModelCode(), false, false);
+			lastVersion = currentVersion;
+		}
 		// Simulation loop
 		int i = 0;
 		while (i < steps) {
-			System.out.println("Step " + i + " of " + steps);
 			List<MeasuredTransitionRule> transitions = List.of(
 					changeSwitchTransition,
 					moveTrainOnRouteTransition,
@@ -1507,14 +1525,22 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 			var activationsToFire = transitionToFire.getAllActivationsAsList();
 			System.out.println("Firing rule " + transitionToFire.transition().toString());
 			if (activationsToFire.isEmpty()) {
-				i++;
 				continue;
 			}
+			System.out.println("Step " + i + " of " + steps);
 			var randomActivation = activationsToFire.get(random.nextInt(activationsToFire.size()));
 			System.out.println("Firing rule " + transitionToFire.transition().toString() + ", activation: " + randomActivation);
 			transitionToFire.fire(randomActivation);
 			propagationAdapter.propagate();
 			queryEngine.flushChanges();
+
+			if (visualize) {
+				this.currentVersion = model.commit();
+				stateSpaceStore.addState(currentVersion, stateCoderAdapter.calculateModelCode(), false, false);
+//				stateSpaceStore.addTransition(lastVersion, this.currentVersion, new ActivationStore.VisitResult(
+//						true, true, 0, 0));
+				lastVersion = currentVersion;
+			}
 
 			// Fire all activations of repairSwitchSetTransition
 			// TODO: Where should we fire this? After every transition? Or only after certain transitions?
@@ -1523,9 +1549,17 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 			for (Tuple activation : repairSwitchSetTransition.getAllActivationsAsList()) {
 				System.out.println("Firing rule repairSwitchSet, activation: " + activation);
 				repairSwitchSetTransition.fire(activation);
+
+				propagationAdapter.propagate();
+				queryEngine.flushChanges();
+				if (visualize) {
+					this.currentVersion = model.commit();
+					stateSpaceStore.addState(currentVersion, stateCoderAdapter.calculateModelCode(), false, false);
+					stateSpaceStore.addTransition(lastVersion, this.currentVersion, new ActivationStore.VisitResult(
+							true, true, 0, 0));
+					lastVersion = currentVersion;
+				}
 			}
-			propagationAdapter.propagate();
-			queryEngine.flushChanges();
 			i++;
 		}
 
