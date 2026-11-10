@@ -1,6 +1,11 @@
 package tools.refinery.measurement;
 
+import tools.refinery.logic.dnf.Query;
+import tools.refinery.logic.dnf.RelationalQuery;
+import tools.refinery.logic.literal.Literals;
+import tools.refinery.logic.term.Variable;
 import tools.refinery.logic.term.cardinalityinterval.CardinalityIntervals;
+import tools.refinery.logic.term.int_.IntTerms;
 import tools.refinery.logic.term.truthvalue.TruthValue;
 import tools.refinery.store.dse.modification.ModificationAdapter;
 import tools.refinery.store.dse.propagation.PropagationAdapter;
@@ -8,9 +13,13 @@ import tools.refinery.store.dse.transition.DesignSpaceExplorationAdapter;
 import tools.refinery.store.dse.transition.Rule;
 import tools.refinery.store.query.interpreter.QueryInterpreterAdapter;
 import tools.refinery.store.reasoning.ReasoningAdapter;
+import tools.refinery.store.reasoning.ReasoningBuilder;
+import tools.refinery.store.reasoning.actions.CleanupActionLiteral;
+import tools.refinery.store.reasoning.actions.CreateNewActionLiteral;
 import tools.refinery.store.reasoning.actions.PartialActionLiterals;
 import tools.refinery.store.reasoning.interpretation.PartialNeighborhoodCalculator;
 import tools.refinery.store.reasoning.literal.Concreteness;
+import tools.refinery.store.reasoning.literal.Modality;
 import tools.refinery.store.reasoning.representation.PartialRelation;
 import tools.refinery.store.reasoning.seed.ModelSeed;
 import tools.refinery.store.reasoning.translator.ConcretizationSettings;
@@ -29,6 +38,7 @@ import tools.refinery.store.tuple.Tuple;
 import java.io.File;
 import java.util.*;
 
+import static tools.refinery.logic.literal.Literals.not;
 import static tools.refinery.logic.term.truthvalue.TruthValue.*;
 
 public class StatechartMeasurement extends MeasurementBase {
@@ -79,27 +89,19 @@ public class StatechartMeasurement extends MeasurementBase {
 			.reference(outgoingTransition, referenceBuilder -> referenceBuilder
 					.source(stateClass)
 					.target(transitionClass)
-					.containment(true)
-					.opposite(source)
 					.defaultValue(TruthValue.FALSE))
 			.reference(incomingTransition, referenceBuilder -> referenceBuilder
 					.source(stateClass)
 					.target(transitionClass)
-					.opposite(target)
 					.defaultValue(TruthValue.FALSE))
-			.reference(source, referenceBuilder -> referenceBuilder
-					.source(transitionClass)
-					.target(stateClass)
-					.opposite(outgoingTransition)
-					.defaultValue(TruthValue.FALSE))
-			.reference(target, referenceBuilder -> referenceBuilder
-					.source(transitionClass)
-					.target(stateClass)
-					.opposite(incomingTransition)
-					.multiplicity(CardinalityIntervals.ONE, targetInvalidMultiplicity)
-					.defaultValue(TruthValue.FALSE));
+			;
 
 	Metamodel metamodel = builder.build();
+
+	RelationalQuery hasLoop;
+	RelationalQuery hasLoopLifted;
+	RelationalQuery noOutgoing;
+	RelationalQuery noOutgoingLifted;
 
 
     PartialRelation stateTransitionPreconditionPartialRelation = new PartialRelation("stateTransition_precondition", 3);
@@ -109,14 +111,80 @@ public class StatechartMeasurement extends MeasurementBase {
                     transitionClass.call(t),
 					stateClass.call(from),
 					stateClass.call(to),
-                    source.call(t, from),
-                    target.call(t, to),
+                    outgoingTransition.call(from, t),
+                    incomingTransition.call(to, t),
 					active.call(from)
             )
             .action(
 					PartialActionLiterals.modify(active, FALSE, from),
 					PartialActionLiterals.modify(active, TRUE, to)
             )));
+
+	PartialRelation injectLoopPreconditionPartialRelation = new PartialRelation("injectLoop_precondition", 1);
+	TransitionRule injectLoop = new TransitionRule(injectLoopPreconditionPartialRelation,
+			Rule.of("injectLoop", (builder, s) -> builder
+					.clause(
+							stateClass.call(s)
+					)
+					.action(t -> List.of(
+							new CreateNewActionLiteral(t),
+							PartialActionLiterals.modify(transitionClass, TRUE, t),
+							PartialActionLiterals.modify(outgoingTransition, TRUE, s, t),
+							PartialActionLiterals.modify(incomingTransition, TRUE, s, t)
+					)
+			)));
+
+	PartialRelation repairLoopPreconditionPartialRelation = new PartialRelation("repairLoop_precondition", 2);
+	TransitionRule repairLoop = new TransitionRule(repairLoopPreconditionPartialRelation,
+			Rule.of("repairLoop", (builder, s, t) -> builder
+					.clause(
+							stateClass.call(s),
+							transitionClass.call(t),
+							outgoingTransition.call(s, t),
+							incomingTransition.call(s, t)
+					)
+					.action(
+							new CleanupActionLiteral(t, true),
+							PartialActionLiterals.modify(stateClass, TRUE, s)
+					)));
+
+	PartialRelation injectNoOutgoingPreconditionPartialRelation = new PartialRelation(
+			"injectNoOutgoing_precondition", 2);
+	TransitionRule injectNoOutgoing = new TransitionRule(injectNoOutgoingPreconditionPartialRelation,
+			Rule.of("injectNoOutgoing", (builder, s, t) -> builder
+					.clause(
+							stateClass.call(s),
+							transitionClass.call(t),
+							outgoingTransition.call(s, t)
+					)
+					.action(
+
+							new CleanupActionLiteral(t, true)
+					)));
+
+	PartialRelation repairNoOutgoingPreconditionPartialRelation = new PartialRelation(
+			"repairNoOutgoing_precondition", 2);
+	TransitionRule repairNoOutgoing = new TransitionRule(repairNoOutgoingPreconditionPartialRelation,
+			Rule.of("repairNoOutgoing", (builder, s1, s2) -> builder
+					.clause(
+							stateClass.call(s1),
+							stateClass.call(s2),
+							not(outgoingTransition.call(s1, Variable.of())),
+							not(outgoingTransition.call(s2, Variable.of())),
+							s1.notEquivalent(s2)
+					)
+					.action((t1, t2) -> List.of(
+							new CreateNewActionLiteral(t1),
+							PartialActionLiterals.modify(transitionClass, TRUE, t1),
+							PartialActionLiterals.modify(outgoingTransition, TRUE, s1, t1),
+							PartialActionLiterals.modify(incomingTransition, TRUE, s2, t1),
+							new CreateNewActionLiteral(t2),
+							PartialActionLiterals.modify(transitionClass, TRUE, t2),
+							PartialActionLiterals.modify(outgoingTransition, TRUE, s2, t2),
+							PartialActionLiterals.modify(incomingTransition, TRUE, s1, t2)
+					))));
+
+
 
     ModelSeed.Builder modelSeedBuilder;
 
@@ -131,12 +199,26 @@ public class StatechartMeasurement extends MeasurementBase {
 
 		var filenameScenario = scenario.toString().toLowerCase();
 		filenameScenario = switch (filenameScenario) {
-//			case "query" -> "batch";
-//			case "simulate" -> "batch";
-			default -> "batch";
+			case "query" -> "repair";
+			case "simulate" -> "batch";
+			default -> filenameScenario;
 		};
 		fileNamePrefix = fileNamePrefix + filenameScenario + "-" + size + "-";
 		System.out.println(fileNamePrefix);
+
+		hasLoop = Query.of("hasLoop", (builder, s, t) -> builder
+				.clause(
+						stateClass.call(s),
+						transitionClass.call(t),
+						outgoingTransition.call(s, t),
+						incomingTransition.call(s, t)
+				));
+
+		noOutgoing = Query.of("noOutgoing", (builder, s) -> builder
+				.clause(
+						stateClass.call(s),
+						not(outgoingTransition.call(s, Variable.of()))
+				));
 
 		classMaps.put(StateClassName, stateClassSet);
 		classMaps.put(TransitionClassName, transitionClassSet);
@@ -160,6 +242,13 @@ public class StatechartMeasurement extends MeasurementBase {
 				.with(new BasePredicateTranslator(active, List.of(stateClass), Set.of(), UNKNOWN,
 						new ConcretizationSettings(true, true)));
 
+		var reasoningBuilder = storeBuilder.getAdapter(ReasoningBuilder.class);
+
+		hasLoopLifted = reasoningBuilder.lift(Modality.MUST, Concreteness.PARTIAL, hasLoop);
+		noOutgoingLifted = reasoningBuilder.lift(Modality.MUST, Concreteness.PARTIAL, noOutgoing);
+
+		queries.add(hasLoopLifted);
+		queries.add(noOutgoingLifted);
 
 		switch (scenario) {
 		case QUERY -> {
@@ -180,14 +269,39 @@ public class StatechartMeasurement extends MeasurementBase {
 			fireOneTransitionRules.add(stateTransition.rule().getName());
 		}
 		case INJECT -> {
-			// TODO
 			storeBuilder = storeBuilder
-					.with(TransitionSystemAdapter.builder());
+					.with(TransitionSystemAdapter.builder()
+							.transition(injectLoop)
+							.transition(injectNoOutgoing))
+					.with(new PredicateTranslator(
+							injectLoopPreconditionPartialRelation,
+							injectLoop.rule().getPrecondition(),
+							List.of(stateClass), Set.of(), true, UNKNOWN))
+					.with(new PredicateTranslator(
+							injectNoOutgoingPreconditionPartialRelation,
+							injectNoOutgoing.rule().getPrecondition(),
+							List.of(stateClass, transitionClass), Set.of(), true, UNKNOWN))
+			;
+			fireOneTransitionRules.add(injectLoop.rule().getName());
+			fireAllTransitionRules.add(injectNoOutgoing.rule().getName());
 		}
 		case REPAIR -> {
-			// TODO
 			storeBuilder = storeBuilder
-					.with(TransitionSystemAdapter.builder());
+					.with(TransitionSystemAdapter.builder()
+							.transition(repairLoop)
+							.transition(repairNoOutgoing)
+					)
+					.with(new PredicateTranslator(
+							repairLoopPreconditionPartialRelation,
+							repairLoop.rule().getPrecondition(),
+							List.of(stateClass, transitionClass), Set.of(), true, UNKNOWN))
+					.with(new PredicateTranslator(
+							repairNoOutgoingPreconditionPartialRelation,
+							repairNoOutgoing.rule().getPrecondition(),
+							List.of(stateClass, stateClass), Set.of(), true, UNKNOWN))
+			;
+			fireOneTransitionRules.add(repairLoop.rule().getName());
+			fireOneTransitionRules.add(repairNoOutgoing.rule().getName());
 		}
 		default -> throw new IllegalArgumentException("Invalid scenario for this measurement: " + scenario);
 		}
@@ -263,7 +377,6 @@ public class StatechartMeasurement extends MeasurementBase {
 			String relationName = mapEntry.getKey();
 			Set<Tuple> tuples = mapEntry.getValue();
 			var partialRelation = switch (relationName) {
-				case outgoingTransitionRelationName -> outgoingTransition;
 				case sourceRelationName -> source;
 				case targetRelationName -> target;
 				default -> null;
@@ -284,6 +397,7 @@ public class StatechartMeasurement extends MeasurementBase {
 			String relationName = mapEntry.getKey();
 			Set<Tuple> tuples = mapEntry.getValue();
 			var partialRelation = switch (relationName) {
+				case outgoingTransitionRelationName -> outgoingTransition;
 				case incomingTransitionRelationName -> incomingTransition;
 				default -> null;
 			};
@@ -320,8 +434,12 @@ public class StatechartMeasurement extends MeasurementBase {
 			modelSeedBuilder.seed(stateTransitionPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
 		}
 		case INJECT -> {
+			modelSeedBuilder.seed(injectLoopPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
+			modelSeedBuilder.seed(injectNoOutgoingPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
 		}
 		case REPAIR -> {
+			modelSeedBuilder.seed(repairLoopPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
+			modelSeedBuilder.seed(repairNoOutgoingPreconditionPartialRelation, builder -> builder.reducedValue(UNKNOWN));
 		}
 		}
 
