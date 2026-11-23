@@ -22,13 +22,15 @@ public class StatechartTextMeasurement extends MeasurementBase {
 	@Inject
 	private ModelInitializer modelInitializer;
 
-	public void init(int size, MeasurementScenario scenario, boolean visualize) throws IOException {
+	public void init(int size, MeasurementScenario scenario, Abstraction abstraction, boolean visualize) throws IOException {
 		this.visualize = visualize;
+		var scenarioName = scenario.name().toLowerCase();
 		if (visualize) {
-			visualizationOutputPath = "output_visualization/statechart_" + size;
+			visualizationOutputPath = "output_visualization/statechart__" + scenarioName + "_" + size;
 		}
 		loader.extraPath("input");
-		var problem = loader.loadFile("input/models/statechart/statechart_" + size + ".refinery");
+		var problem = loader.loadFile("input/models/statechart__/statechart_" + scenarioName + "_" + size +
+				".refinery");
 
 
 

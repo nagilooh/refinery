@@ -23,13 +23,14 @@ public class TrainBenchmarkTextMeasurement extends MeasurementBase {
 	@Inject
 	private ModelInitializer modelInitializer;
 
-	public void init(int size, MeasurementScenario scenario, boolean visualize) throws IOException {
+	public void init(int size, MeasurementScenario scenario, Abstraction abstraction, boolean visualize) throws IOException {
 		this.visualize = visualize;
 		if (visualize) {
 			visualizationOutputPath = "output_visualization/trainbenchmark_" + size;
 		}
 		loader.extraPath("input/models/trainbenchmark/");
-		var problem = loader.loadFile("input/models/trainbenchmark/size-" + size + "/railway-batch-" + size + ".problem");
+		var problem = loader.loadFile("input/models/trainbenchmark_/size-" + size + "/railway-batch-" + size +
+				".problem");
 
 		storeBuilder = storeBuilder
 				.with(QueryInterpreterAdapter.builder())

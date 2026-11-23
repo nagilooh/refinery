@@ -82,7 +82,7 @@ public class StatechartTrafficLightMeasurement extends MeasurementBase {
 
     ModelSeed.Builder modelSeedBuilder;
 
-	public void init(int size, MeasurementScenario scenario, boolean visualize) {
+	public void init(int size, MeasurementScenario scenario, Abstraction abstraction, boolean visualize) {
 		this.visualize = visualize;
 		if (visualize) {
 			visualizationOutputPath = "output_visualization/statechart_" + size;

@@ -32,6 +32,7 @@ import java.util.*;
 public abstract class MeasurementBase implements MeasurementCase {
     protected boolean visualize = false;
 	protected MeasurementScenario scenario;
+	protected Abstraction abstraction;
 	protected int size;
 
 	protected List<RelationalQuery> queries = new ArrayList<>();
@@ -40,9 +41,10 @@ public abstract class MeasurementBase implements MeasurementCase {
 	protected List<String> fireAllTransitionRules = new ArrayList<>();
 
 	protected Map<RelationalQuery, List<Long>> queryTimes = new HashMap<>();
-	protected Map<RelationalQuery, List<ResultSet<Boolean>>> queryMatches = new HashMap<>();
+	protected Map<RelationalQuery, List<Integer>> queryMatches = new HashMap<>();
 	protected Map<Transition, List<Long>> transitionTimes = new HashMap<>();
 	protected Map<Transition, List<Long>> propagationTimes = new HashMap<>();
+	protected Map<Transition, List<Long>> flushTimes = new HashMap<>();
 
     protected ModelStore store;
 	protected ModelQueryBuilder modelQueryBuilder;
@@ -65,7 +67,7 @@ public abstract class MeasurementBase implements MeasurementCase {
 			storeBuilder = storeBuilder.with(ModelVisualizerAdapter.builder()
 					.withOutputPath(visualizationOutputPath)
 					.withFormat(FileFormat.DOT)
-//					.withFormat(FileFormat.SVG)
+					.withFormat(FileFormat.SVG)
 					.saveStates()
 					.saveDesignSpace()
 			);
@@ -99,18 +101,19 @@ public abstract class MeasurementBase implements MeasurementCase {
 			} else if (fireAllTransitionRules.contains(transition.toString())) {
 				transitionType = TransitionType.FIRE_ALL;
 			} else {
-				throw new RuntimeException("Missing transition type for transition: " + transition.toString());
+				transitionType = TransitionType.FIRE_ONE;
 			}
 			measuredTransitionRules.put(transition.toString(), new MeasuredTransitionRule(transition, transitionType));
 			transitionTimes.put(transition, new ArrayList<>());
 			propagationTimes.put(transition, new ArrayList<>());
+			flushTimes.put(transition, new ArrayList<>());
 		}
 	}
 
 	public void transformAndRecheck(int steps) {
-		for (int i = 0; i < measuredTransitionRules.size(); i++) {
+		for (int step = 0; step < steps; step++) {
+			for (int i = 0; i < measuredTransitionRules.size(); i++) {
 			var transition = measuredTransitionRules.values().stream().toList().get(i);
-			for (int step = 0; step < steps; step++) {
 				var activationCursor = transition.transition().getAllActivationsAsResultSet().getAll();
 				List<Activation> activationList = new ArrayList<>();
 				var tupleIndex = 0;
@@ -120,18 +123,17 @@ public abstract class MeasurementBase implements MeasurementCase {
 						tuple = Tuple.of(tuple.get(0));
 					}
 					var activation = new Activation(transition, tuple, i, tupleIndex);
-//					System.out.println("Activation found: " + activation);
 					activationList.add(activation);
 					tupleIndex++;
 				}
 				if (activationList.isEmpty()) {
 					System.out.println("No more activations available for transition: " + transition.transition());
-					break;
+					continue;
 				}
 				var randomActivation = activationList.get((random.nextInt(activationList.size())));
 				fireTransition(randomActivation);
-				check();
 			}
+			check();
 		}
 	}
 
@@ -171,22 +173,26 @@ public abstract class MeasurementBase implements MeasurementCase {
             modelVisualizerAdapter.visualize(stateSpaceStore, renderTransitionsToAlreadyVisitedStates());
         }
         model.close();
-		for (var query : queryTimes.keySet()) {
-			System.out.println("Query: " + query);
-			var times = queryTimes.get(query);
-			var matches = queryMatches.get(query);
-			for (int i = 0; i < times.size(); i++) {
-				System.out.println("Step " + i + ": Time: " + times.get(i) + " ns, Matches: " + matches.get(i).size());
-			}
-		}
-		for (var transition : tsAdapter.getTransitions()) {
-			System.out.println("Transition: " + transition);
-			var times = transitionTimes.get(transition);
-			var propagations = propagationTimes.get(transition);
-			for (int i = 0; i < times.size(); i++) {
-				System.out.println("Step " + i + ": Transition Time: " + times.get(i) + " ns, Propagation Time: " + propagations.get(i) + " ns");
-			}
-		}
+//		for (var query : queryTimes.keySet()) {
+//			System.out.println("Query: " + query);
+//			var times = queryTimes.get(query);
+//			var matches = queryMatches.get(query);
+//			for (int i = 0; i < times.size(); i++) {
+//				System.out.println("Step " + i + ": Time: " + times.get(i) + " ns, Matches: " + matches.get(i));
+//			}
+//		}
+//		for (var transition : tsAdapter.getTransitions()) {
+//			System.out.println("Transition: " + transition);
+//
+//			var times = transitionTimes.get(transition);
+//			System.out.println("Average transition time (" + times.size() + " runs):" + times.stream().mapToDouble(a -> a).average().orElse(0.0) / 1000000.0 + " ms");
+//
+//			var propagations = propagationTimes.get(transition);
+//			System.out.println("Average propagation time (" + propagations.size() + " runs):" + propagations.stream().mapToDouble(a -> a).average().orElse(0.0) / 1000000.0 + " ms");
+//
+//			var flushes = flushTimes.get(transition);
+//			System.out.println("Average flush time (" + flushes.size() + " runs):" + flushes.stream().mapToDouble(a -> a).average().orElse(0.0) / 1000000.0 + " ms");
+//		}
     }
 
     /**
@@ -209,7 +215,6 @@ public abstract class MeasurementBase implements MeasurementCase {
         var result = activation.fire();
 		var transitionEndTime = System.nanoTime();
 		transitionTimes.get(activation.transition().transition()).add(transitionEndTime - transitionStartTime);
-		System.out.println("Fired activation: " + activation + ", result: " + result);
 		if (!result) {
 			System.out.println("Activation failed to fire: " + activation);
 			return;
@@ -218,8 +223,6 @@ public abstract class MeasurementBase implements MeasurementCase {
         propagationAdapter.propagate();
 		var propagationEndTime = System.nanoTime();
 		propagationTimes.get(activation.transition().transition()).add(propagationEndTime - propagationStartTime);
-		// TODO: This should be moved to "recheck" phase
-        dseAdapter.checkAccept();
 		if (visualize) {
 			this.currentVersion = model.commit();
 			stateSpaceStore.addState(currentVersion, stateCoderAdapter.calculateModelCode(), false, false);
@@ -227,7 +230,10 @@ public abstract class MeasurementBase implements MeasurementCase {
 					true, true, activation.transitionIndex(), activation.tupleIndex()));
 		}
 		// TODO: This should be measured either in the transition time or in the recheck phase.
+		var flushStartTime = System.nanoTime();
         queryEngine.flushChanges();
+		var flushEndTime = System.nanoTime();
+		flushTimes.get(activation.transition().transition()).add(flushEndTime - flushStartTime);
     }
 
     /**
@@ -241,7 +247,6 @@ public abstract class MeasurementBase implements MeasurementCase {
             var tupleIndex = 0;
             while (activationCursor.move()) {
 				var activation = new Activation(transition, activationCursor.getKey(), transformationIndex, tupleIndex);
-				System.out.println("Activation found: " + activation);
                 activationList.add(activation);
                 tupleIndex++;
             }
@@ -250,12 +255,11 @@ public abstract class MeasurementBase implements MeasurementCase {
         return activationList;
     }
 
-	protected void check() {
-		var recheckStartTime = System.nanoTime();
+	public void check() {
 		for (var query : queryTimes.keySet()) {
-			queryMatches.get(query).add(getMatches(query));
+			var matches = getMatches(query).size();
+			queryMatches.get(query).add(matches);
 		}
-		var recheckEndTime = System.nanoTime();
 	}
 
 	protected ResultSet<Boolean> getMatches(RelationalQuery query) {
@@ -270,5 +274,25 @@ public abstract class MeasurementBase implements MeasurementCase {
      * Subclasses control the boolean parameter passed to the model visualizer when finishing.
      */
     protected abstract boolean renderTransitionsToAlreadyVisitedStates();
+
+	public Map<RelationalQuery, List<Long>> getQueryTimes() {
+		return queryTimes;
+	}
+
+	public Map<RelationalQuery, List<Integer>> getQueryMatches() {
+		return queryMatches;
+	}
+
+	public Map<Transition, List<Long>> getTransitionTimes() {
+		return transitionTimes;
+	}
+
+	public Map<Transition, List<Long>> getPropagationTimes() {
+		return propagationTimes;
+	}
+
+	public Map<Transition, List<Long>> getFlushTimes() {
+		return flushTimes;
+	}
 }
 

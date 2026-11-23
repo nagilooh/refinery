@@ -9,6 +9,7 @@ plugins {
 }
 
 dependencies {
+	implementation(project(":refinery-store-transition-system-examples"))
 	implementation(project(":refinery-generator"))
 	implementation(libs.jcommander)
 	implementation(libs.slf4j)

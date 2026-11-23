@@ -1,10 +1,8 @@
 package tools.refinery.measurement;
 
-import sun.misc.Signal;
 import tools.refinery.logic.dnf.Query;
 import tools.refinery.logic.dnf.QueryBuilder;
 import tools.refinery.logic.dnf.RelationalQuery;
-import tools.refinery.logic.literal.EquivalenceLiteral;
 import tools.refinery.logic.term.NodeVariable;
 import tools.refinery.logic.term.Variable;
 import tools.refinery.logic.term.abstractdomain.AbstractDomainTerms;
@@ -22,7 +20,6 @@ import tools.refinery.store.dse.transition.objectives.Criterion;
 import tools.refinery.store.dse.transition.statespace.ActivationStore;
 import tools.refinery.store.map.Version;
 import tools.refinery.store.query.ModelQueryAdapter;
-import tools.refinery.store.query.ModelQueryBuilder;
 import tools.refinery.store.query.interpreter.QueryInterpreterAdapter;
 import tools.refinery.store.reasoning.ReasoningAdapter;
 import tools.refinery.store.reasoning.ReasoningBuilder;
@@ -337,22 +334,16 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 
 	Metamodel metamodel = metamodelBuilder.build();
 
-	PartialRelation posLengthPartialRelation = new PartialRelation("posLength", 1);
 	RelationalQuery posLength;
 	RelationalQuery posLengthLifted;
-	PartialRelation switchMonitoredPartialRelation = new PartialRelation("switchMonitored", 1);
 	RelationalQuery switchMonitored;
 	RelationalQuery switchMonitoredLifted;
-	PartialRelation routeSensorPartialRelation = new PartialRelation("routeSensor", 4);
 	RelationalQuery routeSensor;
 	RelationalQuery routeSensorLifted;
-	PartialRelation switchSetPartialRelation = new PartialRelation("switchSet", 1);
 	RelationalQuery switchSet;
 	RelationalQuery switchSetLifted;
-	PartialRelation connectedSegmentsPartialRelation = new PartialRelation("connectedSegments", 6);
 	RelationalQuery connectedSegments;
 	RelationalQuery connectedSegmentsLifted;
-	PartialRelation semaphoreNeighborPartialRelation = new PartialRelation("semaphoreNeighbor", 2);
 	RelationalQuery semaphoreNeighbor;
 	RelationalQuery semaphoreNeighborLifted;
 
@@ -418,7 +409,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 						)
 					)
 					.action(
-							new CleanupActionLiteral(segment2),
+							new CleanupActionLiteral(segment2, true),
 							PartialActionLiterals.modify(connectsTo, TRUE, segment1, segment3)
 					)));
 
@@ -721,9 +712,10 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 
 	Criterion acceptanceCriterion = _ -> () -> false;
 
-	public void init(int size, MeasurementScenario scenario, boolean visualize) {
+	public void init(int size, MeasurementScenario scenario, Abstraction abstraction, boolean visualize) {
 		this.visualize = visualize;
 		this.scenario = scenario;
+		this.abstraction = abstraction;
 		this.size = size;
 
 		if (visualize) {
@@ -1109,7 +1101,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 		default -> throw new IllegalArgumentException("Invalid scenario for this measurement: " + scenario);
 		}
 
-		String pathToCsvFolder = "input/models/trainbenchmark2";
+		String pathToCsvFolder = "input/models/trainbenchmark";
 
 		signalEnumMap.put("Signal::FAILURE", Tuple.of(SIGNAL_FAILURE));
 		signalEnumMap.put("Signal::STOP", Tuple.of(SIGNAL_STOP));
@@ -1123,7 +1115,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 				Objects.requireNonNull(new File(pathToCsvFolder).listFiles((dir, name) -> name.startsWith(fileNamePrefix) &&
 						name.endsWith(".csv") && classMaps.keySet().stream().anyMatch(name::contains)))) {
 			String relationName = csvFile.getName().replace(fileNamePrefix, "").replace(".csv", "");
-			System.out.println("Loading class: " + relationName);
+//			System.out.println("Loading class: " + relationName);
 			var inputMap = classMaps.get(relationName);
 			try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(csvFile))) {
 				String line;
@@ -1488,22 +1480,40 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 //		queryEngine.flushChanges();
 //
 		// Place a train on some active routes
-		var placeTrainOnRouteActivations = activateRouteTransition.getAllActivationsAsList();
+		var placeTrainOnRouteActivations = placeTrainOnRouteTransition.getAllActivationsAsList();
 		var numActivations = placeTrainOnRouteActivations.size();
 		var firedActivations = new HashSet<Integer>();
 		for (int i = 0; i < numActivations / 3; i++) {
-			if (firedActivations.contains(i)) {
+			var nextActivationId = random.nextInt(numActivations);
+			if (firedActivations.contains(nextActivationId)) {
 				i--; // Skip this iteration
 				continue;
 			}
-			var nextActivationId = random.nextInt(numActivations);
 			var nextActivation = placeTrainOnRouteActivations.get(nextActivationId);
-			System.out.println("Firing rule placeTrainOnRoute, activation: " + nextActivation);
+//			System.out.println("Firing rule placeTrainOnRoute, activation: " + nextActivation);
+
+			var transitionStartTime = System.nanoTime();
 			placeTrainOnRouteTransition.fire(nextActivation);
+			var transitionEndTime = System.nanoTime();
+			var transitionDuration = transitionEndTime - transitionStartTime;
+			transitionTimes.get(placeTrainOnRouteTransition.transition()).add(transitionDuration);
 			firedActivations.add(nextActivationId);
+//			System.out.println("Fired rule placeTrainOnRoute, activation: " + nextActivation + ", duration: " + transitionDuration + " ns");
+
+			var propagationStartTime = System.nanoTime();
+			propagationAdapter.propagate();
+			var propagationEndTime = System.nanoTime();
+			var propagationDuration = propagationEndTime - propagationStartTime;
+			propagationTimes.get(placeTrainOnRouteTransition.transition()).add(propagationDuration);
+//			System.out.println("Propagated changes after firing rule placeTrainOnRoute, activation: " + nextActivation + ", duration: " + propagationDuration + " ns");
+
+			var flushStartTime = System.nanoTime();
+			queryEngine.flushChanges();
+			var flushEndTime = System.nanoTime();
+			var flushDuration = flushEndTime - flushStartTime;
+			flushTimes.get(placeTrainOnRouteTransition.transition()).add(flushDuration);
+//			System.out.println("Flushed changes after firing rule placeTrainOnRoute, activation: " + nextActivation + ", duration: " + flushDuration + " ns");
 		}
-		propagationAdapter.propagate();
-		queryEngine.flushChanges();
 
 
 		Version lastVersion = null;
@@ -1523,16 +1533,33 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 			// Randomly select a transition to fire
 			var transitionToFire = transitions.get(random.nextInt(transitions.size()));
 			var activationsToFire = transitionToFire.getAllActivationsAsList();
-			System.out.println("Firing rule " + transitionToFire.transition().toString());
+//			System.out.println("Firing rule " + transitionToFire.transition());
 			if (activationsToFire.isEmpty()) {
 				continue;
 			}
-			System.out.println("Step " + i + " of " + steps);
+//			System.out.println("Step " + i + " of " + steps);
 			var randomActivation = activationsToFire.get(random.nextInt(activationsToFire.size()));
-			System.out.println("Firing rule " + transitionToFire.transition().toString() + ", activation: " + randomActivation);
+//			System.out.println("Firing rule " + transitionToFire.transition() + ", activation: " + randomActivation);
+			var transitionStartTime = System.nanoTime();
 			transitionToFire.fire(randomActivation);
+			var transitionEndTime = System.nanoTime();
+			var transitionDuration = transitionEndTime - transitionStartTime;
+			transitionTimes.get(transitionToFire.transition()).add(transitionDuration);
+//			System.out.println("Fired rule " + transitionToFire.transition() + ", activation: " + randomActivation + ", duration: " + transitionDuration + " ns");
+
+			var propagationStartTime = System.nanoTime();
 			propagationAdapter.propagate();
+			var propagationEndTime = System.nanoTime();
+			var propagationDuration = propagationEndTime - propagationStartTime;
+			propagationTimes.get(transitionToFire.transition()).add(propagationDuration);
+//			System.out.println("Propagated changes after firing rule " + transitionToFire.transition() + ", activation: " + randomActivation + ", duration: " + propagationDuration + " ns");
+
+			var flushStartTime = System.nanoTime();
 			queryEngine.flushChanges();
+			var flushEndTime = System.nanoTime();
+			var flushDuration = flushEndTime - flushStartTime;
+			flushTimes.get(transitionToFire.transition()).add(flushDuration);
+//			System.out.println("Flushed changes after firing rule " + transitionToFire.transition() + ", activation: " + randomActivation + ", duration: " + flushDuration + " ns");
 
 			if (visualize) {
 				this.currentVersion = model.commit();
@@ -1547,11 +1574,28 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 			//  For now, let's fire it after every transition.
 			//  Should we count this as a step? Or each firing of repairSwitchSetTransition as a step?
 			for (Tuple activation : repairSwitchSetTransition.getAllActivationsAsList()) {
-				System.out.println("Firing rule repairSwitchSet, activation: " + activation);
+//				System.out.println("Firing rule repairSwitchSet, activation: " + activation);
+				transitionStartTime = System.nanoTime();
 				repairSwitchSetTransition.fire(activation);
+				transitionEndTime = System.nanoTime();
+				transitionDuration = transitionEndTime - transitionStartTime;
+				transitionTimes.get(repairSwitchSetTransition.transition()).add(transitionDuration);
+//				System.out.println("Fired rule repairSwitchSet, activation: " + activation + ", duration: " + transitionDuration + " ns");
 
+				propagationStartTime = System.nanoTime();
 				propagationAdapter.propagate();
+				propagationEndTime = System.nanoTime();
+				propagationDuration = propagationEndTime - propagationStartTime;
+				propagationTimes.get(repairSwitchSetTransition.transition()).add(propagationDuration);
+//				System.out.println("Propagated changes after firing rule repairSwitchSet, activation: " + activation + ", duration: " + propagationDuration + " ns");
+
+				flushStartTime = System.nanoTime();
 				queryEngine.flushChanges();
+				flushEndTime = System.nanoTime();
+				flushDuration = flushEndTime - flushStartTime;
+				flushTimes.get(repairSwitchSetTransition.transition()).add(flushDuration);
+//				System.out.println("Flushed changes after firing rule repairSwitchSet, activation: " + activation + ", duration: " + flushDuration + " ns");
+
 				if (visualize) {
 					this.currentVersion = model.commit();
 					stateSpaceStore.addState(currentVersion, stateCoderAdapter.calculateModelCode(), false, false);

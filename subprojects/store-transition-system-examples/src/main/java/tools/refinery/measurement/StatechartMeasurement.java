@@ -188,9 +188,10 @@ public class StatechartMeasurement extends MeasurementBase {
 
     ModelSeed.Builder modelSeedBuilder;
 
-	public void init(int size, MeasurementScenario scenario, boolean visualize) {
+	public void init(int size, MeasurementScenario scenario, Abstraction abstraction, boolean visualize) {
 		this.visualize = visualize;
 		this.scenario = scenario;
+		this.abstraction = abstraction;
 		this.size = size;
 
 		if (visualize) {
@@ -312,7 +313,7 @@ public class StatechartMeasurement extends MeasurementBase {
 				Objects.requireNonNull(new File(pathToCsvFolder).listFiles((dir, name) -> name.startsWith(fileNamePrefix) &&
 						name.endsWith(".csv") && classMaps.keySet().stream().anyMatch(name::contains)))) {
 			String relationName = csvFile.getName().replace(fileNamePrefix, "").replace(".csv", "");
-			System.out.println("Loading class: " + relationName);
+//			System.out.println("Loading class: " + relationName);
 			var inputMap = classMaps.get(relationName);
 			try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(csvFile))) {
 				String line;
