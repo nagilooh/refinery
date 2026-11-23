@@ -22,6 +22,7 @@ import tools.refinery.logic.term.Term;
 import tools.refinery.logic.term.UnaryTerm;
 import tools.refinery.logic.term.Variable;
 import tools.refinery.logic.term.truthvalue.TruthValue;
+import tools.refinery.store.map.Cursor;
 import tools.refinery.store.model.Interpretation;
 import tools.refinery.store.query.view.AnySymbolView;
 import tools.refinery.store.reasoning.ReasoningAdapter;
@@ -40,7 +41,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Function;
 import java.util.function.Predicate;
 
 import static tools.refinery.logic.term.truthvalue.TruthValue.FALSE;
@@ -119,7 +119,7 @@ public class ConcreteRelationRefiner extends
 						fixedArguments[i] = key.get(argumentMapping[i]);
 					}
 				}
-				return joinAll(fixedArguments, tuple -> join(tuple, UNKNOWN));
+				return joinAll(fixedArguments, abstractionPropagation.joinedValue());
 			});
 		}
 	}
@@ -416,30 +416,37 @@ public class ConcreteRelationRefiner extends
 		return updatedProjection;
 	}
 
-	private boolean joinAll(int[] argumentMapping, Function<Tuple, Boolean> joinAction) {
+	private boolean joinAll(int[] argumentMapping, TruthValue joinedValue) {
 		int arity = getPartialSymbol().arity();
 		int nodeCount = getAdapter().getNodeCount();
 
-		if (getPartialSymbol().defaultValue() == UNKNOWN) {
+		if (joinedValue.isRefinementOf(interpretation.getSymbol().defaultValue())) {
 			// we may use the cursor of the interpretation for the abstraction
-			int permutationIterationCount = 1;
-			int minAdjacentSize = -1;
+			int minAdjacentSize = Integer.MAX_VALUE;
 			int minAdjacentIndex = -1;
 			for (int i = 0; i < arity; i++) {
-				if (argumentMapping[i] == -1) {
-					permutationIterationCount *= nodeCount;
-				} else {
+				if (argumentMapping[i] != -1) {
 					int adjacentSize = interpretation.getAdjacentSize(i, argumentMapping[i]);
-					if (minAdjacentSize == -1 || adjacentSize < minAdjacentSize) {
+					if (adjacentSize < minAdjacentSize) {
 						minAdjacentSize = adjacentSize;
 						minAdjacentIndex = i;
 					}
 				}
 			}
 
-			if (minAdjacentSize != -1 && minAdjacentSize < permutationIterationCount) {
+			Cursor<Tuple, TruthValue> cursor;
+			if (minAdjacentIndex == -1) {
+				// All tuples must be abstracted away, since there are no bound indices in argumentMapping.
+				cursor = interpretation.getAll();
+				while (cursor.move()) {
+					var key = cursor.getKey();
+					if (!join(key, joinedValue)) {
+						return false;
+					}
+				}
+			} else {
 				// better to iterate over the interpretation elements
-				var cursor = interpretation.getAdjacent(minAdjacentIndex, argumentMapping[minAdjacentIndex]);
+				cursor = interpretation.getAdjacent(minAdjacentIndex, argumentMapping[minAdjacentIndex]);
 				while (cursor.move()) {
 					var key = cursor.getKey();
 					var joinKey = true;
@@ -448,37 +455,32 @@ public class ConcreteRelationRefiner extends
 							joinKey = false;
 						}
 					}
-					if (joinKey) {
-						if (!joinAction.apply(key)) {
+					if (joinKey && !join(key, joinedValue)) {
 							return false;
 						}
-					}
 				}
-				return true;
 			}
+			return true;
 		}
 
-		return backtrack(nodeCount, arity, 0, argumentMapping, new int[arity], joinAction);
+		return backtrack(nodeCount, arity, 0, argumentMapping, new int[arity], joinedValue);
 	}
 
-	private static boolean backtrack(int n, int k, int depth,
-									 int[] fixedArr,
-									 int[] current,
-									 Function<Tuple, Boolean> consumer) {
+	private boolean backtrack(int n, int k, int depth, int[] fixedArr, int[] current, TruthValue joinedValue) {
 
 		if (depth == k) {
-			return consumer.apply(Tuple.of(current));
+			return join(Tuple.of(current), joinedValue);
 		}
 
 		int fixedVal = fixedArr[depth];
 		if (fixedVal != -1) {
 			current[depth] = fixedVal;
-			return backtrack(n, k, depth + 1, fixedArr, current, consumer);
+			return backtrack(n, k, depth + 1, fixedArr, current, joinedValue);
 		}
 
 		for (int i = 0; i < n; i++) {
 			current[depth] = i;
-			if (!backtrack(n, k, depth + 1, fixedArr, current, consumer)) {
+			if (!backtrack(n, k, depth + 1, fixedArr, current, joinedValue)) {
 				return false;
 			}
 		}
@@ -512,7 +514,11 @@ public class ConcreteRelationRefiner extends
 				new RefinementPropagation(relation, refineIfValue, callProjection, constantNodeIds, mergedValue));
 	}
 
-	public record AbstractionPropagation(PartialSymbol<?, ?> partialSymbol, int[] argumentMapping) {
+	public record AbstractionPropagation(PartialSymbol<?, ?> partialSymbol, int[] argumentMapping,
+										 TruthValue joinedValue) {
+		public AbstractionPropagation(PartialSymbol<?, ?> partialSymbol, int[] argumentMapping) {
+			this(partialSymbol, argumentMapping, UNKNOWN);
+		}
 	}
 
 	public static final class RefinementPropagation {

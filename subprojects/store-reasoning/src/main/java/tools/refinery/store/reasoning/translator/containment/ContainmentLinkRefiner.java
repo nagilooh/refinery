@@ -53,6 +53,57 @@ class ContainmentLinkRefiner extends AbstractPartialInterpretationRefiner.Concre
 		return true;
 	}
 
+	@Override
+	public boolean join(Tuple key, TruthValue value) {
+		if (concretizationInProgress()) {
+			return false;
+		}
+
+		var oldValue = interpretation.get(key);
+		var oldLinkValue = getLinkValue(oldValue);
+		var joinedLinkValue = oldLinkValue.join(value);
+		var mustLinks = removeFromSet(oldValue.mustLinks());
+		var forbiddenLinks = removeFromSet(oldValue.forbiddenLinks());
+		switch (joinedLinkValue) {
+		case TRUE -> mustLinks = addToSet(mustLinks, factory.linkType);
+		case FALSE -> forbiddenLinks = addToSet(forbiddenLinks, factory.linkType);
+		case ERROR -> {
+			mustLinks = addToSet(mustLinks, factory.linkType);
+			forbiddenLinks = addToSet(forbiddenLinks, factory.linkType);
+		}
+		case UNKNOWN -> {
+		}
+		}
+
+		var joinedContains = oldValue.contains().join(value);
+		var newValue = new InferredContainment(joinedContains, mustLinks, forbiddenLinks);
+		if (!oldValue.equals(newValue)) {
+			interpretation.put(key, newValue);
+			if (!oldValue.contains().equals(newValue.contains())) {
+				return notifyAbstractionListeners(key, oldValue.contains(), newValue.contains());
+			}
+		}
+		return true;
+	}
+
+	private TruthValue getLinkValue(InferredContainment value) {
+		var must = value.mustLinks().contains(factory.linkType);
+		var forbidden = value.forbiddenLinks().contains(factory.linkType);
+		if (must) {
+			return forbidden ? TruthValue.ERROR : TruthValue.TRUE;
+		}
+		return forbidden ? TruthValue.FALSE : TruthValue.UNKNOWN;
+	}
+
+	private Set<PartialRelation> removeFromSet(Set<PartialRelation> oldSet) {
+		if (!oldSet.contains(factory.linkType)) {
+			return oldSet;
+		}
+		var newElements = new ArrayList<PartialRelation>(oldSet);
+		newElements.remove(factory.linkType);
+		return Set.copyOf(newElements);
+	}
+
 	public InferredContainment mergeLink(InferredContainment oldValue, TruthValue toMerge) {
 		return switch (toMerge) {
 			case UNKNOWN -> oldValue;
