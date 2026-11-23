@@ -309,6 +309,11 @@ public class StatechartMeasurement extends MeasurementBase {
 
 		String pathToCsvFolder = "input/models/statechart_fast";
 
+		var abstractionChance = switch (abstraction) {
+			case ABSTRACT -> 0.15;
+			case CONCRETE -> 0.0;
+		};
+
 		for (var csvFile :
 				Objects.requireNonNull(new File(pathToCsvFolder).listFiles((dir, name) -> name.startsWith(fileNamePrefix) &&
 						name.endsWith(".csv") && classMaps.keySet().stream().anyMatch(name::contains)))) {
@@ -407,7 +412,12 @@ public class StatechartMeasurement extends MeasurementBase {
 			}
 			modelSeedBuilder.seed(partialRelation, builder -> {
 				for (var tuple : tuples) {
-					builder.put(tuple, TRUE);
+					if (random.nextDouble(1.0) < abstractionChance) {
+						builder.put(tuple, UNKNOWN);
+					}
+					else {
+						builder.put(tuple, TRUE);
+					}
 				}
 				builder.reducedValue(FALSE);
 			});
