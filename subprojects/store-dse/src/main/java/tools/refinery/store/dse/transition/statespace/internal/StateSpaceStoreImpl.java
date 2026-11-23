@@ -9,6 +9,7 @@ import tools.refinery.store.dse.transition.ObjectiveValue;
 import tools.refinery.store.dse.transition.statespace.ActivationStore;
 import tools.refinery.store.dse.transition.statespace.StateSpaceStore;
 import tools.refinery.store.map.Version;
+import tools.refinery.store.tuple.Tuple;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,6 +19,7 @@ public class StateSpaceStoreImpl implements StateSpaceStore {
 	private final List<State> states = new ArrayList<>();
 	private final List<StateTransition> transitions = new ArrayList<>();
 	private final List<StateTransition> transitionsToAlreadyVisited = new ArrayList<>();
+	private final List<SimpleStateTransition> simpleTransitions = new ArrayList<>();
 
 	@Override
 	public void addState(Version state, int stateCode, boolean isSolution, boolean isError, ObjectiveValue objectiveValue) {
@@ -27,6 +29,11 @@ public class StateSpaceStoreImpl implements StateSpaceStore {
 	@Override
 	public void addTransition(Version from, Version to, ActivationStore.VisitResult visitResult) {
 		transitions.add(new StateTransition(from, to, transitions.size(), visitResult));
+	}
+
+	@Override
+	public void addTransition(Version from, Version to, String transitionLabel, Tuple tuple) {
+		simpleTransitions.add(new SimpleStateTransition(from, to, simpleTransitions.size(), transitionLabel, tuple));
 	}
 
 	@Override
@@ -47,6 +54,11 @@ public class StateSpaceStoreImpl implements StateSpaceStore {
 	@Override
 	public List<StateTransition> getTransitions() {
 		return transitions;
+	}
+
+	@Override
+	public List<SimpleStateTransition> getSimpleTransitions() {
+		return simpleTransitions;
 	}
 
 	@Override

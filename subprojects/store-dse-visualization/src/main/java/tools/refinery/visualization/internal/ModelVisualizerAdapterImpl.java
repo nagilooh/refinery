@@ -15,10 +15,10 @@ import tools.refinery.store.map.Version;
 import tools.refinery.store.model.Model;
 import tools.refinery.store.model.wrapper.InterpretationWrapper;
 import tools.refinery.store.reasoning.ReasoningAdapter;
-import tools.refinery.store.reasoning.interpretation.AnyPartialInterpretation;
 import tools.refinery.store.reasoning.interpretation.PartialInterpretation;
 import tools.refinery.store.reasoning.literal.Concreteness;
 import tools.refinery.store.reasoning.representation.AnyPartialSymbol;
+import tools.refinery.store.reasoning.translator.MissingInterpretation;
 import tools.refinery.store.representation.wrapper.SymbolWrapper;
 import tools.refinery.store.transition.system.TransitionSystemAdapter;
 import tools.refinery.store.transition.system.statespace.Transition;
@@ -145,14 +145,18 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 				continue;
 			}
 			var arity = symbol.arity();
-			var cursor = entry.getValue().getAll();
+			var partialInterpretation = entry.getValue();
+			if (partialInterpretation == null || partialInterpretation instanceof MissingInterpretation<?,?>) {
+				continue;
+			}
+			var cursor = partialInterpretation.getAll();
 			if (arity == 1) {
 				while (cursor.move()) {
 					if (skippedEntry.shouldSkip(symbol, (Tuple) cursor.getKey(), cursor.getValue())) {
 						continue;
 					}
 					unaryTupleToInterpretationsMap.computeIfAbsent((Tuple) cursor.getKey(), k -> new LinkedHashSet<>())
-							.add(entry.getValue());
+							.add(partialInterpretation);
 				}
 			} else if (arity == 2) {
 				while (cursor.move()) {
@@ -312,6 +316,8 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 		try {
 			Process process = new ProcessBuilder(storeAdapter.getDotBinaryPath(), "-T" + format.getFormat(),
 					"-o", filePath).start();
+//			Process process = new ProcessBuilder(storeAdapter.getDotBinaryPath(), "-Ksfdp", "-Goverlap=scale", "-T" + format.getFormat(),
+//					"-o", filePath).start();
 
 			OutputStream osToProcess = process.getOutputStream();
 			PrintWriter pwToProcess = new PrintWriter(osToProcess);
@@ -350,6 +356,20 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 			}
 		} finally {
 			model.restore(originalVersion);
+		}
+		return transitionsBuilder;
+	}
+
+	private StringBuilder buildDesignSpaceSimpleTransitionsDot(List<StateSpaceStore.SimpleStateTransition> transitions) {
+		StringBuilder transitionsBuilder = new StringBuilder();
+		for (var transition : transitions) {
+			var fromState = this.stateSpaceStore.getStateId(transition.from());
+			var toState = this.stateSpaceStore.getStateId(transition.to());
+			var ruleName = transition.transitionLabel();
+			final String activationLabel = transition.tuple().toString();
+			var label = ruleName + ", " + activationLabel;
+			transitionsBuilder.append(fromState).append(" -> ").append(toState)
+					.append(" [label=\"").append(transition.id()).append(": ").append(label).append("\"]\n");
 		}
 		return transitionsBuilder;
 	}
@@ -413,6 +433,7 @@ public class ModelVisualizerAdapterImpl implements ModelVisualizerAdapter {
 		}
 
 		designSpaceBuilder.append(buildDesignSpaceTransitionsDot(this.stateSpaceStore.getTransitions()));
+		designSpaceBuilder.append(buildDesignSpaceSimpleTransitionsDot(this.stateSpaceStore.getSimpleTransitions()));
 
 
 		if (renderTransitionsToAlreadyVisitedStates) {
