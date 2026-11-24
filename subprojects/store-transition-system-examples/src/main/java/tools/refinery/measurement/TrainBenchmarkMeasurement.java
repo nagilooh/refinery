@@ -66,50 +66,50 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 	int SIGNAL_STOP = firstFreeId++;
 	int SIGNAL_GO = firstFreeId++;
 
-	Set<Tuple> regionClassSet = new HashSet<>();
-	Set<Tuple> semaphoreClassSet = new HashSet<>();
-	Set<Tuple> routeClassSet = new HashSet<>();
-	Set<Tuple> switchPositionClassSet = new HashSet<>();
-	Set<Tuple> sensorClassSet = new HashSet<>();
-	Set<Tuple> segmentClassSet = new HashSet<>();
-	Set<Tuple> switchClassSet = new HashSet<>();
-	Set<Tuple> railwayContainerClassSet = new HashSet<>();
-	Set<Tuple> trackElementClassSet = new HashSet<>();
-	Set<Tuple> trainClassSet = new HashSet<>();
+	Map<Tuple, TruthValue> regionClassSet = new HashMap<>();
+	Map<Tuple, TruthValue> semaphoreClassSet = new HashMap<>();
+	Map<Tuple, TruthValue> routeClassSet = new HashMap<>();
+	Map<Tuple, TruthValue> switchPositionClassSet = new HashMap<>();
+	Map<Tuple, TruthValue> sensorClassSet = new HashMap<>();
+	Map<Tuple, TruthValue> segmentClassSet = new HashMap<>();
+	Map<Tuple, TruthValue> switchClassSet = new HashMap<>();
+	Map<Tuple, TruthValue> railwayContainerClassSet = new HashMap<>();
+	Map<Tuple, TruthValue> trackElementClassSet = new HashMap<>();
+	Map<Tuple, TruthValue> trainClassSet = new HashMap<>();
 
-	Set<Tuple> sensorsMap = new HashSet<>();
-	Set<Tuple> elementsMap = new HashSet<>();
-	Set<Tuple> followsMap = new HashSet<>();
-	Set<Tuple> requiresMap = new HashSet<>();
-	Set<Tuple> entryMap = new HashSet<>();
-	Set<Tuple> exitMap = new HashSet<>();
-	Set<Tuple> routeMap = new HashSet<>();
-	Set<Tuple> targetMap = new HashSet<>();
-	Set<Tuple> monitoredByMap = new HashSet<>();
-	Set<Tuple> connectsToMap = new HashSet<>();
-	Set<Tuple> semaphoresMap = new HashSet<>();
-	Set<Tuple> straightMap = new HashSet<>();
-	Set<Tuple> divergingMap = new HashSet<>();
-	Set<Tuple> monitorsMap = new HashSet<>();
-	Set<Tuple> positionsMap = new HashSet<>();
-	Set<Tuple> regionsMap = new HashSet<>();
-	Set<Tuple> routesMap = new HashSet<>();
-	Set<Tuple> locationMap = new HashSet<>();
+	Map<Tuple, TruthValue> sensorsMap = new HashMap<>();
+	Map<Tuple, TruthValue> elementsMap = new HashMap<>();
+	Map<Tuple, TruthValue> followsMap = new HashMap<>();
+	Map<Tuple, TruthValue> requiresMap = new HashMap<>();
+	Map<Tuple, TruthValue> entryMap = new HashMap<>();
+	Map<Tuple, TruthValue> exitMap = new HashMap<>();
+	Map<Tuple, TruthValue> routeMap = new HashMap<>();
+	Map<Tuple, TruthValue> targetMap = new HashMap<>();
+	Map<Tuple, TruthValue> monitoredByMap = new HashMap<>();
+	Map<Tuple, TruthValue> connectsToMap = new HashMap<>();
+	Map<Tuple, TruthValue> semaphoresMap = new HashMap<>();
+	Map<Tuple, TruthValue> straightMap = new HashMap<>();
+	Map<Tuple, TruthValue> divergingMap = new HashMap<>();
+	Map<Tuple, TruthValue> monitorsMap = new HashMap<>();
+	Map<Tuple, TruthValue> positionsMap = new HashMap<>();
+	Map<Tuple, TruthValue> regionsMap = new HashMap<>();
+	Map<Tuple, TruthValue> routesMap = new HashMap<>();
+	Map<Tuple, TruthValue> locationMap = new HashMap<>();
 	Map<Tuple, IntInterval> lengthMap = new HashMap<>();
 
-	Set<Tuple> signalMap = new HashSet<>();
-	Set<Tuple> positionMap = new HashSet<>();
-	Set<Tuple> currentPositionMap = new HashSet<>();
+	Map<Tuple, TruthValue> signalMap = new HashMap<>();
+	Map<Tuple, TruthValue> positionMap = new HashMap<>();
+	Map<Tuple, TruthValue> currentPositionMap = new HashMap<>();
 
 	Map<Tuple, TruthValue> activeMap = new HashMap<>();
 
 	Map<String, Tuple> positionEnumMap = new HashMap<>();
 	Map<String, Tuple> signalEnumMap = new HashMap<>();
 
-	Map<String, Set<Tuple>> classMaps = new HashMap<>();
-	Map<String, Set<Tuple>> relationMaps = new HashMap<>();
+	Map<String, Map<Tuple, TruthValue>> classMaps = new HashMap<>();
+	Map<String, Map<Tuple, TruthValue>> relationMaps = new HashMap<>();
 	Map<String, Map<String, Tuple>> enumMaps = new HashMap<>();
-	Map<String, Set<Tuple>> enumAttributeMaps = new HashMap<>();
+	Map<String, Map<Tuple, TruthValue>> enumAttributeMaps = new HashMap<>();
 	Map<String, Map<Tuple, TruthValue>> booleanAttributeMaps = new HashMap<>();
 	Map<String, Map<Tuple, IntInterval>> intAttributeMaps = new HashMap<>();
 
@@ -728,7 +728,13 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 			case "simulate" -> "batch";
 			default -> filenameScenario;
 		};
-		fileNamePrefix = fileNamePrefix + filenameScenario + "-" + size + "-";
+		var filenameAbstraction = abstraction.toString().toLowerCase();
+		filenameAbstraction = switch (filenameAbstraction) {
+			case "concrete" -> "";
+			case "abstract" -> "-abstract";
+			default -> filenameScenario;
+		};
+		fileNamePrefix = fileNamePrefix + filenameScenario + filenameAbstraction + "-" + size + "-";
 		System.out.println(fileNamePrefix);
 
 		posLength = Query.of("posLength", (builder, segment) -> builder
@@ -1101,7 +1107,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 		default -> throw new IllegalArgumentException("Invalid scenario for this measurement: " + scenario);
 		}
 
-		String pathToCsvFolder = "input/models/trainbenchmark";
+		String pathToCsvFolder = "input/models/trainbenchmark3";
 
 		signalEnumMap.put("Signal::FAILURE", Tuple.of(SIGNAL_FAILURE));
 		signalEnumMap.put("Signal::STOP", Tuple.of(SIGNAL_STOP));
@@ -1109,7 +1115,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 		positionEnumMap.put("Position::FAILURE", Tuple.of(POSITION_FAILURE));
 		positionEnumMap.put("Position::STRAIGHT", Tuple.of(POSITION_STRAIGHT));
 		positionEnumMap.put("Position::DIVERGING", Tuple.of(POSITION_DIVERGING));
-		railwayContainerClassSet.add(Tuple.of(firstFreeId));
+		railwayContainerClassSet.put(Tuple.of(firstFreeId), TRUE);
 
 		var abstractionChance = switch (abstraction) {
 			case ABSTRACT -> 0.15;
@@ -1120,13 +1126,14 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 				Objects.requireNonNull(new File(pathToCsvFolder).listFiles((dir, name) -> name.startsWith(fileNamePrefix) &&
 						name.endsWith(".csv") && classMaps.keySet().stream().anyMatch(name::contains)))) {
 			String relationName = csvFile.getName().replace(fileNamePrefix, "").replace(".csv", "");
-//			System.out.println("Loading class: " + relationName);
+			System.out.println("Loading class: " + relationName);
 			var inputMap = classMaps.get(relationName);
 			try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(csvFile))) {
 				String line;
 				while ((line = br.readLine()) != null) {
 					String[] values = line.split(",");
-					inputMap.add(Tuple.of(Integer.parseInt(values[0]) + firstFreeId));
+					inputMap.put(Tuple.of(Integer.parseInt(values[0]) + firstFreeId),
+							TruthValue.valueOf(values[1].toUpperCase()));
 				}
 			} catch (java.io.IOException e) {
 				e.printStackTrace();
@@ -1141,7 +1148,8 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 				String line;
 				while ((line = br.readLine()) != null) {
 					String[] values = line.split(",");
-					inputMap.add(Tuple.of(Integer.parseInt(values[0]) + firstFreeId, Integer.parseInt(values[1]) + firstFreeId));
+					inputMap.put(Tuple.of(Integer.parseInt(values[0]) + firstFreeId,
+							Integer.parseInt(values[1]) + firstFreeId), TruthValue.valueOf(values[2].toUpperCase()));
 				}
 			} catch (java.io.IOException e) {
 				e.printStackTrace();
@@ -1156,7 +1164,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 				String line;
 				while ((line = br.readLine()) != null) {
 					String[] values = line.split(",");
-					inputMap.put(Tuple.of(Integer.parseInt(values[0]) + firstFreeId), of(Boolean.parseBoolean(values[1])));
+					inputMap.put(Tuple.of(Integer.parseInt(values[0]) + firstFreeId), TruthValue.valueOf(values[1].toUpperCase()));
 				}
 			} catch (java.io.IOException e) {
 				e.printStackTrace();
@@ -1193,7 +1201,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 					if (enumValue == null) {
 						throw new IllegalArgumentException("Invalid enum value: " + values[1]);
 					}
-					inputMap.add(Tuple.of(Integer.parseInt(values[0]) + firstFreeId, enumValue.get(0)));
+					inputMap.put(Tuple.of(Integer.parseInt(values[0]) + firstFreeId, enumValue.get(0)), TruthValue.valueOf(values[2].toUpperCase()));
 				}
 			} catch (java.io.IOException e) {
 				e.printStackTrace();
@@ -1203,7 +1211,8 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 		// TODO: This is a hack to get the number of nodes in the model. We should find a better way to do this.
-		var nodeCount = classMaps.values().stream().flatMap(Set::stream).mapToInt(t -> t.get(0)).max().orElse(0) + 1;
+		var nodeCount = classMaps.values().stream().flatMap(map -> map.keySet().stream())
+				.mapToInt(t -> t.get(0)).max().orElse(0) + 1;
 		System.out.println(nodeCount);
 		modelSeedBuilder = ModelSeed.builder(nodeCount)
 				.seed(MultiObjectTranslator.COUNT_SYMBOL, builder -> builder
@@ -1219,7 +1228,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 
 		for (var entry : classMaps.entrySet()) {
 			String relationName = entry.getKey();
-			Set<Tuple> tuples = entry.getValue();
+			Map<Tuple, TruthValue> valueMap = entry.getValue();
 			var partialRelation = switch (relationName) {
 				case RegionClassName -> regionClass;
 				case SemaphoreClassName -> semaphoreClass;
@@ -1234,8 +1243,8 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 				default -> throw new IllegalArgumentException("Unknown relation name: " + relationName);
 			};
 			modelSeedBuilder.seed(partialRelation, builder -> {
-				for (var tuple : tuples) {
-					builder.put(tuple, TRUE);
+				for (var valueEntry : valueMap.entrySet()) {
+					builder.put(valueEntry.getKey(), valueEntry.getValue());
 				}
 				builder.reducedValue(UNKNOWN);
 			});
@@ -1244,7 +1253,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 
 		for (var mapEntry : relationMaps.entrySet()) {
 			String relationName = mapEntry.getKey();
-			Set<Tuple> tuples = mapEntry.getValue();
+			Map<Tuple, TruthValue> valueMap = mapEntry.getValue();
 			var partialRelation = switch (relationName) {
 				case monitorsRelationName -> monitors;
 				case sensorsRelationName -> sensors;
@@ -1261,8 +1270,8 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 				continue;
 			}
 			modelSeedBuilder.seed(partialRelation, builder -> {
-				for (var tuple : tuples) {
-					builder.put(tuple, TRUE);
+				for (var valueEntry : valueMap.entrySet()) {
+					builder.put(valueEntry.getKey(), valueEntry.getValue());
 				}
 				builder.reducedValue(UNKNOWN);
 			});
@@ -1271,7 +1280,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 
 		for (var mapEntry : relationMaps.entrySet()) {
 			String relationName = mapEntry.getKey();
-			Set<Tuple> tuples = mapEntry.getValue();
+			Map<Tuple, TruthValue> valueMap = mapEntry.getValue();
 			var partialRelation = switch (relationName) {
 				case requiresRelationName -> requires;
 				case entryRelationName -> entry;
@@ -1288,13 +1297,8 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 				continue;
 			}
 			modelSeedBuilder.seed(partialRelation, builder -> {
-				for (var tuple : tuples) {
-					if (random.nextDouble(1.0) < abstractionChance) {
-						builder.put(tuple, UNKNOWN);
-					}
-					else {
-						builder.put(tuple, TRUE);
-					}
+				for (var valueEntry : valueMap.entrySet()) {
+					builder.put(valueEntry.getKey(), valueEntry.getValue());
 				}
 				builder.reducedValue(FALSE);
 			});
@@ -1318,7 +1322,7 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 
 		for (var mapEntry : enumAttributeMaps.entrySet()) {
 			String relationName = mapEntry.getKey();
-			Set<Tuple> tuples = mapEntry.getValue();
+			Map<Tuple, TruthValue> valueMap = mapEntry.getValue();
 			var partialRelation = switch (relationName) {
 				case signalRelationName -> signal;
 				case positionRelationName -> position;
@@ -1326,8 +1330,8 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 				default -> throw new IllegalArgumentException("Unknown relation name: " + relationName);
 			};
 			modelSeedBuilder.seed(partialRelation, builder -> {
-				for (var tuple : tuples) {
-					builder.put(tuple, TRUE);
+				for (var valueEntry : valueMap.entrySet()) {
+					builder.put(valueEntry.getKey(), valueEntry.getValue());
 				}
 				builder.reducedValue(FALSE);
 			});
@@ -1335,14 +1339,14 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 
 		for (var mapEntry : booleanAttributeMaps.entrySet()) {
 			String relationName = mapEntry.getKey();
-			Map<Tuple, TruthValue> tuples = mapEntry.getValue();
+			Map<Tuple, TruthValue> valueMap = mapEntry.getValue();
 			if (!relationName.equals(activeAttributeName)) {
 				throw new IllegalArgumentException("Unknown relation name: " + relationName);
 			}
 			var partialRelation = active;
 			modelSeedBuilder.seed(partialRelation, builder -> {
-				for (var tupleEntry : tuples.entrySet()) {
-					builder.put(tupleEntry.getKey(), tupleEntry.getValue());
+				for (var valueEntry : valueMap.entrySet()) {
+					builder.put(valueEntry.getKey(), valueEntry.getValue());
 				}
 				builder.reducedValue(UNKNOWN);
 			});
@@ -1350,14 +1354,14 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 
 		for (var mapEntry : intAttributeMaps.entrySet()) {
 			String relationName = mapEntry.getKey();
-			Map<Tuple, IntInterval> tuples = mapEntry.getValue();
+			Map<Tuple, IntInterval> valueMap = mapEntry.getValue();
 			if (!relationName.equals(lengthAttributeName)) {
 				throw new IllegalArgumentException("Unknown relation name: " + relationName);
 			}
 			var partialRelation = length;
 			modelSeedBuilder.seed(partialRelation, builder -> {
-				for (var tupleEntry : tuples.entrySet()) {
-					builder.put(tupleEntry.getKey(), tupleEntry.getValue());
+				for (var valueEntry : valueMap.entrySet()) {
+					builder.put(valueEntry.getKey(), valueEntry.getValue());
 				}
 				builder.reducedValue(IntInterval.UNKNOWN);
 			});
@@ -1455,6 +1459,112 @@ public class TrainBenchmarkMeasurement extends MeasurementBase {
 		case SIMULATE -> simulate(steps);
 		case INJECT, REPAIR -> transformAndRecheck(steps);
 		default -> throw new IllegalArgumentException("Invalid scenario for this measurement: " + scenario);
+		}
+	}
+
+	private void simulatedExactSteps(int steps) {
+		var activateRouteTransition = measuredTransitionRules.get("activateRoute");
+		var repairSwitchSetTransition = measuredTransitionRules.get("repairSwitchSet");
+		var placeTrainOnRouteTransition = measuredTransitionRules.get("placeTrainOnRoute");
+		var changeSwitchTransition = measuredTransitionRules.get("changeSwitch");
+		var moveTrainOnRouteTransition = measuredTransitionRules.get("moveTrainOnRoute");
+		var activateNextRouteTransition = measuredTransitionRules.get("activateNextRoute");
+		var moveTrainToNextRouteTransition = measuredTransitionRules.get("moveTrainToNextRoute");
+
+
+		var placeTrainOnRouteActivations = placeTrainOnRouteTransition.getAllActivationsAsList();
+		var numActivations = placeTrainOnRouteActivations.size();
+		var firedActivations = new HashSet<Integer>();
+		for (int i = 0; i < Math.min(numActivations - 1, steps); i++) {
+			var nextActivationId = random.nextInt(numActivations);
+			if (firedActivations.contains(nextActivationId)) {
+				i--; // Skip this iteration
+				continue;
+			}
+			var nextActivation = placeTrainOnRouteActivations.get(nextActivationId);
+//			System.out.println("Firing rule placeTrainOnRoute, activation: " + nextActivation);
+
+			var transitionStartTime = System.nanoTime();
+			placeTrainOnRouteTransition.fire(nextActivation);
+			var transitionEndTime = System.nanoTime();
+			var transitionDuration = transitionEndTime - transitionStartTime;
+			transitionTimes.get(placeTrainOnRouteTransition.transition()).add(transitionDuration);
+			firedActivations.add(nextActivationId);
+
+			var propagationStartTime = System.nanoTime();
+			propagationAdapter.propagate();
+			var propagationEndTime = System.nanoTime();
+			var propagationDuration = propagationEndTime - propagationStartTime;
+			propagationTimes.get(placeTrainOnRouteTransition.transition()).add(propagationDuration);
+
+			var flushStartTime = System.nanoTime();
+			queryEngine.flushChanges();
+			var flushEndTime = System.nanoTime();
+			var flushDuration = flushEndTime - flushStartTime;
+			flushTimes.get(placeTrainOnRouteTransition.transition()).add(flushDuration);
+		}
+
+
+		// Simulation loop
+		int i = 0;
+		while (i < steps) {
+			List<MeasuredTransitionRule> transitions = List.of(
+					changeSwitchTransition,
+					moveTrainOnRouteTransition,
+					activateNextRouteTransition,
+					moveTrainToNextRouteTransition
+			);
+			// Randomly select a transition to fire
+			var transitionToFire = transitions.get(random.nextInt(transitions.size()));
+			var activationsToFire = transitionToFire.getAllActivationsAsList();
+			if (activationsToFire.isEmpty()) {
+				continue;
+			}
+
+			var randomActivation = activationsToFire.get(random.nextInt(activationsToFire.size()));
+			var transitionStartTime = System.nanoTime();
+			transitionToFire.fire(randomActivation);
+			var transitionEndTime = System.nanoTime();
+			var transitionDuration = transitionEndTime - transitionStartTime;
+			transitionTimes.get(transitionToFire.transition()).add(transitionDuration);
+
+			var propagationStartTime = System.nanoTime();
+			propagationAdapter.propagate();
+			var propagationEndTime = System.nanoTime();
+			var propagationDuration = propagationEndTime - propagationStartTime;
+			propagationTimes.get(transitionToFire.transition()).add(propagationDuration);
+
+			var flushStartTime = System.nanoTime();
+			queryEngine.flushChanges();
+			var flushEndTime = System.nanoTime();
+			var flushDuration = flushEndTime - flushStartTime;
+			flushTimes.get(transitionToFire.transition()).add(flushDuration);
+
+
+			// Fire all activations of repairSwitchSetTransition
+			// TODO: Where should we fire this? After every transition? Or only after certain transitions?
+			//  For now, let's fire it after every transition.
+			//  Should we count this as a step? Or each firing of repairSwitchSetTransition as a step?
+			for (Tuple activation : repairSwitchSetTransition.getAllActivationsAsList()) {
+				transitionStartTime = System.nanoTime();
+				repairSwitchSetTransition.fire(activation);
+				transitionEndTime = System.nanoTime();
+				transitionDuration = transitionEndTime - transitionStartTime;
+				transitionTimes.get(repairSwitchSetTransition.transition()).add(transitionDuration);
+
+				propagationStartTime = System.nanoTime();
+				propagationAdapter.propagate();
+				propagationEndTime = System.nanoTime();
+				propagationDuration = propagationEndTime - propagationStartTime;
+				propagationTimes.get(repairSwitchSetTransition.transition()).add(propagationDuration);
+
+				flushStartTime = System.nanoTime();
+				queryEngine.flushChanges();
+				flushEndTime = System.nanoTime();
+				flushDuration = flushEndTime - flushStartTime;
+				flushTimes.get(repairSwitchSetTransition.transition()).add(flushDuration);
+			}
+			i++;
 		}
 	}
 

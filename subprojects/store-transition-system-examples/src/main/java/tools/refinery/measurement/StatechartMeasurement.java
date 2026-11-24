@@ -45,20 +45,20 @@ public class StatechartMeasurement extends MeasurementBase {
 
 	String fileNamePrefix = "statechart-";
 
-	Set<Tuple> stateClassSet = new HashSet<>();
-	Set<Tuple> transitionClassSet = new HashSet<>();
+	Map<Tuple, TruthValue> stateClassSet = new HashMap<>();
+	Map<Tuple, TruthValue> transitionClassSet = new HashMap<>();
 
-	Set<Tuple> outgoingTransitionSet = new HashSet<>();
-	Set<Tuple> incomingTransitionSet = new HashSet<>();
-	Set<Tuple> sourceSet = new HashSet<>();
-	Set<Tuple> targetSet = new HashSet<>();
+	Map<Tuple, TruthValue> outgoingTransitionSet = new HashMap<>();
+	Map<Tuple, TruthValue> incomingTransitionSet = new HashMap<>();
+	Map<Tuple, TruthValue> sourceSet = new HashMap<>();
+	Map<Tuple, TruthValue> targetSet = new HashMap<>();
 
-	Set<Tuple> activeSet = new HashSet<>();
+	Map<Tuple, TruthValue> activeSet = new HashMap<>();
 
 
-	Map<String, Set<Tuple>> classMaps = new HashMap<>();
-	Map<String, Set<Tuple>> relationMaps = new HashMap<>();
-	Map<String, Set<Tuple>> attributeMaps = new HashMap<>();
+	Map<String, Map<Tuple, TruthValue>> classMaps = new HashMap<>();
+	Map<String, Map<Tuple, TruthValue>> relationMaps = new HashMap<>();
+	Map<String, Map<Tuple, TruthValue>> attributeMaps = new HashMap<>();
 
 
 	static final String StateClassName = "State";
@@ -204,7 +204,13 @@ public class StatechartMeasurement extends MeasurementBase {
 			case "simulate" -> "batch";
 			default -> filenameScenario;
 		};
-		fileNamePrefix = fileNamePrefix + filenameScenario + "-" + size + "-";
+		var filenameAbstraction = abstraction.toString().toLowerCase();
+		filenameAbstraction = switch (filenameAbstraction) {
+			case "concrete" -> "";
+			case "abstract" -> "-abstract";
+			default -> filenameScenario;
+		};
+		fileNamePrefix = fileNamePrefix + filenameScenario + filenameAbstraction + "-" + size + "-";
 		System.out.println(fileNamePrefix);
 
 		hasLoop = Query.of("hasLoop", (builder, s, t) -> builder
@@ -309,22 +315,18 @@ public class StatechartMeasurement extends MeasurementBase {
 
 		String pathToCsvFolder = "input/models/statechart_fast";
 
-		var abstractionChance = switch (abstraction) {
-			case ABSTRACT -> 0.15;
-			case CONCRETE -> 0.0;
-		};
-
 		for (var csvFile :
 				Objects.requireNonNull(new File(pathToCsvFolder).listFiles((dir, name) -> name.startsWith(fileNamePrefix) &&
 						name.endsWith(".csv") && classMaps.keySet().stream().anyMatch(name::contains)))) {
 			String relationName = csvFile.getName().replace(fileNamePrefix, "").replace(".csv", "");
 //			System.out.println("Loading class: " + relationName);
 			var inputMap = classMaps.get(relationName);
+			System.out.println("Loading class: " + relationName + " from file: " + csvFile.getName());
 			try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(csvFile))) {
 				String line;
 				while ((line = br.readLine()) != null) {
 					String[] values = line.split(",");
-					inputMap.add(Tuple.of(Integer.parseInt(values[0])));
+					inputMap.put(Tuple.of(Integer.parseInt(values[0])), TruthValue.valueOf(values[1].toUpperCase()));
 				}
 			} catch (java.io.IOException e) {
 				e.printStackTrace();
@@ -339,15 +341,17 @@ public class StatechartMeasurement extends MeasurementBase {
 				String line;
 				while ((line = br.readLine()) != null) {
 					String[] values = line.split(",");
-					inputMap.add(Tuple.of(Integer.parseInt(values[0]), Integer.parseInt(values[1])));
+					inputMap.put(Tuple.of(Integer.parseInt(values[0]), Integer.parseInt(values[1])),
+							TruthValue.valueOf(values[2].toUpperCase()));
 				}
 			} catch (java.io.IOException e) {
 				e.printStackTrace();
 			}
 		}
-		activeSet.add(Tuple.of(0)); // set the initial state as active
+		activeSet.put(Tuple.of(0), TRUE); // set the initial state as active
 
-		var nodeCount = classMaps.values().stream().flatMap(Set::stream).mapToInt(t -> t.get(0)).max().orElse(0) + 1;
+		var nodeCount = classMaps.values().stream().flatMap(map -> map.keySet().stream())
+				.mapToInt(t -> t.get(0)).max().orElse(0) + 1;
 		System.out.println(nodeCount);
 		modelSeedBuilder = ModelSeed.builder(nodeCount)
 				.seed(MultiObjectTranslator.COUNT_SYMBOL, builder -> builder
@@ -364,15 +368,15 @@ public class StatechartMeasurement extends MeasurementBase {
 
 		for (var entry : classMaps.entrySet()) {
 			String relationName = entry.getKey();
-			Set<Tuple> tuples = entry.getValue();
+			Map<Tuple, TruthValue> valueMap = entry.getValue();
 			var partialRelation = switch (relationName) {
 				case StateClassName -> stateClass;
 				case TransitionClassName -> transitionClass;
 				default -> throw new IllegalArgumentException("Unknown relation name: " + relationName);
 			};
 			modelSeedBuilder.seed(partialRelation, builder -> {
-				for (var tuple : tuples) {
-					builder.put(tuple, TRUE);
+				for (var valueEntry : valueMap.entrySet()) {
+					builder.put(valueEntry.getKey(), valueEntry.getValue());
 				}
 				builder.reducedValue(UNKNOWN);
 			});
@@ -381,7 +385,7 @@ public class StatechartMeasurement extends MeasurementBase {
 
 		for (var mapEntry : relationMaps.entrySet()) {
 			String relationName = mapEntry.getKey();
-			Set<Tuple> tuples = mapEntry.getValue();
+			Map<Tuple, TruthValue> valueMap = mapEntry.getValue();
 			var partialRelation = switch (relationName) {
 				case sourceRelationName -> source;
 				case targetRelationName -> target;
@@ -391,8 +395,8 @@ public class StatechartMeasurement extends MeasurementBase {
 				continue;
 			}
 			modelSeedBuilder.seed(partialRelation, builder -> {
-				for (var tuple : tuples) {
-					builder.put(tuple, TRUE);
+				for (var valueEntry : valueMap.entrySet()) {
+					builder.put(valueEntry.getKey(), valueEntry.getValue());
 				}
 				builder.reducedValue(UNKNOWN);
 			});
@@ -401,7 +405,7 @@ public class StatechartMeasurement extends MeasurementBase {
 
 		for (var mapEntry : relationMaps.entrySet()) {
 			String relationName = mapEntry.getKey();
-			Set<Tuple> tuples = mapEntry.getValue();
+			Map<Tuple, TruthValue> valueMap = mapEntry.getValue();
 			var partialRelation = switch (relationName) {
 				case outgoingTransitionRelationName -> outgoingTransition;
 				case incomingTransitionRelationName -> incomingTransition;
@@ -411,13 +415,8 @@ public class StatechartMeasurement extends MeasurementBase {
 				continue;
 			}
 			modelSeedBuilder.seed(partialRelation, builder -> {
-				for (var tuple : tuples) {
-					if (random.nextDouble(1.0) < abstractionChance) {
-						builder.put(tuple, UNKNOWN);
-					}
-					else {
-						builder.put(tuple, TRUE);
-					}
+				for (var valueEntry : valueMap.entrySet()) {
+					builder.put(valueEntry.getKey(), valueEntry.getValue());
 				}
 				builder.reducedValue(FALSE);
 			});
@@ -426,14 +425,14 @@ public class StatechartMeasurement extends MeasurementBase {
 
 		for (var entry : attributeMaps.entrySet()) {
 			String relationName = entry.getKey();
-			Set<Tuple> tuples = entry.getValue();
+			Map<Tuple, TruthValue> valueMap = entry.getValue();
 			var partialRelation = switch (relationName) {
 				case activeAttributeName -> active;
 				default -> throw new IllegalArgumentException("Unknown relation name: " + relationName);
 			};
 			modelSeedBuilder.seed(partialRelation, builder -> {
-				for (var tuple : tuples) {
-					builder.put(tuple, TRUE);
+				for (var valueEntry : valueMap.entrySet()) {
+					builder.put(valueEntry.getKey(), valueEntry.getValue());
 				}
 				builder.reducedValue(FALSE);
 			});
